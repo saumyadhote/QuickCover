@@ -1,0 +1,28 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
+*.swp
+.vscode/
+.idea/
+
+# Python / backend
+backend/.venv/
+backend/__pycache__/
+backend/**/*.pyc
+backend/.pytest_cache/
+backend/quickcover.db
+
+# Node / frontend
+admin-frontend/node_modules/
+admin-frontend/dist/
+admin-frontend/.eslintcache
+
+# Environment / secrets
+.env
+backend/.env
+admin-frontend/.env
+
+# Cursor / IDE project metadata
+.cursor/
