@@ -1,3 +1,63 @@
+## QuickCover – Parametric Income Protection MVP
+
+This repository contains a minimal end-to-end prototype for **QuickCover**, an AI-powered parametric income protection layer for India’s Q‑commerce gig workers.
+
+### Structure
+
+- `backend/` – FastAPI service for trips, triggers and weekly payouts (SQLite via SQLAlchemy).
+- `admin-frontend/` – React + Vite admin dashboard to visualise trips, trigger events and worker payouts.
+
+### Backend – FastAPI
+
+#### Setup
+
+```bash
+cd backend
+python -m venv .venv
+.venv\Scripts\activate  # Windows PowerShell
+pip install -r requirements.txt
+
+# Run DB migrations
+alembic upgrade head
+
+# Start API
+uvicorn app.main:app --reload --port 8000
+```
+
+The API will be available at `http://127.0.0.1:8000` with docs at `/docs`.
+
+Key endpoints:
+
+- `GET /health` – service status
+- `POST /trips` – create a simulated trip
+- `GET /trips` – list recent trips
+- `POST /triggers` – create a disruption trigger and auto-generate parametric claims
+- `GET /payouts/weekly` – aggregate approved claims into weekly worker payouts
+
+### Admin Frontend – React + Vite
+
+#### Setup
+
+```bash
+cd admin-frontend
+npm install
+npm run dev
+```
+
+By default Vite runs at `http://127.0.0.1:5173` and proxies `/api` to `http://127.0.0.1:8000`.
+
+The dashboard lets you:
+
+- Simulate a trip (worker, zone, expected earnings)
+- Simulate a trigger event (e.g. heavy rain in a zone)
+- Observe generated trips, trigger events and computed weekly payouts
+
+### Next Steps / Extensions
+
+- Add real integrations to Q‑commerce trip webhooks.
+- Replace simulated triggers with background jobs calling OpenWeatherMap / civic-event APIs.
+- Add a worker-facing mobile app (React Native / Flutter) that surfaces coverage status and UPI payout history.
+
 # QuickCover AI 🛡️
 ### AI-Powered Parametric Income Protection for India's Gig Economy
 
