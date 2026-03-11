@@ -2,8 +2,13 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import axios from 'axios';
 import { Platform } from 'react-native';
 
-// For Android emulator, use 10.0.2.2 for localhost. For iOS simulator / Web, use localhost.
+// For physical devices on Expo Go, you MUST use your computer's local WiFi IP (e.g. 192.168.x.x).
+// 10.0.2.2 only works for the official Android Studio emulator.
+// localhost only works for iOS simulator or Web browser.
+// If the user's phone cannot reach the backend, they should replace 'localhost' below with their IPv4 address.
 const API_URL = Platform.OS === 'android' ? 'http://10.0.2.2:4000' : 'http://localhost:4000';
+// Fallback override: 
+// const API_URL = 'http://192.168.1.100:4000'; // Replace with your computer's local IP Address if using a physical phone!
 
 type Disruption = {
   type: string;
@@ -41,7 +46,7 @@ export function MockDataProvider({ children }: { children: React.ReactNode }) {
         const res = await axios.get(`${API_URL}/status`);
         setState(res.data);
       } catch (err) {
-        console.warn('Backend unavailable... Are you running the mock server?', err);
+        console.warn(`Backend unavailable at ${API_URL}... Are you running the mock server? If you are on a physical phone, you need to change localhost/10.0.2.2 to your computer's local WiFi IP Address in context/MockDataContext.tsx !`);
       } finally {
         setLoading(false);
       }
@@ -57,7 +62,7 @@ export function MockDataProvider({ children }: { children: React.ReactNode }) {
       const res = await axios.post(`${API_URL}/accept-trip`);
       setState(res.data.state);
     } catch (err) {
-      console.error(err);
+      console.error('Error accepting trip:', err);
     }
   };
 
@@ -66,7 +71,7 @@ export function MockDataProvider({ children }: { children: React.ReactNode }) {
       const res = await axios.post(`${API_URL}/complete-trip`);
       setState(res.data.state);
     } catch (err) {
-      console.error(err);
+      console.error('Error completing trip:', err);
     }
   };
 

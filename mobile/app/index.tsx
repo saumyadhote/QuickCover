@@ -2,8 +2,7 @@ import { useEffect } from 'react';
 import { View, Text, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useMockData } from '../context/MockDataContext';
-
-// We import Tailwind styles via NativeWind seamlessly since it's configured.
+import { LinearGradient } from 'expo-linear-gradient';
 
 export default function SplashScreen() {
   const router = useRouter();
@@ -19,16 +18,24 @@ export default function SplashScreen() {
   }, [loading]);
 
   return (
-    <View className="flex-1 bg-blue-600 items-center justify-center">
-      <View className="items-center">
-        <View className="w-24 h-24 bg-white rounded-2xl items-center justify-center mb-6 shadow-xl">
-          {/* Logo Placeholder */}
-          <Text className="text-4xl font-bold text-blue-600">QC</Text>
+    <View className="flex-1 bg-[#020617] items-center justify-center relative overflow-hidden">
+      {/* Background ambient glows */}
+      <View className="absolute top-[-150px] left-[-100px] w-96 h-96 bg-blue-600/30 rounded-full blur-[120px]" />
+      <View className="absolute bottom-[-100px] right-[-100px] w-80 h-80 bg-cyan-600/20 rounded-full blur-[120px]" />
+
+      <View className="items-center z-10">
+        <View className="w-24 h-24 rounded-3xl items-center justify-center mb-6 border border-slate-700/50 shadow-2xl shadow-blue-900/50 overflow-hidden">
+          <LinearGradient
+            colors={['rgba(37, 99, 235, 0.4)', 'rgba(15, 23, 42, 0.8)']}
+            className="flex-1 w-full h-full items-center justify-center"
+          >
+            <Text className="text-4xl font-black text-white">QC</Text>
+          </LinearGradient>
         </View>
         <Text className="text-4xl font-extrabold text-white tracking-widest">QuickCover</Text>
-        <Text className="text-blue-200 mt-2 font-medium text-lg tracking-wide">Parametric Income Protection</Text>
+        <Text className="text-blue-400 mt-2 font-medium text-lg tracking-wide uppercase text-xs">Parametric Income Protection</Text>
       </View>
-      <ActivityIndicator size="large" color="white" className="absolute bottom-12" />
+      <ActivityIndicator size="large" color="#60a5fa" className="absolute bottom-16" />
     </View>
   );
 }

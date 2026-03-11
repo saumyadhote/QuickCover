@@ -4,59 +4,56 @@ This repository contains a minimal end-to-end prototype for **QuickCover**, an A
 
 ### Structure
 
-- `backend/` – FastAPI service for trips, triggers and weekly payouts (SQLite via SQLAlchemy).
-- `admin-frontend/` – React + Vite admin dashboard to visualise trips, trigger events and worker payouts.
+- `mobile/` – React Native (Expo) app for the worker-facing interface.
+- `mock-backend/` – A simulated Express.js server providing API endpoints for trips and disruption triggers.
 
-### Backend – FastAPI
+### Mock Backend – Node & Express
 
 #### Setup
 
 ```bash
-cd backend
-python -m venv .venv
-.venv\Scripts\activate  # Windows PowerShell
-pip install -r requirements.txt
-
-# Run DB migrations
-alembic upgrade head
+cd mock-backend
+npm install
 
 # Start API
-uvicorn app.main:app --reload --port 8000
+npm start
 ```
 
-The API will be available at `http://127.0.0.1:8000` with docs at `/docs`.
+The API will be available at `http://localhost:4000`.
 
 Key endpoints:
 
-- `GET /health` – service status
-- `POST /trips` – create a simulated trip
-- `GET /trips` – list recent trips
-- `POST /triggers` – create a disruption trigger and auto-generate parametric claims
-- `GET /payouts/weekly` – aggregate approved claims into weekly worker payouts
+- `GET /status` – Check server connection
+- `POST /accept-trip` – Start a new trip and activate coverage
+- `POST /complete-trip` – Finish an active trip
+- `POST /trigger-disruption` – Simulate an external disruption
+- `POST /reset` – Reset server state
 
-### Admin Frontend – React + Vite
+### Mobile App – React Native + Expo
 
 #### Setup
 
 ```bash
-cd admin-frontend
+cd mobile
 npm install
-npm run dev
+
+# Start the Expo development server
+npm start
 ```
 
-By default Vite runs at `http://127.0.0.1:5173` and proxies `/api` to `http://127.0.0.1:8000`.
+This will launch Expo. You can press `a` to run it on an Android emulator, `i` for an iOS simulator, or scan the QR code with the Expo Go app on your physical device to see the app.
 
-The dashboard lets you:
+The mobile app currently allows a gig worker to:
 
-- Simulate a trip (worker, zone, expected earnings)
-- Simulate a trigger event (e.g. heavy rain in a zone)
-- Observe generated trips, trigger events and computed weekly payouts
+- View realtime parametric protection status
+- Start a mock shift to activate coverage
+- Receive disruption alerts if a catastrophic event occurs
 
 ### Next Steps / Extensions
 
-- Add real integrations to Q‑commerce trip webhooks.
-- Replace simulated triggers with background jobs calling OpenWeatherMap / civic-event APIs.
-- Add a worker-facing mobile app (React Native / Flutter) that surfaces coverage status and UPI payout history.
+- Connect the mobile app to the real backend when it is developed.
+- Replace simulated triggers in the mock backend with background jobs calling OpenWeatherMap / civic-event APIs.
+- Enhance the UI metrics to include UPI payout history tracking.
 
 # QuickCover AI 🛡️
 ### AI-Powered Parametric Income Protection for India's Gig Economy

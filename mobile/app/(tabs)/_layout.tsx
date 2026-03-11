@@ -7,15 +7,15 @@ export default function TabLayout() {
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: '#ffffff',
+          backgroundColor: '#020617', // match the background
           borderTopWidth: 1,
-          borderTopColor: '#f1f5f9',
+          borderTopColor: '#1e293b',
           height: 60,
           paddingBottom: 10,
           paddingTop: 10,
         },
-        tabBarActiveTintColor: '#2563eb', // blue-600
-        tabBarInactiveTintColor: '#94a3b8', // slate-400
+        tabBarActiveTintColor: '#60a5fa', // blue-400
+        tabBarInactiveTintColor: '#475569', // slate-600
       }}
     >
       <Tabs.Screen
