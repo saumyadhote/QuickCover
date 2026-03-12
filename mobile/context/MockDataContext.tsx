@@ -2,13 +2,9 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import axios from 'axios';
 import { Platform } from 'react-native';
 
-// For physical devices on Expo Go, you MUST use your computer's local WiFi IP (e.g. 192.168.x.x).
-// 10.0.2.2 only works for the official Android Studio emulator.
-// localhost only works for iOS simulator or Web browser.
-// If the user's phone cannot reach the backend, they should replace 'localhost' below with their IPv4 address.
-const API_URL = Platform.OS === 'android' ? 'http://10.0.2.2:4000' : 'http://localhost:4000';
-// Fallback override: 
-// const API_URL = 'http://192.168.1.100:4000'; // Replace with your computer's local IP Address if using a physical phone!
+// Replacing localhost and 10.0.2.2 with explicit local IP address
+// so physical devices (Expo Go) and all emulators can reliably connect.
+const API_URL = 'http://10.9.191.124:4000';
 
 type Disruption = {
   type: string;
@@ -39,14 +35,25 @@ export function MockDataProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AppState | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const fallbackState: AppState = {
+    isTripActive: false,
+    disruption: null,
+    claimStatus: 'none',
+    weeklyEarnings: 3200,
+    weeklyProtected: 0
+  };
+
   // Poll backend every 2 seconds to check for triggers
   useEffect(() => {
     const fetchStatus = async () => {
       try {
-        const res = await axios.get(`${API_URL}/status`);
+        // Set a short timeout so the UI doesn't hang if the IP is unreachable
+        const res = await axios.get(`${API_URL}/status`, { timeout: 2000 });
         setState(res.data);
       } catch (err) {
-        console.warn(`Backend unavailable at ${API_URL}... Are you running the mock server? If you are on a physical phone, you need to change localhost/10.0.2.2 to your computer's local WiFi IP Address in context/MockDataContext.tsx !`);
+        // If it fails, fallback immediately to local state so the UI loads instantly
+        if (!state) setState(fallbackState);
+        console.warn(`Backend unavailable at ${API_URL}... Using local fallback state. If you are on a physical phone, you need to change 172.25.x.x to your computer's local WiFi IP Address in context/MockDataContext.tsx!`);
       } finally {
         setLoading(false);
       }

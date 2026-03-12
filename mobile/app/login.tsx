@@ -44,16 +44,9 @@ export default function LoginScreen() {
           
           <TouchableOpacity 
             onPress={handleLogin}
-            className="w-full bg-[#fce000]/10 border border-[#fce000]/30 py-4 rounded-2xl flex-row justify-center items-center shadow-lg mb-4"
+            className="w-full bg-[#fce000]/10 border border-[#fce000]/30 py-4 rounded-2xl flex-row justify-center items-center shadow-lg"
           >
             <Text className="text-[#fce000] font-bold text-lg tracking-wide">Continue with Blinkit</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            onPress={handleLogin}
-            className="w-full bg-[#c084fc]/10 border border-[#c084fc]/30 py-4 rounded-2xl flex-row justify-center items-center shadow-lg"
-          >
-             <Text className="text-[#c084fc] font-bold text-lg tracking-wide">Continue with Zepto</Text>
           </TouchableOpacity>
         </BlurView>
         

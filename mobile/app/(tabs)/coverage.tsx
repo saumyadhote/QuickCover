@@ -1,0 +1,170 @@
+import { useState } from 'react';
+import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
+import { useMockData } from '../../context/MockDataContext';
+import { ArrowLeft, Bell, ChevronRight, Check, ShieldCheck, Zap, Sparkles } from 'lucide-react-native';
+
+export default function CoverageScreen() {
+  const [step, setStep] = useState(1);
+  const { state } = useMockData();
+  const maxSteps = 3;
+
+  return (
+    <View className="flex-1 bg-white pt-14">
+      {/* Header */}
+      <View className="px-6 flex-row justify-between items-center pb-4">
+        <View className="flex-row items-center">
+          <ArrowLeft color="#1e293b" size={24} className="mr-4" />
+          <Text className="text-xl font-bold text-slate-800">Get Protected</Text>
+        </View>
+        <View className="relative">
+          <View className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full z-10 border border-white" />
+          <Bell color="#475569" size={24} />
+        </View>
+      </View>
+
+      {/* Progress Bar Container */}
+      <View className="px-6 pb-6">
+        <View className="flex-row justify-between mb-2">
+          {/* Step 1 indicator */}
+          <View className={`h-1 flex-1 rounded-full mr-2 ${step >= 1 ? 'bg-green-600' : 'bg-slate-200'}`} />
+          {/* Step 2 indicator */}
+          <View className={`h-1 flex-1 rounded-full mx-1 ${step >= 2 ? 'bg-green-600' : 'bg-slate-200'}`} />
+          {/* Step 3 indicator */}
+          <View className={`h-1 flex-1 rounded-full ml-2 ${step >= 3 ? 'bg-green-600' : 'bg-slate-200'}`} />
+        </View>
+        <Text className="text-slate-500 text-xs">Step {step} of 3</Text>
+      </View>
+
+      <ScrollView className="flex-1 px-5" contentContainerStyle={{ paddingBottom: 100 }}>
+        
+        {step === 1 && (
+          <View className="flex-1">
+            <Text className="font-bold text-2xl text-slate-900 mb-2 mt-4">Connect Your Account</Text>
+            <Text className="text-slate-500 mb-8 text-[15px] leading-6">
+              We'll automatically import your worker details for faster setup.
+            </Text>
+
+            {/* SSO Button (Mocked) */}
+            <TouchableOpacity className="border border-slate-200 rounded-2xl p-4 flex-row items-center justify-between mb-8 flex-wrap shadow-sm bg-white">
+              <View className="flex-row items-center flex-1">
+                {/* Mock Logo (Replace with actual image if provided) */}
+                <View className="w-12 h-12 rounded-xl bg-green-500 items-center justify-center mr-4">
+                  <Text className="text-xl">🚀</Text>
+                </View>
+                <View className="flex-1">
+                  <Text className="font-bold text-slate-800 text-base mb-0.5">Sign in with Blinkit</Text>
+                  <Text className="font-bold text-slate-800 text-base">Partner ID</Text>
+                  <Text className="text-slate-500 text-xs mt-1">Auto-imports your worker details</Text>
+                </View>
+              </View>
+              <ChevronRight color="#94a3b8" size={20} />
+            </TouchableOpacity>
+
+            {/* Import Details Block */}
+            <View className="bg-blue-50/50 rounded-2xl p-5 border border-blue-100 flex-1 justify-center align-middle mb-8">
+               <Text className="text-blue-800 font-bold mb-4 text-sm">What we'll import:</Text>
+               
+               <View className="flex-row items-center mb-3">
+                 <Check color="#3b82f6" size={16} className="mr-3" />
+                 <Text className="text-blue-600">Worker ID & Name</Text>
+               </View>
+               
+               <View className="flex-row items-center mb-3">
+                 <Check color="#3b82f6" size={16} className="mr-3" />
+                 <Text className="text-blue-600">Vehicle Type</Text>
+               </View>
+
+               <View className="flex-row items-center">
+                 <Check color="#3b82f6" size={16} className="mr-3" />
+                 <Text className="text-blue-600">Delivery Zone</Text>
+               </View>
+            </View>
+
+            {/* Continue Button */}
+            <TouchableOpacity 
+              className="bg-green-600 rounded-xl py-4 items-center"
+              onPress={() => setStep(2)}>
+              <Text className="text-white font-bold text-base">Continue</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {step === 2 && (
+          <View className="flex-1">
+            <Text className="font-bold text-2xl text-slate-900 mb-2 mt-2">How It Works</Text>
+            <Text className="text-slate-500 mb-6 text-[15px]">
+              Quick overview of your protection benefits.
+            </Text>
+
+            {/* Benefit 1 */}
+            <View className="border border-slate-200 rounded-2xl p-5 mb-4 shadow-sm bg-white">
+              <View className="w-10 h-10 rounded-xl bg-green-500 items-center justify-center mb-4">
+                 <ShieldCheck color="#ffffff" size={20} />
+              </View>
+              <Text className="font-bold text-slate-800 text-base mb-1.5">Income Protection</Text>
+              <Text className="text-slate-500 text-sm leading-5">
+                Get compensated if deliveries stop due to weather or curfew.
+              </Text>
+            </View>
+
+            {/* Benefit 2 */}
+            <View className="border border-slate-200 rounded-2xl p-5 mb-4 shadow-sm bg-white">
+              <View className="w-10 h-10 rounded-xl bg-blue-500 items-center justify-center mb-4">
+                 <Zap color="#ffffff" size={20} />
+              </View>
+              <Text className="font-bold text-slate-800 text-base mb-1.5">Automatic Coverage</Text>
+              <Text className="text-slate-500 text-sm leading-5">
+                Coverage activates automatically during each delivery.
+              </Text>
+            </View>
+
+            {/* Benefit 3 */}
+            <View className="border border-slate-200 rounded-2xl p-5 mb-8 shadow-sm bg-white">
+              <View className="w-10 h-10 rounded-xl bg-purple-500 items-center justify-center mb-4">
+                 <Sparkles color="#ffffff" size={20} />
+              </View>
+              <Text className="font-bold text-slate-800 text-base mb-1.5">Zero Out-of-Pocket</Text>
+              <Text className="text-slate-500 text-sm leading-5">
+                Premium funded by customer tips and micro-fees.
+              </Text>
+            </View>
+
+            {/* Navigation Buttons */}
+            <View className="flex-row justify-between">
+              <TouchableOpacity 
+                className="bg-slate-100 rounded-xl py-4 flex-1 items-center mr-3"
+                onPress={() => setStep(1)}>
+                <Text className="text-slate-700 font-bold text-base">Back</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                className="bg-green-600 rounded-xl py-4 flex-1 items-center ml-3"
+                onPress={() => setStep(3)}>
+                <Text className="text-white font-bold text-base">Next</Text>
+              </TouchableOpacity>
+            </View>
+
+          </View>
+        )}
+
+        {/* Dummy Step 3 handler if the user is interested later */}
+        {step > 2 && (
+          <View className="flex-1 items-center justify-center mt-20">
+             <View className="w-20 h-20 rounded-full bg-green-100 items-center justify-center mb-4">
+                 <Check color="#16a34a" size={40} />
+             </View>
+             <Text className="font-bold text-2xl text-slate-900 mb-2 mt-4 text-center">You're Protected!</Text>
+             <Text className="text-slate-500 text-center">Step 3 completion mockup.</Text>
+             
+             <TouchableOpacity 
+                className="bg-green-600 rounded-xl py-4 px-10 items-center mt-10"
+                onPress={() => setStep(1)}>
+                <Text className="text-white font-bold text-base">Restart Demo</Text>
+              </TouchableOpacity>
+          </View>
+        )}
+
+      </ScrollView>
+    </View>
+  );
+}

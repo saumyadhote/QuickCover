@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { Home, IndianRupee } from 'lucide-react-native';
+import { Home, ShieldCheck, FileText, User } from 'lucide-react-native';
 
 export default function TabLayout() {
   return (
@@ -7,29 +7,43 @@ export default function TabLayout() {
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: '#020617', // match the background
-          borderTopWidth: 1,
-          borderTopColor: '#1e293b',
-          height: 60,
+          backgroundColor: '#ffffff',
+          borderTopWidth: 2,
+          borderTopColor: '#a855f7', // Purple border top
+          height: 65,
           paddingBottom: 10,
           paddingTop: 10,
         },
-        tabBarActiveTintColor: '#60a5fa', // blue-400
-        tabBarInactiveTintColor: '#475569', // slate-600
+        tabBarActiveTintColor: '#2563eb', // Blue active icon
+        tabBarInactiveTintColor: '#64748b', // Slate inactive icon
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Dashboard',
+          title: 'Home',
           tabBarIcon: ({ color }) => <Home color={color} size={24} />,
         }}
       />
       <Tabs.Screen
-        name="earnings"
+        name="coverage"
         options={{
-          title: 'Earnings',
-          tabBarIcon: ({ color }) => <IndianRupee color={color} size={24} />,
+          title: 'Coverage',
+          tabBarIcon: ({ color }) => <ShieldCheck color={color} size={24} />,
+        }}
+      />
+      <Tabs.Screen
+        name="claims"
+        options={{
+          title: 'Claims',
+          tabBarIcon: ({ color }) => <FileText color={color} size={24} />,
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'Profile',
+          tabBarIcon: ({ color }) => <User color={color} size={24} />,
         }}
       />
     </Tabs>

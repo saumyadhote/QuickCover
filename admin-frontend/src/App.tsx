@@ -86,20 +86,20 @@ function App() {
         {/* Global Metrics Row */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
           
-          {/* Active Workers */}
+          {/* Active Deliveries */}
           <div className="glass-panel p-6 rounded-3xl relative overflow-hidden group">
             <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-bl-[100px] transition-all group-hover:scale-110" />
             <div className="flex justify-between items-start mb-4 relative z-10">
               <div className="p-3 bg-slate-800/80 rounded-2xl border border-slate-700">
                 <WebUsers className="text-emerald-400" size={24} />
               </div>
-              <span className="px-3 py-1 bg-emerald-500/20 text-emerald-300 text-xs font-bold rounded-full border border-emerald-500/30">LIVE</span>
+              <span className="px-3 py-1 bg-emerald-500/20 text-emerald-300 text-xs font-bold rounded-full border border-emerald-500/30">MOCK SCALE</span>
             </div>
-            <h3 className="text-slate-400 font-medium mb-1">Active Protected Trips</h3>
-            <p className="text-4xl font-black">{state.isTripActive ? '1' : '0'}</p>
+            <h3 className="text-slate-400 font-medium mb-1">Live Active Deliveries</h3>
+            <p className="text-4xl font-black">{state.isTripActive ? '24,893' : '24,892'}</p>
           </div>
 
-          {/* At Risk Payouts */}
+          {/* Daily Premium Volume */}
           <div className="glass-panel p-6 rounded-3xl relative overflow-hidden group">
             <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-bl-[100px] transition-all group-hover:scale-110" />
             <div className="flex justify-between items-start mb-4 relative z-10">
@@ -107,11 +107,13 @@ function App() {
                 <WebActivity className="text-blue-400" size={24} />
               </div>
             </div>
-            <h3 className="text-slate-400 font-medium mb-1">Total Payouts Triggered</h3>
-            <p className="text-4xl font-black">₹{state.weeklyProtected.toLocaleString()}</p>
+            <h3 className="text-slate-400 font-medium mb-1">24h Premium Volume (Gross)</h3>
+            <p className="text-4xl font-black text-blue-400">
+              ₹{((state.currentMicroFee || 2.0) * 213120).toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+            </p>
           </div>
 
-          {/* Global Network Status */}
+          {/* Estimated Daily Profit */}
           <div className={`glass-panel p-6 rounded-3xl relative overflow-hidden group ${state.disruption ? 'border-red-500/50 shadow-red-900/20' : ''}`}>
              <div className={`absolute top-0 right-0 w-32 h-32 rounded-bl-[100px] transition-all group-hover:scale-110 ${state.disruption ? 'bg-red-500/20' : 'bg-slate-600/10'}`} />
             <div className="flex justify-between items-start mb-4 relative z-10">
@@ -119,21 +121,116 @@ function App() {
                 {state.disruption ? (
                   <AlertTriangle className="text-red-500" size={24} />
                 ) : (
-                  <WebShieldCheck className="text-slate-400" size={24} />
+                  <WebShieldCheck className="text-purple-400" size={24} />
                 )}
               </div>
-              {state.disruption && (
-                <span className="px-3 py-1 bg-red-500/20 text-red-400 text-xs font-bold rounded-full border border-red-500/30 uppercase animate-pulse">
-                  CRITICAL
-                </span>
-              )}
+              <span className={`px-3 py-1 text-xs font-bold rounded-full border ${state.disruption ? 'bg-red-500/20 text-red-400 border-red-500/30 animate-pulse' : 'bg-green-500/20 text-green-400 border-green-500/30'}`}>
+                {state.disruption ? 'PAYOUT RISK SPIKE' : `${state.currentRiskLevel === 'Low' ? '92%' : state.currentRiskLevel === 'Medium' ? '78%' : '45%'} MARGIN`}
+              </span>
             </div>
-            <h3 className="text-slate-400 font-medium mb-1">Grid Status</h3>
-            <p className={`text-2xl font-black ${state.disruption ? 'text-red-400' : 'text-slate-200'}`}>
-              {state.disruption ? state.disruption.type.toUpperCase() : 'NOMINAL'}
+            <h3 className="text-slate-400 font-medium mb-1">Estimated Net Profit (Daily)</h3>
+            <p className={`text-4xl font-black ${state.disruption ? 'text-red-400' : 'text-emerald-400'}`}>
+              {state.disruption ? '₹' + (((state.currentMicroFee || 2.0) * 213120) * 0.15).toLocaleString('en-IN', { maximumFractionDigits: 0 }) : 
+               '₹' + (((state.currentMicroFee || 2.0) * 213120) * (state.currentRiskLevel === 'Low' ? 0.92 : state.currentRiskLevel === 'Medium' ? 0.78 : 0.45)).toLocaleString('en-IN', { maximumFractionDigits: 0 })
+              }
             </p>
           </div>
 
+        </div>
+
+        {/* Enterprise Partners B2B Section */}
+        <div className="mb-10">
+          <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
+            <WebCloudLightning className="text-purple-400" /> Enterprise Integrations (B2B)
+          </h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            {/* Blinkit Partner Card */}
+            <div className="glass-panel p-6 rounded-3xl border border-slate-700/60 shadow-lg relative overflow-hidden">
+              <div className="flex justify-between items-start mb-6">
+                <div className="flex items-center gap-4">
+                   <div className="w-12 h-12 rounded-xl bg-yellow-400 flex items-center justify-center font-black text-slate-900 text-xl shadow-lg shadow-yellow-500/20">
+                     B
+                   </div>
+                   <div>
+                     <h3 className="font-bold text-lg text-slate-200">Blinkit</h3>
+                     <p className="text-slate-400 text-sm">Delivery Partner API</p>
+                   </div>
+                </div>
+                <span className="px-3 py-1 bg-green-500/20 text-green-400 text-xs font-bold rounded-full border border-green-500/30 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></span>
+                  CONNECTED
+                </span>
+              </div>
+              
+              <div className="space-y-4">
+                <div className="bg-slate-800/50 p-3 rounded-xl border border-slate-700/50">
+                  <p className="text-xs text-slate-500 font-medium mb-1 uppercase tracking-wider">Active Webhook (Payout Sync)</p>
+                  <p className="text-sm font-mono text-slate-300">https://api.blinkit.co.in/v1/quickcover/payout</p>
+                </div>
+                <div className="bg-slate-800/50 p-3 rounded-xl border border-slate-700/50">
+                   <p className="text-xs text-slate-500 font-medium mb-1 uppercase tracking-wider">Live Worker Telemetry Pool</p>
+                   <p className="text-sm font-medium text-blue-400">114,208 Riders (NCR Region)</p>
+                </div>
+              </div>
+            </div>
+
+            {/* ML Dynamic Pricing Engine Card */}
+            <div className="glass-panel p-6 rounded-3xl border border-slate-700/60 shadow-lg relative overflow-hidden bg-gradient-to-br from-slate-900 to-slate-800/80">
+              <div className={`absolute top-0 right-0 w-32 h-32 rounded-bl-[100px] transition-colors duration-1000 ${
+                state.currentRiskLevel === 'Low' ? 'bg-green-500/10' :
+                state.currentRiskLevel === 'Medium' ? 'bg-yellow-500/10' : 'bg-red-500/10'
+              }`} />
+              
+              <div className="flex justify-between items-start mb-6 relative z-10">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-500/20 rounded-lg text-blue-400 animate-pulse">
+                    <WebActivity size={24} />
+                  </div>
+                  <h3 className="font-bold text-lg text-slate-200">ML Forecast Engine</h3>
+                </div>
+                <button 
+                  onClick={async () => {
+                    try {
+                      await axios.post(`${API_URL}/refresh-forecast`);
+                    } catch (err) {
+                      console.error(err);
+                    }
+                  }}
+                  className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded-lg text-xs font-bold text-slate-300 flex items-center gap-1.5 transition-colors border border-slate-600"
+                >
+                  <WebRefreshCw size={14} /> REFRESH
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 mb-6 relative z-10">
+                <div>
+                  <p className="text-xs text-slate-400 font-medium mb-1 uppercase tracking-wider">Current Micro-Fee</p>
+                  <div className="flex items-baseline gap-1">
+                    <p className="text-3xl font-black text-white">₹{state.currentMicroFee?.toFixed(2)}</p>
+                    <p className="text-xs text-slate-500">/ order</p>
+                  </div>
+                </div>
+                
+                <div>
+                  <p className="text-xs text-slate-400 font-medium mb-1 uppercase tracking-wider">Predicted Risk</p>
+                  <div className={`inline-flex px-3 py-1 rounded-full text-xs font-bold border ${
+                    state.currentRiskLevel === 'Low' ? 'bg-green-500/20 text-green-400 border-green-500/30' :
+                    state.currentRiskLevel === 'Medium' ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30' :
+                    'bg-red-500/20 text-red-400 border-red-500/30'
+                  }`}>
+                    {state.currentRiskLevel?.toUpperCase()}
+                  </div>
+                </div>
+              </div>
+
+              <div className="text-sm text-slate-400 bg-slate-800/80 p-3 rounded-xl border border-slate-700 relative z-10">
+                <p>Fee auto-fluctuates (₹1.5 - ₹4) based on real-time external API streams (IMD Weather, Traffic, AQI).</p>
+              </div>
+            </div>
+
+          </div>
         </div>
 
         {/* Disruption Simulator */}

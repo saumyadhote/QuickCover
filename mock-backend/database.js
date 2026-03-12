@@ -29,13 +29,15 @@ function initializeDatabase() {
       disruptionMessage TEXT,
       disruptionTimestamp TEXT,
       claimStatus TEXT DEFAULT 'none',
-      weeklyEarnings REAL DEFAULT 4500,
-      weeklyProtected REAL DEFAULT 0
+      weeklyEarnings REAL DEFAULT 3200,
+      weeklyProtected REAL DEFAULT 0,
+      currentMicroFee REAL DEFAULT 2.0,
+      currentRiskLevel TEXT DEFAULT 'Low'
     )`);
 
     // Insert the default row if it doesn't exist
-    db.run(`INSERT OR IGNORE INTO state (id, isTripActive, claimStatus, weeklyEarnings, weeklyProtected) 
-            VALUES (1, 0, 'none', 4500, 0)`);
+    db.run(`INSERT OR IGNORE INTO state (id, isTripActive, claimStatus, weeklyEarnings, weeklyProtected, currentMicroFee, currentRiskLevel) 
+            VALUES (1, 0, 'none', 3200, 0, 2.0, 'Low')`);
 
     // We create a trips table to track historical trips
     db.run(`CREATE TABLE IF NOT EXISTS trips (
