@@ -2,7 +2,6 @@ import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { useMockData } from '../../context/MockDataContext';
 import { ShieldCheck, ShieldAlert, AlertTriangle } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import axios from 'axios';
 
 export default function DashboardScreen() {
   const { state } = useMockData();
@@ -18,7 +17,7 @@ export default function DashboardScreen() {
           </View>
           <View className="w-12 h-12 bg-slate-800/60 rounded-full animate-pulse" />
         </View>
-        
+
         {/* Skeleton Main Card */}
         <View className="w-full h-32 bg-slate-800/40 rounded-3xl animate-pulse mb-6 border border-slate-800/60" />
 
@@ -81,7 +80,7 @@ export default function DashboardScreen() {
           </View>
           <View className="relative">
             <View className="absolute top-0 right-0 w-2.5 h-2.5 bg-red-500 rounded-full z-10 border-2 border-white" />
-            <Text className="text-2xl">🔔</Text>{/* Fallback if no specific icon library handles it nicely */}
+            <Text className="text-2xl">🔔</Text>
           </View>
         </View>
 
@@ -92,11 +91,11 @@ export default function DashboardScreen() {
               colors={isTripActive ? ['#10b981', '#059669'] : ['#64748b', '#475569']}
               className="rounded-2xl p-4 flex-row items-center justify-between shadow-sm"
             >
-              <View className="flex-row items-center">
+              <View className="flex-row items-center flex-1">
                 <View className="w-10 h-10 rounded-full bg-white/20 items-center justify-center mr-3">
                   {isTripActive ? <ShieldCheck color="#ffffff" size={24} /> : <ShieldAlert color="#ffffff" size={24} />}
                 </View>
-                <View>
+                <View style={{ flex: 1 }}>
                   <Text className="text-white font-bold text-base mb-0.5">{isTripActive ? 'Insurance Active' : 'Insurance Standby'}</Text>
                   <Text className="text-white/80 text-sm">{isTripActive ? 'Trip Protected. Tap to end.' : 'Tap to start a protected trip.'}</Text>
                 </View>
@@ -113,7 +112,7 @@ export default function DashboardScreen() {
               <View className="w-10 h-10 rounded-full bg-red-100 items-center justify-center mr-3">
                  <AlertTriangle color="#dc2626" size={20} />
               </View>
-              <View className="flex-1">
+              <View style={{ flex: 1 }}>
                  <Text className="text-red-900 font-bold text-sm mb-0.5">Disruption Detected in Zone</Text>
                  <Text className="text-red-700 text-xs">{disruption.message}</Text>
               </View>
@@ -125,7 +124,7 @@ export default function DashboardScreen() {
         <View className="px-4 mb-4">
           <View className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm">
             <Text className="font-bold text-xl text-slate-800 mb-6">This Week</Text>
-            
+
             {/* Protected Earnings Row */}
             <View className="flex-row items-center mb-6">
               <View className="w-12 h-12 rounded-full bg-green-50 items-center justify-center mr-4">
@@ -138,7 +137,6 @@ export default function DashboardScreen() {
             </View>
 
             {/* Weekly Coverage Boundary Row */}
-            {/* Note: This is a static value according to our new specs */}
             <View className="flex-row items-center mb-6">
               <View className="w-12 h-12 rounded-full bg-blue-50 items-center justify-center mr-4">
                 <ShieldCheck color="#3b82f6" size={24} />
@@ -150,12 +148,12 @@ export default function DashboardScreen() {
             </View>
 
             {/* Platform Covered Assurance Row */}
-            <View className="bg-slate-50 rounded-2xl p-4 flex-row justify-between items-center">
-              <View className="flex-row items-center flex-1 pr-2">
-                 <ShieldCheck color="#64748b" size={16} className="mr-2" />
-                 <Text className="text-slate-500 text-sm">Covered by platform</Text>
+            <View className="bg-slate-50 rounded-2xl p-4 flex-row items-center">
+              <View style={{ marginRight: 8 }}>
+                <ShieldCheck color="#64748b" size={16} />
               </View>
-              <Text className="text-slate-900 font-bold text-sm">₹0 Out-of-pocket</Text>
+              <Text className="text-slate-500 text-sm" style={{ flex: 1 }}>Covered by platform</Text>
+              <Text className="text-slate-900 font-bold text-sm" style={{ flexShrink: 0 }}>₹0 Out-of-pocket</Text>
             </View>
           </View>
         </View>
@@ -190,7 +188,7 @@ export default function DashboardScreen() {
                 <View className="w-8 h-8 rounded-full bg-green-200 items-center justify-center mr-3">
                   <ShieldCheck color="#166534" size={16} />
                 </View>
-                <View>
+                <View style={{ flex: 1 }}>
                   <Text className="text-green-900 font-bold text-sm">Payment Successful</Text>
                   <Text className="text-green-700 text-xs mt-0.5">Synced to Next Weekly Settlement</Text>
                 </View>

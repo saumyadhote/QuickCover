@@ -96,6 +96,40 @@ AI cross-verifies: worker GPS + platform logs + trigger event
 Claim auto-approved → Payout to worker's UPI at end of week
 ```
 
+---
+
+## System Architecture
+
+```mermaid
+graph TB
+    subgraph Mobile["📱 Mobile App (React Native/Expo)"]
+        UI["UI Components<br/>- Trip Management<br/>- Status Display<br/>- Alerts"]
+        Context["MockDataContext<br/>State Management"]
+    end
+
+    subgraph Backend["🔧 Mock Backend (Express.js)"]
+        API["API Server<br/>- Port 4000<br/>- RESTful Endpoints"]
+        DB[(PostgreSQL<br/>Database)]
+        Logic["Business Logic<br/>- Trip Handler<br/>- Disruption Trigger"]
+    end
+
+    subgraph External["🌍 External Services"]
+        Weather["Weather APIs<br/>AQI / Flood Data"]
+        UPI["UPI Payments<br/>Worker Payouts"]
+    end
+
+    Mobile -->|HTTP Requests| API
+    API -->|Query/Update| DB
+    API -->|Poll Data| Weather
+    API -->|Process Claims| UPI
+    API -->|JSON Response| Mobile
+    Context -->|Provide State| UI
+    
+    style Mobile fill:#e1f5ff
+    style Backend fill:#fff3e0
+    style External fill:#f3e5f5
+```
+
 ### Key Design Principles
 
 | Principle | Implementation |
