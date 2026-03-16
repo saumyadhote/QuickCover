@@ -1,76 +1,134 @@
-const sqlite3 = require('sqlite3').verbose();
+require('dotenv').config();
 const path = require('path');
 
-// Connect to SQLite database
-// In the future, this can be easily migrated to Supabase by replacing 
-// these sqlite3.Database calls with @supabase/supabase-js client calls.
-// Supabase equivalent: const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-const dbPath = path.resolve(__dirname, 'quickcover.db');
-const db = new sqlite3.Database(dbPath, (err) => {
-  if (err) {
-    console.error('Error opening database', err.message);
-  } else {
-    console.log('Connected to the SQLite database.');
-    initializeDatabase();
-  }
-});
+// -----------------------------------------------------------------------
+// Dual-mode database layer
+//
+//  • LOCAL DEV  (no DATABASE_URL): uses SQLite — zero setup required
+//  • PRODUCTION (DATABASE_URL set): uses PostgreSQL (Supabase / Render)
+// -----------------------------------------------------------------------
 
-function initializeDatabase() {
-  db.serialize(() => {
-    // We create a single-row state table to hold the global simulation state
-    // In a real Supabase schema, this would be a 'workers' table where each 
-    // row is a worker's current state (e.g., worker_id, is_trip_active, etc.)
-    db.run(`CREATE TABLE IF NOT EXISTS state (
-      id INTEGER PRIMARY KEY CHECK (id = 1),
-      isTripActive BOOLEAN DEFAULT 0,
-      disruptionType TEXT,
-      disruptionZone TEXT,
-      disruptionSeverity TEXT,
-      disruptionMessage TEXT,
-      disruptionTimestamp TEXT,
-      claimStatus TEXT DEFAULT 'none',
-      weeklyEarnings REAL DEFAULT 3200,
-      weeklyProtected REAL DEFAULT 0,
-      currentMicroFee REAL DEFAULT 2.0,
-      currentRiskLevel TEXT DEFAULT 'Low'
-    )`);
+const usePostgres = Boolean(process.env.DATABASE_URL);
 
-    // Insert the default row if it doesn't exist
-    db.run(`INSERT OR IGNORE INTO state (id, isTripActive, claimStatus, weeklyEarnings, weeklyProtected, currentMicroFee, currentRiskLevel) 
-            VALUES (1, 0, 'none', 3200, 0, 2.0, 'Low')`);
-
-    // We create a trips table to track historical trips
-    db.run(`CREATE TABLE IF NOT EXISTS trips (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      status TEXT, -- 'completed', 'disrupted'
-      earnings REAL,
-      protectedAmount REAL,
-      timestamp TEXT
-    )`);
+// ---- PostgreSQL (production) -------------------------------------------
+let pool;
+if (usePostgres) {
+  const { Pool } = require('pg');
+  pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
   });
 }
 
-// Helper wrappers for Promisified SQLite queries to act more like Modern ORMs/Supabase
+// ---- SQLite (local dev) ------------------------------------------------
+let sqliteDb;
+if (!usePostgres) {
+  const sqlite3 = require('sqlite3').verbose();
+  const dbPath = path.resolve(__dirname, 'quickcover.db');
+  sqliteDb = new sqlite3.Database(dbPath);
+}
+
+// -----------------------------------------------------------------------
+// Unified helpers
+// -----------------------------------------------------------------------
+
+// dbGet  — returns one row
 const dbGet = (sql, params = []) => {
+  if (usePostgres) {
+    // pg uses $1,$2… placeholders — caller must pass pg-style SQL
+    return pool.query(sql, params).then(r => r.rows[0]);
+  }
   return new Promise((resolve, reject) => {
-    db.get(sql, params, (err, row) => {
-      if (err) reject(err);
-      else resolve(row);
-    });
+    sqliteDb.get(sql, params, (err, row) => (err ? reject(err) : resolve(row)));
   });
 };
 
+// dbRun  — INSERT / UPDATE / DELETE
 const dbRun = (sql, params = []) => {
+  if (usePostgres) {
+    return pool.query(sql, params);
+  }
+  // SQLite uses ? placeholders; convert pg-style $1,$2 → ? for compatibility
+  const sqliteSql = sql.replace(/\$\d+/g, '?');
   return new Promise((resolve, reject) => {
-    db.run(sql, params, function (err) {
+    sqliteDb.run(sqliteSql, params, function (err) {
       if (err) reject(err);
       else resolve(this);
     });
   });
 };
 
-module.exports = {
-  db,
-  dbGet,
-  dbRun
-};
+// -----------------------------------------------------------------------
+// Schema initialisation
+// -----------------------------------------------------------------------
+async function initializeDatabase() {
+  if (usePostgres) {
+    const client = await pool.connect();
+    try {
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS state (
+          id INTEGER PRIMARY KEY DEFAULT 1,
+          "isTripActive" BOOLEAN DEFAULT FALSE,
+          "disruptionType" TEXT,
+          "disruptionZone" TEXT,
+          "disruptionSeverity" TEXT,
+          "disruptionMessage" TEXT,
+          "disruptionTimestamp" TEXT,
+          "claimStatus" TEXT DEFAULT 'none',
+          "weeklyEarnings" REAL DEFAULT 3200,
+          "weeklyProtected" REAL DEFAULT 0,
+          "currentMicroFee" REAL DEFAULT 2.0,
+          "currentRiskLevel" TEXT DEFAULT 'Low',
+          CONSTRAINT single_row CHECK (id = 1)
+        )
+      `);
+      await client.query(`INSERT INTO state (id) VALUES (1) ON CONFLICT (id) DO NOTHING`);
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS trips (
+          id SERIAL PRIMARY KEY,
+          status TEXT,
+          earnings REAL,
+          "protectedAmount" REAL,
+          timestamp TEXT
+        )
+      `);
+    } finally {
+      client.release();
+    }
+  } else {
+    // SQLite — promise-wrap the serialize block
+    await new Promise((resolve, reject) => {
+      sqliteDb.serialize(() => {
+        sqliteDb.run(`CREATE TABLE IF NOT EXISTS state (
+          id INTEGER PRIMARY KEY CHECK (id = 1),
+          isTripActive BOOLEAN DEFAULT 0,
+          disruptionType TEXT,
+          disruptionZone TEXT,
+          disruptionSeverity TEXT,
+          disruptionMessage TEXT,
+          disruptionTimestamp TEXT,
+          claimStatus TEXT DEFAULT 'none',
+          weeklyEarnings REAL DEFAULT 3200,
+          weeklyProtected REAL DEFAULT 0,
+          currentMicroFee REAL DEFAULT 2.0,
+          currentRiskLevel TEXT DEFAULT 'Low'
+        )`);
+        sqliteDb.run(`INSERT OR IGNORE INTO state (id) VALUES (1)`);
+        sqliteDb.run(`CREATE TABLE IF NOT EXISTS trips (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          status TEXT,
+          earnings REAL,
+          protectedAmount REAL,
+          timestamp TEXT
+        )`, resolve);
+      });
+    });
+  }
+
+  console.log(`Database initialised (${usePostgres ? 'PostgreSQL' : 'SQLite local dev'})`);
+}
+
+// Graceful pool shutdown (PostgreSQL only)
+const closeDatabase = () => (pool ? pool.end() : Promise.resolve());
+
+module.exports = { dbGet, dbRun, initializeDatabase, closeDatabase };

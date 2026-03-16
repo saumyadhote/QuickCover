@@ -1,12 +1,23 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const { dbGet, dbRun } = require('./database');
+const { dbGet, dbRun, initializeDatabase, closeDatabase } = require('./database');
 
 const app = express();
-app.use(cors());
+
+// CORS — restrict to known origins in production, open in dev
+const allowedOrigins = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(',').map(o => o.trim())
+  : true; // true = all origins in dev
+app.use(cors({ origin: allowedOrigins }));
 app.use(express.json());
 
-// Helper to format DB row to resemble original state
+// Health check — required by Render for zero-downtime deploys
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Helper to format DB row to resemble original state shape
 const formatState = (row) => ({
   isTripActive: Boolean(row.isTripActive),
   disruption: row.disruptionType ? {
@@ -35,14 +46,13 @@ app.get('/status', async (req, res) => {
 app.post('/accept-trip', async (req, res) => {
   try {
     await dbRun(`
-      UPDATE state 
-      SET isTripActive = 1, 
-          disruptionType = NULL, disruptionZone = NULL, disruptionSeverity = NULL, 
-          disruptionMessage = NULL, disruptionTimestamp = NULL,
-          claimStatus = 'none'
+      UPDATE state
+      SET "isTripActive" = TRUE,
+          "disruptionType" = NULL, "disruptionZone" = NULL, "disruptionSeverity" = NULL,
+          "disruptionMessage" = NULL, "disruptionTimestamp" = NULL,
+          "claimStatus" = 'none'
       WHERE id = 1
     `);
-    
     const row = await dbGet('SELECT * FROM state WHERE id = 1');
     res.json({ message: 'Trip activated. Coverage is now active.', state: formatState(row) });
   } catch (error) {
@@ -52,21 +62,17 @@ app.post('/accept-trip', async (req, res) => {
 
 app.post('/complete-trip', async (req, res) => {
   try {
-    const currentState = await dbGet('SELECT * FROM state WHERE id = 1');
-    
-    // Log trip
     await dbRun(
-      'INSERT INTO trips (status, earnings, protectedAmount, timestamp) VALUES (?, ?, ?, ?)',
-      ['completed', parseInt(Math.random() * 50) + 20, 0, new Date().toISOString()]
+      'INSERT INTO trips (status, earnings, "protectedAmount", timestamp) VALUES ($1, $2, $3, $4)',
+      ['completed', Math.floor(Math.random() * 50) + 20, 0, new Date().toISOString()]
     );
 
-    // Update state
     await dbRun(`
-      UPDATE state 
-      SET isTripActive = 0, 
-          disruptionType = NULL, disruptionZone = NULL, disruptionSeverity = NULL, 
-          disruptionMessage = NULL, disruptionTimestamp = NULL,
-          claimStatus = 'none'
+      UPDATE state
+      SET "isTripActive" = FALSE,
+          "disruptionType" = NULL, "disruptionZone" = NULL, "disruptionSeverity" = NULL,
+          "disruptionMessage" = NULL, "disruptionTimestamp" = NULL,
+          "claimStatus" = 'none'
       WHERE id = 1
     `);
 
@@ -79,7 +85,7 @@ app.post('/complete-trip', async (req, res) => {
 
 app.post('/trigger-disruption', async (req, res) => {
   const { type, zone, severity, message } = req.body;
-  
+
   try {
     const currentState = await dbGet('SELECT * FROM state WHERE id = 1');
     if (!currentState.isTripActive) {
@@ -95,9 +101,9 @@ app.post('/trigger-disruption', async (req, res) => {
     };
 
     await dbRun(`
-      UPDATE state 
-      SET disruptionType = ?, disruptionZone = ?, disruptionSeverity = ?, 
-          disruptionMessage = ?, disruptionTimestamp = ?, claimStatus = 'processing'
+      UPDATE state
+      SET "disruptionType" = $1, "disruptionZone" = $2, "disruptionSeverity" = $3,
+          "disruptionMessage" = $4, "disruptionTimestamp" = $5, "claimStatus" = 'processing'
       WHERE id = 1
     `, [disruption.type, disruption.zone, disruption.severity, disruption.message, disruption.timestamp]);
 
@@ -108,26 +114,23 @@ app.post('/trigger-disruption', async (req, res) => {
     setTimeout(async () => {
       const payoutAmount = 450;
       await dbRun(`
-        UPDATE state 
-        SET claimStatus = 'approved', weeklyProtected = weeklyProtected + ?
-        WHERE id = 1 AND isTripActive = 1 AND claimStatus = 'processing'
+        UPDATE state
+        SET "claimStatus" = 'approved', "weeklyProtected" = "weeklyProtected" + $1
+        WHERE id = 1 AND "isTripActive" = TRUE AND "claimStatus" = 'processing'
       `, [payoutAmount]);
-      
-      // Log disrupted trip
+
       await dbRun(
-        'INSERT INTO trips (status, earnings, protectedAmount, timestamp) VALUES (?, ?, ?, ?)',
+        'INSERT INTO trips (status, earnings, "protectedAmount", timestamp) VALUES ($1, $2, $3, $4)',
         ['disrupted', 10, payoutAmount, new Date().toISOString()]
       );
-      
-      // Auto-complete trip after disruption
-      await dbRun('UPDATE state SET isTripActive = 0 WHERE id = 1');
 
-      // Simulate the payout transfer completing
+      await dbRun('UPDATE state SET "isTripActive" = FALSE WHERE id = 1');
+
       setTimeout(async () => {
         await dbRun(`
           UPDATE state
-          SET claimStatus = 'paid'
-          WHERE id = 1 AND claimStatus = 'approved'
+          SET "claimStatus" = 'paid'
+          WHERE id = 1 AND "claimStatus" = 'approved'
         `);
       }, 5000);
 
@@ -141,21 +144,18 @@ app.post('/trigger-disruption', async (req, res) => {
 app.post('/reset', async (req, res) => {
   try {
     await dbRun(`
-      UPDATE state 
-      SET isTripActive = 0, 
-          disruptionType = NULL, disruptionZone = NULL, disruptionSeverity = NULL, 
-          disruptionMessage = NULL, disruptionTimestamp = NULL,
-          claimStatus = 'none',
-          weeklyEarnings = 3200,
-          weeklyProtected = 0,
-          currentMicroFee = 2.0,
-          currentRiskLevel = 'Low'
+      UPDATE state
+      SET "isTripActive" = FALSE,
+          "disruptionType" = NULL, "disruptionZone" = NULL, "disruptionSeverity" = NULL,
+          "disruptionMessage" = NULL, "disruptionTimestamp" = NULL,
+          "claimStatus" = 'none',
+          "weeklyEarnings" = 3200,
+          "weeklyProtected" = 0,
+          "currentMicroFee" = 2.0,
+          "currentRiskLevel" = 'Low'
       WHERE id = 1
     `);
-    
-    // Clear trips
     await dbRun('DELETE FROM trips');
-    
     const row = await dbGet('SELECT * FROM state WHERE id = 1');
     res.json({ message: 'State reset.', state: formatState(row) });
   } catch (error) {
@@ -166,37 +166,33 @@ app.post('/reset', async (req, res) => {
 // --- ML Pricing Engine Mock ---
 const runForecast = async () => {
   try {
-    // 1. Simulate external API calls (Traffic, IMD Weather, AQI)
     const conditions = ['Clear Skies', 'Light Rain', 'Heavy Traffic Jam', 'Monsoon Alert', 'High AQI (Smog)'];
     const selectedCondition = conditions[Math.floor(Math.random() * conditions.length)];
-    
+
     let riskLevel = 'Low';
     let baseFee = 2.0;
 
-    // 2. Simple Rules Engine evaluating external data
     if (selectedCondition === 'Clear Skies') {
       riskLevel = 'Low';
-      baseFee = 1.5 + (Math.random() * 0.5); // 1.50 - 2.00
+      baseFee = 1.5 + Math.random() * 0.5;
     } else if (selectedCondition === 'Light Rain' || selectedCondition === 'Heavy Traffic Jam') {
       riskLevel = 'Medium';
-      baseFee = 2.2 + (Math.random() * 0.8); // 2.20 - 3.00
+      baseFee = 2.2 + Math.random() * 0.8;
     } else {
       riskLevel = 'High';
-      baseFee = 3.2 + (Math.random() * 0.8); // 3.20 - 4.00
+      baseFee = 3.2 + Math.random() * 0.8;
     }
 
-    // Format to 2 decimal places
     const newFee = parseFloat(baseFee.toFixed(2));
 
     await dbRun(`
       UPDATE state
-      SET currentMicroFee = ?, currentRiskLevel = ?
+      SET "currentMicroFee" = $1, "currentRiskLevel" = $2
       WHERE id = 1
     `, [newFee, riskLevel]);
-    
+
     const row = await dbGet('SELECT * FROM state WHERE id = 1');
     return formatState(row);
-
   } catch (error) {
     console.error('Failed to run ML forecast', error);
     return null;
@@ -208,17 +204,35 @@ app.post('/refresh-forecast', async (req, res) => {
   if (updatedState) {
     res.json({ message: 'Forecast updated.', state: updatedState });
   } else {
-    res.status(500).json({ error: 'Failed to forecast pricing engine' });
+    res.status(500).json({ error: 'Failed to update forecast' });
   }
 });
 
-// Automatically fluctuate the pricing market every 15 seconds
-setInterval(() => {
-  runForecast();
-}, 15000);
+// Auto-fluctuate pricing every 15 seconds
+setInterval(() => { runForecast(); }, 15000);
 // -----------------------------
 
-const PORT = 4000;
-app.listen(PORT, () => {
-  console.log(`Mock Backend Console listening on port ${PORT}`);
-});
+const PORT = process.env.PORT || 4000;
+
+// Start server only after DB is ready
+initializeDatabase()
+  .then(() => {
+    const server = app.listen(PORT, () => {
+      console.log(`QuickCover backend listening on port ${PORT}`);
+    });
+
+    // Graceful shutdown — required for Render zero-downtime deploys
+    process.on('SIGTERM', () => {
+      console.log('SIGTERM received. Shutting down gracefully...');
+      server.close(() => {
+        closeDatabase().then(() => {
+          console.log('Database connection closed.');
+          process.exit(0);
+        });
+      });
+    });
+  })
+  .catch((err) => {
+    console.error('Failed to initialize database:', err);
+    process.exit(1);
+  });

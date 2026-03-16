@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Activity as WebActivity, AlertTriangle, ShieldAlert as WebShieldAlert, Users as WebUsers, CloudLightning as WebCloudLightning, ShieldCheck as WebShieldCheck, RefreshCw as WebRefreshCw } from 'lucide-react';
 
-const API_URL = 'http://localhost:4000';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
 
 function App() {
   const [state, setState] = useState<any>(null);
