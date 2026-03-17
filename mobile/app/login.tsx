@@ -1,55 +1,70 @@
 import { View, Text, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
-import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
+import { AppLogo } from './components/AppLogo';
 
-export default function LoginScreen() {
+export default function WelcomeScreen() {
   const router = useRouter();
 
-  const handleLogin = () => {
-    // Navigate to actual app dashboard
-    router.replace('/(tabs)');
-  };
-
   return (
-    <View className="flex-1 bg-[#020617] relative">
+    <View className="flex-1 bg-[#050714] relative">
       {/* Background ambient glows */}
-      <View className="absolute top-[-100px] right-[-100px] w-[500px] h-[500px] bg-blue-600/20 rounded-full blur-[120px]" />
-      <View className="absolute bottom-[-100px] left-[-100px] w-80 h-80 bg-purple-600/20 rounded-full blur-[120px]" />
+      <View className="absolute top-[-120px] right-[-120px] w-[560px] h-[560px] bg-purple-600/18 rounded-full blur-[140px]" />
+      <View className="absolute bottom-[-120px] left-[-120px] w-[560px] h-[560px] bg-slate-900/40 rounded-full blur-[140px]" />
+      <View className="absolute top-[28%] left-[40%] w-72 h-72 bg-indigo-700/10 rounded-full blur-[100px]" />
 
-      <View className="flex-1 px-6 justify-center z-10">
-        
-        <View className="items-center mb-12">
-          <View className="w-20 h-20 rounded-3xl items-center justify-center mb-6 border border-slate-700/50 shadow-2xl shadow-blue-900/50 overflow-hidden">
-            <LinearGradient
-              colors={['rgba(37, 99, 235, 0.4)', 'rgba(15, 23, 42, 0.8)']}
-              className="flex-1 w-full h-full items-center justify-center"
-            >
-              <Text className="text-3xl font-black text-white">QC</Text>
-            </LinearGradient>
+      <View className="flex-1 px-8 justify-between pt-24 pb-12">
+
+        {/* Top: Branding */}
+        <View className="items-center">
+          {/* Icon / logo */}
+          <View className="w-24 h-24 rounded-3xl items-center justify-center mb-8 border border-purple-600/30 overflow-hidden shadow-2xl">
+            <AppLogo size={88} />
           </View>
-          
-          <Text className="text-3xl font-extrabold text-white text-center tracking-wide">
-            Welcome to QuickCover
+
+          {/* App name */}
+          <Text className="text-5xl font-extrabold text-white tracking-tight text-center">
+            Quick<Text className="text-purple-400">Cover</Text>
           </Text>
-          <Text className="text-slate-400 text-center mt-3 text-base px-4">
-            Log in with your existing gig platform ID to instantly activate income protection.
+
+          {/* Tagline */}
+          <Text className="text-purple-200 font-semibold text-lg mt-4 text-center leading-7">
+            Every delivery.
+          </Text>
+          <Text className="text-white font-semibold text-lg text-center leading-7">
+            We've got your back.
+          </Text>
+
+          {/* Sub-copy */}
+          <Text className="text-slate-400 text-center mt-6 text-sm leading-6 px-4">
+            When heavy rain, curfews, or sudden closures stop deliveries,
+            QuickCover helps support you with simple disruption coverage.
           </Text>
         </View>
 
-        <BlurView intensity={20} tint="dark" className="w-full rounded-3xl overflow-hidden border border-slate-800/60 p-6">
-          <LinearGradient colors={['rgba(30, 41, 59, 0.3)', 'rgba(2, 6, 23, 0.5)']} className="absolute inset-0" />
-          
-          <Text className="text-slate-400 font-medium mb-6 text-sm uppercase tracking-wider text-center">Select Partner Network</Text>
-          
-          <TouchableOpacity 
-            onPress={handleLogin}
-            className="w-full bg-[#fce000]/10 border border-[#fce000]/30 py-4 rounded-2xl flex-row justify-center items-center shadow-lg"
+        {/* Bottom: CTAs */}
+        <View>
+          <TouchableOpacity
+            onPress={() => router.push('/login-form')}
+            className="w-full rounded-2xl py-4 items-center mb-4 overflow-hidden"
           >
-            <Text className="text-[#fce000] font-bold text-lg tracking-wide">Continue with Blinkit</Text>
+            <LinearGradient
+              colors={['#7c3aed', '#4f46e5']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              className="absolute inset-0"
+            />
+            <Text className="text-white font-bold text-lg tracking-wide z-10">Log In</Text>
           </TouchableOpacity>
-        </BlurView>
-        
+
+          <View className="flex-row justify-center items-center">
+            <Text className="text-slate-500 text-sm">Don't have an account? </Text>
+            <TouchableOpacity onPress={() => router.push('/signup')}>
+              <Text className="text-purple-400 font-bold text-sm">Sign Up</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
       </View>
     </View>
   );

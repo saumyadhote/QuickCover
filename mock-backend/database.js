@@ -66,6 +66,18 @@ async function initializeDatabase() {
     const client = await pool.connect();
     try {
       await client.query(`
+        CREATE TABLE IF NOT EXISTS users (
+          id SERIAL PRIMARY KEY,
+          name TEXT NOT NULL,
+          email TEXT NOT NULL UNIQUE,
+          "passwordHash" TEXT NOT NULL,
+          phone TEXT,
+          "driverId" TEXT NOT NULL UNIQUE,
+          platform TEXT DEFAULT 'blinkit',
+          "createdAt" TEXT NOT NULL
+        )
+      `);
+      await client.query(`
         CREATE TABLE IF NOT EXISTS state (
           id INTEGER PRIMARY KEY DEFAULT 1,
           "isTripActive" BOOLEAN DEFAULT FALSE,
@@ -99,6 +111,16 @@ async function initializeDatabase() {
     // SQLite — promise-wrap the serialize block
     await new Promise((resolve, reject) => {
       sqliteDb.serialize(() => {
+        sqliteDb.run(`CREATE TABLE IF NOT EXISTS users (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL,
+          email TEXT NOT NULL UNIQUE,
+          passwordHash TEXT NOT NULL,
+          phone TEXT,
+          driverId TEXT NOT NULL UNIQUE,
+          platform TEXT DEFAULT 'blinkit',
+          createdAt TEXT NOT NULL
+        )`);
         sqliteDb.run(`CREATE TABLE IF NOT EXISTS state (
           id INTEGER PRIMARY KEY CHECK (id = 1),
           isTripActive BOOLEAN DEFAULT 0,

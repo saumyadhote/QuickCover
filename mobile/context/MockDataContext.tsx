@@ -1,21 +1,6 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import axios from 'axios';
-import { Platform } from 'react-native';
-
-// -----------------------------------------------------------------------
-// Resolve the backend URL for every environment automatically:
-//   Android emulator  →  10.0.2.2  (maps to host machine)
-//   iOS simulator     →  localhost
-//   Physical device   →  EXPO_PUBLIC_API_URL  (must be set in .env)
-// -----------------------------------------------------------------------
-function resolveApiUrl(): string {
-  const envUrl = process.env.EXPO_PUBLIC_API_URL;
-  if (envUrl && envUrl !== 'http://localhost:4000') return envUrl;
-  if (Platform.OS === 'android') return 'http://10.0.2.2:4000';
-  return 'http://localhost:4000';
-}
-
-const API_URL = resolveApiUrl();
+import { API_URL } from '../utils/apiUrl';
 
 type Disruption = {
   type: string;
@@ -60,35 +45,51 @@ export function MockDataProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
+    let retryCount = 0;
+    const maxRetries = 6;
 
-    const fetchStatus = async () => {
+    const fetchStatus = async (attempt = 1) => {
       try {
-        const res = await axios.get(`${API_URL}/status`, { timeout: 2000 });
+        console.log(`[QuickCover] Connecting to ${API_URL}...`);
+        const res = await axios.get(`${API_URL}/status`, { timeout: 2500 });
         if (!cancelled) {
           setState(res.data);
           setBackendOnline(true);
-          warnedRef.current = false; // reset so we log recovery
+          warnedRef.current = false;
+          console.log(`✅ [QuickCover] Connected!`);
+          setLoading(false);
         }
-      } catch {
+      } catch (err: any) {
         if (!cancelled) {
+          const errMsg = err.code || err.message || 'Unknown';
+          console.log(`❌ [QuickCover] Connection failed (${errMsg}) - attempt ${attempt}/${maxRetries}`);
           setBackendOnline(false);
           if (!state) setState(FALLBACK_STATE);
-          if (!warnedRef.current) {
-            console.warn(
-              `[QuickCover] Backend unavailable at ${API_URL}. ` +
-              `Running in offline mode.\n` +
-              `Physical device? Set EXPO_PUBLIC_API_URL=http://<your-wifi-ip>:4000 in mobile/.env`
-            );
-            warnedRef.current = true;
+
+          if (attempt < maxRetries) {
+            const delayMs = 500 * Math.pow(2, attempt - 1);
+            setTimeout(() => {
+              if (!cancelled) fetchStatus(attempt + 1);
+            }, delayMs);
+          } else {
+            setLoading(false);
+            if (!warnedRef.current) {
+              console.warn(
+                `[QuickCover] ⚠️  Backend unavailable at ${API_URL}.\n` +
+                `→ ANDROID EMULATOR? Run: adb reverse tcp:4000 tcp:4000\n` +
+                `→ Then restart the app (npm start → press 'a')\n` +
+                `→ PHYSICAL DEVICE? Set EXPO_PUBLIC_API_URL=http://<your-local-ip>:4000 in mobile/.env\n` +
+                `→ Running in OFFLINE MODE for now — local state only.`
+              );
+              warnedRef.current = true;
+            }
           }
         }
-      } finally {
-        if (!cancelled) setLoading(false);
       }
     };
 
     fetchStatus();
-    const interval = setInterval(fetchStatus, 4000); // reduced from 2 s to 4 s
+    const interval = setInterval(() => fetchStatus(), 12000);
     return () => {
       cancelled = true;
       clearInterval(interval);

@@ -3,6 +3,8 @@ const express = require('express');
 const cors = require('cors');
 const { dbGet, dbRun, initializeDatabase, closeDatabase } = require('./database');
 
+const authRouter = require('./auth');
+
 const app = express();
 
 // CORS — restrict to known origins in production, open in dev
@@ -11,6 +13,9 @@ const allowedOrigins = process.env.CORS_ORIGIN
   : true; // true = all origins in dev
 app.use(cors({ origin: allowedOrigins }));
 app.use(express.json());
+
+// Auth routes
+app.use('/auth', authRouter);
 
 // Health check — required by Render for zero-downtime deploys
 app.get('/health', (req, res) => {
@@ -36,9 +41,11 @@ const formatState = (row) => ({
 
 app.get('/status', async (req, res) => {
   try {
+    console.log('✅ /status endpoint hit from:', req.ip);
     const row = await dbGet('SELECT * FROM state WHERE id = 1');
     res.json(formatState(row));
   } catch (error) {
+    console.error('❌ /status error:', error);
     res.status(500).json({ error: 'Database error' });
   }
 });
@@ -217,8 +224,8 @@ const PORT = process.env.PORT || 4000;
 // Start server only after DB is ready
 initializeDatabase()
   .then(() => {
-    const server = app.listen(PORT, () => {
-      console.log(`QuickCover backend listening on port ${PORT}`);
+    const server = app.listen(PORT, '0.0.0.0', () => {
+      console.log(`QuickCover backend listening on http://0.0.0.0:${PORT}`);
     });
 
     // Graceful shutdown — required for Render zero-downtime deploys
