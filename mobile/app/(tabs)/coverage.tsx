@@ -142,19 +142,64 @@ export default function CoverageScreen() {
           </View>
         )}
 
-        {step > 2 && (
-          <View className="flex-1 items-center justify-center mt-20">
-             <View className="w-20 h-20 rounded-full bg-green-100 items-center justify-center mb-4">
-                 <Check color="#16a34a" size={40} />
-             </View>
-             <Text className="font-bold text-2xl text-slate-900 mb-2 mt-4 text-center">You're Protected!</Text>
-             <Text className="text-slate-500 text-center">Step 3 completion mockup.</Text>
+        {step === 3 && (
+          <View className="flex-1">
+            <Text className="font-bold text-2xl text-slate-900 mb-2 mt-2">Data Permissions</Text>
+            <Text className="text-slate-500 mb-6 text-[15px] leading-6">
+              We need these permissions to verify claims and protect you better.
+            </Text>
 
-             <TouchableOpacity
-                className="bg-green-600 rounded-xl py-4 px-10 items-center mt-10"
-                onPress={() => setStep(1)}>
-                <Text className="text-white font-bold text-base">Restart Demo</Text>
+            {/* Permissions list */}
+            <View className="border border-slate-200 rounded-2xl p-5 mb-5 bg-white shadow-sm">
+              {/* Permission 1 */}
+              <View className="mb-5">
+                <Text className="font-bold text-slate-800 text-base mb-1">Trip Telemetry Access</Text>
+                <Text className="text-slate-500 text-sm leading-5">
+                  Allows us to verify active deliveries and auto-trigger claims.
+                </Text>
+              </View>
+              {/* Divider */}
+              <View className="h-px bg-slate-100 mb-5" />
+              {/* Permission 2 */}
+              <View className="mb-5">
+                <Text className="font-bold text-slate-800 text-base mb-1">GPS Routing Data</Text>
+                <Text className="text-slate-500 text-sm leading-5">
+                  Helps detect disruptions like traffic or road closures in your area.
+                </Text>
+              </View>
+              {/* Divider */}
+              <View className="h-px bg-slate-100 mb-5" />
+              {/* Permission 3 */}
+              <View>
+                <Text className="font-bold text-slate-800 text-base mb-1">Delivery Timestamps</Text>
+                <Text className="text-slate-500 text-sm leading-5">
+                  Used to calculate protected earnings and coverage periods.
+                </Text>
+              </View>
+            </View>
+
+            {/* Privacy note */}
+            <View className="bg-green-50 border border-green-200 rounded-2xl p-4 mb-8">
+              <Text className="text-green-800 text-sm leading-5">
+                <Text className="font-bold">Privacy First: </Text>
+                Your data is encrypted and only used for insurance verification. We never share it with third parties.
+              </Text>
+            </View>
+
+            {/* Navigation Buttons */}
+            <View className="flex-row justify-between">
+              <TouchableOpacity
+                className="bg-slate-100 rounded-xl py-4 flex-1 items-center mr-3"
+                onPress={() => setStep(2)}>
+                <Text className="text-slate-700 font-bold text-base">Back</Text>
               </TouchableOpacity>
+
+              <TouchableOpacity
+                className="bg-slate-300 rounded-xl py-4 flex-1 items-center ml-3"
+                onPress={() => {}}>
+                <Text className="text-slate-500 font-bold text-base">Activate Protection</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         )}
 

@@ -1,42 +1,109 @@
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
-import { AppLogo } from './components/AppLogo';
+import { useFonts, PlayfairDisplay_700Bold, PlayfairDisplay_400Regular } from '@expo-google-fonts/playfair-display';
+import Svg, { Circle, Path, Defs, LinearGradient as SvgGrad, Stop } from 'react-native-svg';
+
+function ScooterIcon({ size = 120 }: { size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 120 120" fill="none">
+      <Defs>
+        <SvgGrad id="ringGrad" x1="0" y1="0" x2="120" y2="120">
+          <Stop offset="0%" stopColor="#ede9fe" />
+          <Stop offset="100%" stopColor="#ddd6fe" />
+        </SvgGrad>
+      </Defs>
+      {/* Concentric rings */}
+      <Circle cx="60" cy="60" r="58" stroke="#ede9fe" strokeWidth="1.5" fill="none" />
+      <Circle cx="60" cy="60" r="48" stroke="#ddd6fe" strokeWidth="1.5" fill="none" />
+      <Circle cx="60" cy="60" r="38" stroke="#c4b5fd" strokeWidth="1.5" fill="none" />
+      {/* Rider silhouette */}
+      <Circle cx="60" cy="28" r="9" fill="#1e1b4b" />
+      <Path d="M52 42 Q60 36 68 42 L72 64 L48 64 Z" fill="#1e1b4b" />
+      {/* Shield badge */}
+      <Path
+        d="M68 52 L76 58 L76 68 C76 74 72 79 68 81 C64 79 60 74 60 68 L60 58 Z"
+        fill="#7c3aed"
+      />
+      <Path
+        d="M65 64 L67 67 L72 61"
+        stroke="white"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+      {/* Scooter body */}
+      <Path d="M36 72 Q44 66 55 68 L72 68 Q80 68 84 72" stroke="#1e1b4b" strokeWidth="3" fill="none" strokeLinecap="round" />
+      <Circle cx="40" cy="78" r="7" fill="#1e1b4b" />
+      <Circle cx="80" cy="78" r="7" fill="#1e1b4b" />
+      <Circle cx="40" cy="78" r="3" fill="white" />
+      <Circle cx="80" cy="78" r="3" fill="white" />
+    </Svg>
+  );
+}
 
 export default function WelcomeScreen() {
   const router = useRouter();
+  const [fontsLoaded] = useFonts({
+    PlayfairDisplay_700Bold,
+    PlayfairDisplay_400Regular,
+  });
+
+  if (!fontsLoaded) {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#ffffff', alignItems: 'center', justifyContent: 'center' }}>
+        <ActivityIndicator color="#7c3aed" />
+      </View>
+    );
+  }
 
   return (
-    <View className="flex-1 bg-[#050714] relative">
-      {/* Background ambient glows */}
-      <View className="absolute top-[-120px] right-[-120px] w-[560px] h-[560px] bg-purple-600/18 rounded-full blur-[140px]" />
-      <View className="absolute bottom-[-120px] left-[-120px] w-[560px] h-[560px] bg-slate-900/40 rounded-full blur-[140px]" />
-      <View className="absolute top-[28%] left-[40%] w-72 h-72 bg-indigo-700/10 rounded-full blur-[100px]" />
-
-      <View className="flex-1 px-8 justify-between pt-24 pb-12">
+    <View style={{ flex: 1, backgroundColor: '#ffffff' }}>
+      <View style={{ flex: 1, paddingHorizontal: 32, justifyContent: 'space-between', paddingTop: 80, paddingBottom: 48 }}>
 
         {/* Top: Branding */}
-        <View className="items-center">
-          {/* Icon / logo */}
-          <View className="w-24 h-24 rounded-3xl items-center justify-center mb-8 border border-purple-600/30 overflow-hidden shadow-2xl">
-            <AppLogo size={88} />
+        <View style={{ alignItems: 'center' }}>
+          {/* Scooter illustration */}
+          <View style={{ marginBottom: 28 }}>
+            <ScooterIcon size={160} />
           </View>
 
           {/* App name */}
-          <Text className="text-5xl font-extrabold text-white tracking-tight text-center">
-            Quick<Text className="text-purple-400">Cover</Text>
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'baseline', marginBottom: 20 }}>
+            <Text style={{ fontFamily: 'PlayfairDisplay_700Bold', fontSize: 44, color: '#7c3aed', letterSpacing: -0.5 }}>
+              Quick
+            </Text>
+            <Text style={{ fontFamily: 'PlayfairDisplay_700Bold', fontSize: 44, color: '#1e1b4b', letterSpacing: -0.5 }}>
+              Cover
+            </Text>
+          </View>
+
+          {/* Icon row under name */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 20, marginBottom: 24 }}>
+            <View style={{ width: 28, height: 28, borderRadius: 14, borderWidth: 1.5, borderColor: '#c4b5fd', alignItems: 'center', justifyContent: 'center' }}>
+              <Text style={{ fontSize: 12, color: '#7c3aed' }}>👤</Text>
+            </View>
+            <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: '#7c3aed', alignItems: 'center', justifyContent: 'center' }}>
+              <Text style={{ fontSize: 12 }}>⚡</Text>
+            </View>
+            <View style={{ width: 28, height: 28, borderRadius: 14, borderWidth: 1.5, borderColor: '#c4b5fd', alignItems: 'center', justifyContent: 'center' }}>
+              <Text style={{ fontSize: 12, color: '#7c3aed' }}>✓</Text>
+            </View>
+          </View>
 
           {/* Tagline */}
-          <Text className="text-purple-200 font-semibold text-lg mt-4 text-center leading-7">
+          <Text style={{ fontFamily: 'PlayfairDisplay_700Bold', fontSize: 28, color: '#7c3aed', textAlign: 'center', lineHeight: 36 }}>
             Every delivery.
           </Text>
-          <Text className="text-white font-semibold text-lg text-center leading-7">
-            We've got your back.
+          <Text style={{ fontFamily: 'PlayfairDisplay_700Bold', fontSize: 28, color: '#1e1b4b', textAlign: 'center', lineHeight: 36 }}>
+            We've got
+          </Text>
+          <Text style={{ fontFamily: 'PlayfairDisplay_700Bold', fontSize: 28, color: '#1e1b4b', textAlign: 'center', lineHeight: 36, marginBottom: 16 }}>
+            your back.
           </Text>
 
           {/* Sub-copy */}
-          <Text className="text-slate-400 text-center mt-6 text-sm leading-6 px-4">
+          <Text style={{ color: '#64748b', textAlign: 'center', fontSize: 13, lineHeight: 20, paddingHorizontal: 8 }}>
             When heavy rain, curfews, or sudden closures stop deliveries,
             QuickCover helps support you with simple disruption coverage.
           </Text>
@@ -46,21 +113,22 @@ export default function WelcomeScreen() {
         <View>
           <TouchableOpacity
             onPress={() => router.push('/login-form')}
-            className="w-full rounded-2xl py-4 items-center mb-4 overflow-hidden"
+            style={{
+              width: '100%',
+              borderRadius: 14,
+              paddingVertical: 16,
+              alignItems: 'center',
+              backgroundColor: '#2d1b69',
+              marginBottom: 16,
+            }}
           >
-            <LinearGradient
-              colors={['#7c3aed', '#4f46e5']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              className="absolute inset-0"
-            />
-            <Text className="text-white font-bold text-lg tracking-wide z-10">Log In</Text>
+            <Text style={{ color: '#ffffff', fontWeight: '700', fontSize: 17 }}>Log In</Text>
           </TouchableOpacity>
 
-          <View className="flex-row justify-center items-center">
-            <Text className="text-slate-500 text-sm">Don't have an account? </Text>
+          <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}>
+            <Text style={{ color: '#94a3b8', fontSize: 14 }}>Don't have an account? </Text>
             <TouchableOpacity onPress={() => router.push('/signup')}>
-              <Text className="text-purple-400 font-bold text-sm">Sign Up</Text>
+              <Text style={{ color: '#7c3aed', fontWeight: '700', fontSize: 14 }}>Sign Up</Text>
             </TouchableOpacity>
           </View>
         </View>
