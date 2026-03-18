@@ -1,7 +1,21 @@
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { ArrowLeft, FileText, Download, Eye, ShieldCheck, Phone, Info, HelpCircle, Award } from 'lucide-react-native';
+import { useAuth } from '../../context/AuthContext';
+import { useRouter } from 'expo-router';
 
 export default function ProfileScreen() {
+  const { user, logout } = useAuth();
+  const router = useRouter();
+  const initial = user?.name?.[0]?.toUpperCase() ?? '?';
+  const platformLabel = user?.platform
+    ? user.platform.charAt(0).toUpperCase() + user.platform.slice(1) + ' Partner'
+    : 'Partner';
+
+  const handleSignOut = async () => {
+    await logout();
+    router.replace('/login');
+  };
+
   return (
     <View className="flex-1 bg-slate-50 pt-14">
       {/* Header */}
@@ -15,14 +29,16 @@ export default function ProfileScreen() {
         {/* User Info Header */}
         <View className="flex-row items-center mb-8 px-2">
           <View className="w-16 h-16 rounded-full bg-blue-500 items-center justify-center mr-4">
-            <Text className="text-white font-bold text-2xl">A</Text>
+            <Text className="text-white font-bold text-2xl">{initial}</Text>
           </View>
           <View style={{ flex: 1 }}>
-            <Text className="text-xl font-bold text-slate-900 mb-1">Arjun Kumar</Text>
-            <View className="bg-green-100 flex-row items-center self-start px-2 py-1 rounded-full">
+            <Text className="text-xl font-bold text-slate-900 mb-1">{user?.name ?? '—'}</Text>
+            <View className="bg-green-100 flex-row items-center self-start px-2 py-1 rounded-full mb-1">
               <View className="w-1.5 h-1.5 rounded-full bg-green-500 mr-1.5" />
-              <Text className="text-green-700 text-xs font-bold">Blinkit Partner</Text>
+              <Text className="text-green-700 text-xs font-bold">{platformLabel}</Text>
             </View>
+            <Text className="text-slate-400 text-xs">{user?.email}</Text>
+            <Text className="text-slate-400 text-xs">{user?.phone ?? 'No phone'} · ID: {user?.driverId}</Text>
           </View>
         </View>
 
@@ -156,7 +172,7 @@ export default function ProfileScreen() {
           <TouchableOpacity className="mb-6">
             <Text className="text-slate-600 font-medium text-sm">Privacy Policy</Text>
           </TouchableOpacity>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={handleSignOut}>
             <Text className="text-red-500 font-bold text-sm">Sign Out</Text>
           </TouchableOpacity>
         </View>

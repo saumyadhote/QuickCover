@@ -1,5 +1,6 @@
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { useMockData } from '../../context/MockDataContext';
+import { useAuth } from '../../context/AuthContext';
 import { ShieldCheck, ShieldAlert, AlertTriangle } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -39,6 +40,9 @@ export default function DashboardScreen() {
 
   const { acceptTrip, completeTrip } = useMockData();
   const { isTripActive, disruption, claimStatus, weeklyEarnings, weeklyProtected } = state;
+  const { user } = useAuth();
+  const firstName = user?.name?.split(' ')[0] ?? 'there';
+  const initial = user?.name?.[0]?.toUpperCase() ?? '?';
 
   const toggleTrip = async () => {
     try {
@@ -67,12 +71,12 @@ export default function DashboardScreen() {
                 colors={['#0ea5e9', '#3b82f6']}
                 className="flex-1 items-center justify-center"
               >
-                <Text className="text-white font-bold text-lg">A</Text>
+                <Text className="text-white font-bold text-lg">{initial}</Text>
               </LinearGradient>
             </View>
             <View>
               <View className="flex-row items-center">
-                <Text className="text-xl font-bold text-slate-900 mr-1">Hi Arjun</Text>
+                <Text className="text-xl font-bold text-slate-900 mr-1">Hi {firstName}</Text>
                 <Text className="text-xl">👋</Text>
               </View>
               <Text className="text-slate-500 text-sm">Good afternoon</Text>
@@ -176,7 +180,7 @@ export default function DashboardScreen() {
 
               <View className="flex-row justify-between items-center mb-4">
                 <Text className="text-slate-500 text-sm">Destination</Text>
-                <Text className="text-slate-800 font-semibold text-sm">Blinkit Partner API</Text>
+                <Text className="text-slate-800 font-semibold text-sm">{user?.platform ? user.platform.charAt(0).toUpperCase() + user.platform.slice(1) : 'Platform'} Partner API</Text>
               </View>
 
               <View className="flex-row justify-between items-center mb-6">

@@ -1,43 +1,74 @@
 import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useFonts, PlayfairDisplay_700Bold, PlayfairDisplay_400Regular } from '@expo-google-fonts/playfair-display';
-import Svg, { Circle, Path, Defs, LinearGradient as SvgGrad, Stop } from 'react-native-svg';
+import Svg, { Circle, Path } from 'react-native-svg';
 
 function ScooterIcon({ size = 120 }: { size?: number }) {
+  // All coords in 240×240 space. Dark circle r=88 centered at 120,120.
+  // Scooter icon is white, contained within the dark circle.
   return (
-    <Svg width={size} height={size} viewBox="0 0 120 120" fill="none">
-      <Defs>
-        <SvgGrad id="ringGrad" x1="0" y1="0" x2="120" y2="120">
-          <Stop offset="0%" stopColor="#ede9fe" />
-          <Stop offset="100%" stopColor="#ddd6fe" />
-        </SvgGrad>
-      </Defs>
-      {/* Concentric rings */}
-      <Circle cx="60" cy="60" r="58" stroke="#ede9fe" strokeWidth="1.5" fill="none" />
-      <Circle cx="60" cy="60" r="48" stroke="#ddd6fe" strokeWidth="1.5" fill="none" />
-      <Circle cx="60" cy="60" r="38" stroke="#c4b5fd" strokeWidth="1.5" fill="none" />
-      {/* Rider silhouette */}
-      <Circle cx="60" cy="28" r="9" fill="#1e1b4b" />
-      <Path d="M52 42 Q60 36 68 42 L72 64 L48 64 Z" fill="#1e1b4b" />
-      {/* Shield badge */}
+    <Svg width={size} height={size} viewBox="0 0 240 240" fill="none">
+
+      {/* ── Concentric rings (outermost → innermost, ring 2 dashed) ── */}
+      <Circle cx="120" cy="120" r="118" stroke="rgba(124,58,237,0.30)" strokeWidth="1.5" fill="none" />
+      <Circle cx="120" cy="120" r="100" stroke="rgba(124,58,237,0.40)" strokeWidth="1.5" fill="none" strokeDasharray="15 8" />
+      <Circle cx="120" cy="120" r="82"  stroke="rgba(124,58,237,0.50)" strokeWidth="1.5" fill="none" />
+      <Circle cx="120" cy="120" r="64"  stroke="rgba(124,58,237,0.60)" strokeWidth="1.5" fill="none" />
+
+      {/* ── Dark filled center circle ── */}
+      <Circle cx="120" cy="120" r="56" fill="#0d0d1a" />
+
+      {/* ── Rider head ── */}
+      <Circle cx="120" cy="83" r="11" fill="white" />
+
+      {/* ── Handlebars (horizontal bar across shoulders) ── */}
+      <Path d="M100 101 L140 101" stroke="white" strokeWidth="5" strokeLinecap="round" />
+
+      {/* ── Upper body / torso ── */}
       <Path
-        d="M68 52 L76 58 L76 68 C76 74 72 79 68 81 C64 79 60 74 60 68 L60 58 Z"
+        d="M106 101 C104 108 103 114 103 120 L137 120 C137 114 136 108 134 101 Z"
+        fill="white"
+      />
+
+      {/* ── Step-through gap (arch cutout at bottom of body) ── */}
+      <Path
+        d="M103 120 L103 130 Q103 140 110 143 L130 143 Q137 140 137 130 L137 120 Z"
+        fill="white"
+      />
+      {/* cutout oval */}
+      <Path
+        d="M112 128 Q112 138 120 139 Q128 138 128 128 Q128 121 120 121 Q112 121 112 128 Z"
+        fill="#0d0d1a"
+      />
+
+      {/* ── Scooter footboard / platform ── */}
+      <Path d="M103 143 L103 148 L137 148 L137 143 Z" fill="white" />
+
+      {/* ── Rear wheel ── */}
+      <Circle cx="105" cy="156" r="12" fill="white" />
+      <Circle cx="105" cy="156" r="5"  fill="#0d0d1a" />
+
+      {/* ── Front wheel ── */}
+      <Circle cx="135" cy="156" r="12" fill="white" />
+      <Circle cx="135" cy="156" r="5"  fill="#0d0d1a" />
+
+      {/* ── Shield badge — overlaps bottom-right edge of dark circle ── */}
+      {/* Navy backing circle so badge stands out */}
+      <Circle cx="162" cy="162" r="20" fill="#0d0d1a" />
+      {/* Purple shield */}
+      <Path
+        d="M162 150 L170 154.5 L170 161 C170 167 162 170 162 170 C162 170 154 167 154 161 L154 154.5 Z"
         fill="#7c3aed"
       />
+      {/* White checkmark */}
       <Path
-        d="M65 64 L67 67 L72 61"
+        d="M158 161 L161 164.5 L167 157"
         stroke="white"
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
         fill="none"
       />
-      {/* Scooter body */}
-      <Path d="M36 72 Q44 66 55 68 L72 68 Q80 68 84 72" stroke="#1e1b4b" strokeWidth="3" fill="none" strokeLinecap="round" />
-      <Circle cx="40" cy="78" r="7" fill="#1e1b4b" />
-      <Circle cx="80" cy="78" r="7" fill="#1e1b4b" />
-      <Circle cx="40" cy="78" r="3" fill="white" />
-      <Circle cx="80" cy="78" r="3" fill="white" />
     </Svg>
   );
 }

@@ -1,60 +1,48 @@
 import React from 'react';
 import { View } from 'react-native';
-import Svg, { Circle, Defs, LinearGradient, Path, Stop } from 'react-native-svg';
+import Svg, { Circle, Path } from 'react-native-svg';
+
+// Fixed 120×120 coordinate space.
+// Rings fill the full canvas. Badge at bottom-right.
+// No background — transparent so it works on any screen color.
 
 export function AppLogo({ size = 80 }: { size?: number }) {
-  const stroke = '#FFFFFF';
-  const fill = 'rgba(99, 102, 241, 0.7)';
-  const shieldFill = 'rgba(124, 58, 237, 0.85)';
-  const scooterFill = 'rgba(255, 255, 255, 0.9)';
-
   return (
-    <View
-      style={{
-        width: size,
-        height: size,
-        borderRadius: size * 0.25,
-        overflow: 'hidden',
-        backgroundColor: 'rgba(15, 23, 42, 0.8)',
-        borderWidth: 1,
-        borderColor: 'rgba(124, 58, 237, 0.35)',
-      }}
-    >
+    <View style={{ width: size, height: size }}>
       <Svg width={size} height={size} viewBox="0 0 120 120" fill="none">
-        <Defs>
-          <LinearGradient id="grad" x1="0" y1="0" x2="120" y2="120">
-            <Stop offset="0%" stopColor="#6d28d9" stopOpacity="0.85" />
-            <Stop offset="100%" stopColor="#0b1227" stopOpacity="0.9" />
-          </LinearGradient>
-        </Defs>
 
-        {/* Outer ring */}
-        <Circle cx="60" cy="60" r="55" fill="url(#grad)" stroke="rgba(255,255,255,0.16)" strokeWidth="1" />
-        <Circle cx="60" cy="60" r="46" fill="rgba(124, 58, 237, 0.32)" />
+        {/* Ring 1 — outermost */}
+        <Circle cx="60" cy="60" r="56" stroke="rgba(124,58,237,0.85)" strokeWidth="2" fill="none" />
 
-        {/* Shield / badge */}
+        {/* Ring 2 — dashed (gap effect) */}
+        <Circle cx="60" cy="60" r="45" stroke="rgba(124,58,237,0.70)" strokeWidth="2" fill="none"
+          strokeDasharray="14 7" />
+
+        {/* Ring 3 */}
+        <Circle cx="60" cy="60" r="34" stroke="rgba(124,58,237,0.65)" strokeWidth="2" fill="none" />
+
+        {/* Ring 4 — innermost */}
+        <Circle cx="60" cy="60" r="23" stroke="rgba(124,58,237,0.60)" strokeWidth="2" fill="none" />
+
+        {/* Badge — dark navy circle at bottom-right, sitting on ring 2 */}
+        <Circle cx="78" cy="78" r="17" fill="#2d1b69" />
+
+        {/* Shield inside badge */}
         <Path
-          d="M60 28 L80 44 L80 70 C80 81 71 90 60 94 C49 90 40 81 40 70 L40 44 Z"
-          fill="rgba(255,255,255,0.9)"
-          opacity="0.12"
-        />
-        <Path
-          d="M60 32 L78 48 L78 68 C78 78 70 86 60 89 C50 86 42 78 42 68 L42 48 Z"
-          fill="#7765F3"
-        />
-        <Path
-          d="M60 38 L74 50 L60 62 L46 50 Z"
-          fill="#fff"
-          opacity="0.85"
+          d="M78 66 L85.5 70.5 L85.5 76.5 C85.5 82.5 78 85.5 78 85.5 C78 85.5 70.5 82.5 70.5 76.5 L70.5 70.5 Z"
+          fill="#7c3aed"
         />
 
-        {/* Shield outline */}
+        {/* Checkmark */}
         <Path
-          d="M60 28 L80 44 L80 70 C80 81 71 90 60 94 C49 90 40 81 40 70 L40 44 Z"
-          stroke="rgba(255,255,255,0.55)"
-          strokeWidth="1.5"
+          d="M74.5 77.5 L77.5 80.5 L82.5 73"
+          stroke="#ffffff"
+          strokeWidth="2.2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
           fill="none"
         />
+
       </Svg>
     </View>
   );

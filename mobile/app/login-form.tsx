@@ -48,8 +48,8 @@ export default function LoginScreen() {
       >
         {/* Logo + heading */}
         <View className="items-center mb-10">
-          <View className="w-20 h-20 rounded-3xl items-center justify-center mb-6 border border-slate-700/50 shadow-2xl overflow-hidden">
-            <AppLogo size={72} />
+          <View className="mb-6">
+            <AppLogo size={100} />
           </View>
           <Text className="text-3xl font-extrabold text-white text-center tracking-wide">Welcome Back</Text>
           <Text className="text-slate-400 text-center mt-3 text-base px-4">

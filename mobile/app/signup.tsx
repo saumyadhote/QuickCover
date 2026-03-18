@@ -77,8 +77,8 @@ export default function SignupScreen() {
       >
         {/* Header */}
         <View className="items-center mb-8">
-          <View className="w-16 h-16 rounded-3xl items-center justify-center mb-4 border border-slate-700/50 overflow-hidden">
-            <AppLogo size={64} />
+          <View className="mb-4">
+            <AppLogo size={90} />
           </View>
           <Text className="text-2xl font-extrabold text-white text-center">Create Account</Text>
           <Text className="text-slate-400 text-center mt-2 text-sm px-4">
