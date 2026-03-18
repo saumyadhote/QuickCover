@@ -170,6 +170,68 @@ app.post('/reset', async (req, res) => {
   }
 });
 
+// --- Adversarial Defense & Anti-Spoofing Strategy (see README) ---
+
+/**
+ * [STUB] Pillar 2: OS-Level Mock Location Detection
+ * TODO: Implement as part of "Adversarial Defense & Anti-Spoofing Strategy" (see README).
+ *
+ * Checks device metadata for active mock location providers (e.g. Fake GPS apps).
+ * On Android: reads LocationManager.isProviderEnabled('test') flag sent from mobile client.
+ * On iOS: flags suspiciously perfect accuracy (exactly 0m error — impossible on real hardware).
+ *
+ * @param {Object}  deviceData
+ * @param {boolean} deviceData.mockLocationEnabled - Android mock location provider active
+ * @param {string}  deviceData.platform            - 'android' | 'ios'
+ * @param {number}  deviceData.locationAccuracy    - GPS accuracy in metres
+ * @returns {{ isSpoofed: boolean, confidence: number, reason: string }}
+ */
+function detect_os_mock_location(deviceData) {
+  // TODO: Implement OS mock location detection logic
+  return { isSpoofed: false, confidence: 0, reason: 'stub — not yet implemented' };
+}
+
+/**
+ * [STUB] Pillar 2: Telematics & Behavioral Anomaly Detection
+ * TODO: Implement as part of "Adversarial Defense & Anti-Spoofing Strategy" (see README).
+ *
+ * Cross-references accelerometer/gyroscope readings against GPS path to verify the worker
+ * is physically navigating a route (bumps, turns, stops). Also detects "teleportation" —
+ * GPS jumps that exceed physically possible movement speed between consecutive pings.
+ *
+ * @param {Object}   sensorData
+ * @param {number[]} sensorData.accelerometer - [x, y, z] m/s² over sampling window
+ * @param {number[]} sensorData.gyroscope     - [x, y, z] rad/s over sampling window
+ * @param {Object[]} gpsData                  - Array of { lat, lng, timestamp } pings
+ * @returns {{ anomalyDetected: boolean, anomalyType: string|null, riskScore: number }}
+ */
+function analyze_telematics_anomalies(sensorData, gpsData) {
+  // TODO: Implement telematics anomaly analysis
+  return { anomalyDetected: false, anomalyType: null, riskScore: 0 };
+}
+
+/**
+ * [STUB] Pillar 3: Quarantine & Deferred Payout Workflow
+ * TODO: Implement as part of "Adversarial Defense & Anti-Spoofing Strategy" (see README).
+ *
+ * Instead of auto-denying a flagged claim, places it in "Pending Review". The mobile app
+ * will prompt the worker for a timestamped photo (flooded street, closed store) once their
+ * network stabilises. Prevents false negatives from legitimate network drops during storms.
+ *
+ * @param {string|number} claimId - Trip/claim ID to quarantine
+ * @param {string}        reason  - Reason logged internally for fraud analyst review queue
+ * @returns {Promise<{ success: boolean, newStatus: string }>}
+ */
+async function quarantine_claim(claimId, reason) {
+  // TODO: UPDATE trips SET status = 'pending_review' WHERE id = claimId
+  // TODO: Emit push notification to worker once network stabilises
+  // TODO: Log reason to fraud analyst review queue
+  console.log(`[STUB] quarantine_claim — claimId: ${claimId}, reason: ${reason}`);
+  return { success: false, newStatus: 'pending_review' };
+}
+
+// ------------------------------------------------------------------
+
 // --- ML Pricing Engine Mock ---
 const runForecast = async () => {
   try {

@@ -167,6 +167,41 @@ QuickCover/
 
 ---
 
+## Adversarial Defense & Anti-Spoofing Strategy
+
+QuickCover's parametric model pays out automatically — which means GPS spoofing is a primary fraud vector. A bad actor could fake their location to appear inside a disruption zone and claim a payout without being genuinely affected. The following three-pillar strategy addresses this.
+
+### Pillar 1 — AI/ML Architecture: Behavioral Anomaly Detection
+
+The system moves beyond checking raw GPS coordinates. The AI flags **impossible physics** in the data:
+
+- **Teleportation detection** — a worker cannot jump 5 km between two GPS pings 30 seconds apart. Velocity-based filtering catches spoofed location jumps instantly.
+- **Clustering anomalies** — during a real storm, hundreds of workers will have GPS coordinates that *drift naturally* due to movement and signal noise. A spoofing attack produces unnaturally identical or static coordinates across many accounts from the same zone.
+- **Context-aware movement analysis** — the AI analyzes whether movement patterns are consistent with navigating flooded roads (slower speeds, detours, stops) versus a static device with a spoofed location.
+
+### Pillar 2 — Data: Beyond Basic GPS Coordinates
+
+GPS alone is insufficient. The system cross-verifies using three secondary signals:
+
+| Signal | Method | What It Catches |
+|---|---|---|
+| **OS-Level Mock Location Flags** | Android `isProviderEnabled('test')` flag; iOS perfect-accuracy anomaly (0m error) | Third-party spoofing apps (Fake GPS, Mock Location) active on device |
+| **Network Triangulation & IP Data** | Match GPS coordinates against cell tower IDs and Wi-Fi IP geolocation | GPS placed in Zone A while device connects via cell tower in Zone C |
+| **Telematics & Device Sensors** | Accelerometer + gyroscope confirm physical movement: bumps, turns, stops consistent with route navigation | Stationary device with animated GPS path |
+
+### Pillar 3 — UX Balance: Quarantine & Deferred Payout
+
+Heavy rain causes natural network drops — automatically denying flagged claims would harm honest workers. Instead, QuickCover uses a **Quarantine & Deferred Payout** workflow:
+
+1. **Flag, don't deny** — suspicious claims are marked `"Pending Review"`, not rejected.
+2. **Wait for connectivity** — once the worker's network stabilizes (post-storm), the app sends a push notification.
+3. **Low-friction secondary verification** — the worker is prompted to take a single live, timestamped photograph: a flooded street, a closed store shutter, or a police cordon.
+4. **AI photo review** — the image is processed for authenticity (timestamp, geotag, scene content). Matching photos trigger immediate fund release.
+
+This approach eliminates false positives caused by infrastructure failures while maintaining strong fraud resistance against deliberate spoofing.
+
+---
+
 ## Running Locally
 
 ### Backend
