@@ -1,61 +1,4 @@
-## QuickCover – Parametric Income Protection MVP
-
-This repository contains a minimal end-to-end prototype for **QuickCover**, an AI-powered parametric income protection layer for India’s Q‑commerce gig workers.
-
-### Structure
-
-- `mobile/` – React Native (Expo) app for the worker-facing interface.
-- `mock-backend/` – A simulated Express.js server providing API endpoints for trips and disruption triggers.
-
-### Mock Backend – Node & Express
-
-#### Setup
-
-```bash
-cd mock-backend
-npm install
-
-# Start API
-npm start
-```
-
-The API will be available at `http://localhost:4000`.
-
-Key endpoints:
-
-- `GET /status` – Check server connection
-- `POST /accept-trip` – Start a new trip and activate coverage
-- `POST /complete-trip` – Finish an active trip
-- `POST /trigger-disruption` – Simulate an external disruption
-- `POST /reset` – Reset server state
-
-### Mobile App – React Native + Expo
-
-#### Setup
-
-```bash
-cd mobile
-npm install
-
-# Start the Expo development server
-npm start
-```
-
-This will launch Expo. You can press `a` to run it on an Android emulator, `i` for an iOS simulator, or scan the QR code with the Expo Go app on your physical device to see the app.
-
-The mobile app currently allows a gig worker to:
-
-- View realtime parametric protection status
-- Start a mock shift to activate coverage
-- Receive disruption alerts if a catastrophic event occurs
-
-### Next Steps / Extensions
-
-- Connect the mobile app to the real backend when it is developed.
-- Replace simulated triggers in the mock backend with background jobs calling OpenWeatherMap / civic-event APIs.
-- Enhance the UI metrics to include UPI payout history tracking.
-
-# QuickCover AI 🛡️
+# QuickCover 🛡️
 ### AI-Powered Parametric Income Protection for India's Gig Economy
 
 > *Submitted to Guidewire DEVTrails 2026: Unicorn Chase*
@@ -64,37 +7,85 @@ The mobile app currently allows a gig worker to:
 
 ## The Problem
 
-India's 15 million+ gig delivery workers power the Q-commerce economy — but have zero financial protection when it breaks down around them.
+India's 15 million+ gig delivery workers power the Q-commerce economy — but have zero financial
+protection when it breaks down around them.
 
-When a sudden flood, toxic air quality alert, or unplanned curfew halts operations, it isn't the platform that suffers — it's the worker. A single disrupted day erases **20–30% of monthly income**, with no recourse, no claim process, and no safety net.
+When a sudden flood, extreme heat, or unplanned curfew halts operations, it isn't the platform
+that suffers — it's the worker. A single disrupted day erases **₹400–₹650 of net income**
+(20–30% of a monthly take-home of ₹10k–₹20k), with no recourse, no claim process, no safety net.
 
-These are not personal failures. They are **systemic, measurable, external events** — and yet workers bear the entire financial cost alone.
+These are not personal failures. They are **systemic, measurable, external events** — and yet
+workers bear the entire financial cost alone.
+
+**Blinkit and other platforms already spend ₹100 crore+ annually on partner insurance** — but
+it only covers accidents and hospitalisation. Nobody covers income lost to weather, outages, or
+zone disruptions. That is the gap QuickCover fills.
 
 ---
 
 ## The Solution
 
-**QuickCover** is a micro-duration parametric insurance platform purpose-built for Q-commerce delivery partners (Blinkit, Zepto, Swiggy Instamart).
+**QuickCover** is a consumer-funded parametric income protection platform for Q-commerce delivery
+partners (Blinkit, Zepto, Swiggy Instamart).
 
-We cover one thing only: **Loss of Income due to verifiable external disruptions.** No health. No vehicle. No life. Just income.
+### The Core Insight: The Driver Pays Nothing
 
-Coverage activates the moment a worker accepts a trip. It ends when the trip is completed. Disruptions are verified automatically — claims are batched and paid out **every week**, directly to the worker's UPI account.
+Protection is funded entirely by a **micro-surcharge on the consumer's order** — ₹2–5 per order,
+less than the cost of a single Mentos. The consumer opts in at checkout ("Protect your delivery
+partner — ₹3"). The pool pays drivers automatically when a verified disruption hits.
+
+```
+Consumer places ₹500 order → ₹3 surcharge added at checkout
+              ↓
+Worker accepts the order → Coverage activates for that trip
+              ↓
+External disruption detected (heavy rain / outage / curfew)
+              ↓
+AI verifies: worker GPS + platform logs + trigger event data
+              ↓
+Payout auto-credited → Worker's UPI wallet, synced to weekly settlement
+```
+
+No claims. No paperwork. No cost to the driver — ever.
 
 ---
 
-## How It Works
+## Financial Model at a Glance
 
-```
-Worker accepts order → Coverage activates
-         ↓
-Customer pays ₹2 surcharge → Routed to premium pool
-         ↓
-External disruption detected (flood / AQI spike / curfew)
-         ↓
-AI cross-verifies: worker GPS + platform logs + trigger event
-         ↓
-Claim auto-approved → Payout to worker's UPI at end of week
-```
+### Consumer Micro-Charge (AI Variable)
+
+| Order Value | Surcharge | As % of Order |
+|---|---|---|
+| ₹100–₹300 | ₹2 | 0.7–2% |
+| ₹300–₹700 | ₹3 | 0.4–1% |
+| ₹700–₹1,500 | ₹5 | 0.3–0.7% |
+
+The AI engine adjusts the surcharge in real time based on: weather risk, zone disruption history,
+active driver shortage, time of day, and current pool balance.
+
+### Payout Triggers (Parametric — Automatic)
+
+| Trigger | Condition | Driver Payout |
+|---|---|---|
+| Heavy rain | IMD: >15mm/hr in zone | ₹300–500/shift |
+| Extreme heat | >43°C for 2+ hrs | ₹250–400/shift |
+| Platform outage | Zone unavailable >90 mins | ₹200–350 |
+| Lockdown / curfew | Govt. notification | ₹500–700/day |
+
+### Unit Economics (10% Rollout)
+
+| Metric | Value |
+|---|---|
+| Blinkit orders/day (India) | ~750,000–1,000,000 |
+| Avg surcharge per order | ₹3 |
+| Monthly pool inflow (10%) | ₹6.7Cr–₹9Cr |
+| Monthly driver payouts | ₹1.75Cr–₹3.5Cr |
+| Loss ratio | ~30–50% (target 55–65%) |
+| QuickCover platform margin | 15–20% of pool |
+
+Break-even at **~2–3% of Blinkit's daily order volume** participating.
+
+See [FINANCIAL_MODEL.md](FINANCIAL_MODEL.md) for the full model.
 
 ---
 
@@ -102,100 +93,51 @@ Claim auto-approved → Payout to worker's UPI at end of week
 
 ```mermaid
 graph TB
-    subgraph Mobile["📱 Mobile App (React Native/Expo)"]
-        UI["UI Components<br/>- Trip Management<br/>- Status Display<br/>- Alerts"]
-        Context["MockDataContext<br/>State Management"]
+    subgraph Consumer["🛒 Consumer (Blinkit App)"]
+        Checkout["Checkout Surcharge<br/>₹2–5 per order"]
     end
 
-    subgraph Backend["🔧 Mock Backend (Express.js)"]
-        API["API Server<br/>- Port 4000<br/>- RESTful Endpoints"]
-        DB[(PostgreSQL<br/>Database)]
-        Logic["Business Logic<br/>- Trip Handler<br/>- Disruption Trigger"]
+    subgraph Mobile["📱 Worker App (React Native/Expo)"]
+        UI["Trip Management<br/>Coverage Status<br/>Payout History"]
+        Context["Auth + MockDataContext"]
     end
 
-    subgraph External["🌍 External Services"]
-        Weather["Weather APIs<br/>AQI / Flood Data"]
+    subgraph Backend["🔧 Backend (Express.js → Render)"]
+        API["REST API"]
+        DB[(PostgreSQL<br/>Supabase)]
+        Pool["Premium Pool<br/>Manager"]
+        Trigger["Parametric<br/>Trigger Engine"]
+    end
+
+    subgraph External["🌍 External"]
+        IMD["IMD Weather API<br/>Rainfall / Heat"]
         UPI["UPI Payments<br/>Worker Payouts"]
     end
 
-    Mobile -->|HTTP Requests| API
-    API -->|Query/Update| DB
-    API -->|Poll Data| Weather
-    API -->|Process Claims| UPI
-    API -->|JSON Response| Mobile
-    Context -->|Provide State| UI
-    
-    style Mobile fill:#e1f5ff
-    style Backend fill:#fff3e0
-    style External fill:#f3e5f5
+    subgraph Admin["🖥️ Admin Dashboard (Vercel)"]
+        Claims["Claims Pipeline"]
+        Analytics["Loss Ratio / Pool Analytics"]
+    end
+
+    Checkout -->|Surcharge| Pool
+    Mobile -->|Trip events| API
+    API -->|State| DB
+    Pool -->|Fund| Trigger
+    Trigger -->|Poll| IMD
+    Trigger -->|Auto payout| UPI
+    API -->|JSON| Mobile
+    DB -->|Data| Admin
 ```
 
 ### Key Design Principles
 
 | Principle | Implementation |
 |---|---|
-| **Zero upfront cost** | Premiums funded via ₹2 customer surcharge per order — not deducted from worker earnings |
-| **Trip-level granularity** | Coverage is per-trip, not monthly — no over-insurance, no gaps |
-| **Parametric payouts** | No manual claims. Triggers are objective, verifiable data events |
-| **AI fraud prevention** | GPS cross-referencing + trip log validation prevents spoofing |
-
----
-
-## Parametric Triggers
-
-QuickCover monitors real-time APIs across two disruption categories:
-
-**Environmental**
-- Heavy rainfall / waterlogging alerts above zone threshold
-- Extreme heat index (WBGT) preventing outdoor work
-- Severe pollution (AQI > 300) in worker's delivery zone
-
-**Civic**
-- Unplanned localized curfews or Section 144 orders
-- Sudden zone closures blocking pickups or drop-offs
-
----
-
-## The Weekly Premium Model
-
-Trip-level risk is aggregated into a **Weekly Pricing Cycle** — aligned with how gig workers think about earnings.
-
-- **Dynamic base premium** calculated weekly using predictive weather models + worker's historical zone risk
-- **Low-risk zones** receive adjusted-down premiums; surplus builds a catastrophic tail-risk reserve
-- **Customer surcharges** collected throughout the week fund the premium pool in real-time
-
----
-
-## AI & ML Integration
-
-### Dynamic Risk Scoring
-An ML model evaluates incoming API signals (weather, traffic density, time-of-day patterns) against a worker's live GPS coordinates to generate a per-trip risk score and dynamically price exposure.
-
-### Intelligent Fraud Detection
-At FNOL, the system cross-references:
-- Claim timestamp vs. platform's internal trip logs
-- Worker GPS trace vs. disruption zone boundary
-- Duplicate claim patterns across the worker pool
-
-This eliminates GPS spoofing, duplicate submissions, and claims from workers not genuinely active in the affected area.
-
----
-
-## Product Architecture
-
-### Worker-Facing: Mobile App
-Gig workers live on their phones. The mobile app provides:
-- One-tap onboarding via existing Q-commerce ID
-- Real-time coverage status per active trip
-- Direct photo upload for supplementary proof (e.g., roadblock photos)
-- Weekly payout tracking and earnings summary via UPI/wallet
-
-### Admin-Facing: Web Dashboard
-Insurers and underwriters need data density. The web dashboard provides:
-- Live claims pipeline with AI-generated risk flags
-- Weather-event predictive modeling for upcoming liability exposure
-- Loss-ratio analytics and zone-level heat maps
-- Premium pool balance and reserve adequacy monitoring
+| **Zero cost to driver** | 100% consumer-funded via per-order surcharge |
+| **Trip-level granularity** | Coverage is per-trip, not monthly — no gaps, no over-insurance |
+| **Parametric payouts** | No manual claims — objective, verifiable data triggers |
+| **AI variable pricing** | Surcharge adjusts real-time to weather, zone risk, pool balance |
+| **Fraud prevention** | GPS cross-referencing + trip log validation |
 
 ---
 
@@ -203,23 +145,75 @@ Insurers and underwriters need data density. The web dashboard provides:
 
 | Layer | Technology |
 |---|---|
-| Mobile (Worker) | React Native / Flutter |
-| Web (Admin) | React.js / Next.js |
-| Backend | FastAPI (Python) + Node.js (Express) |
-| Databases | PostgreSQL (policies/users) + MongoDB (telemetry/trip logs) |
-| Trigger APIs | OpenWeatherMap, Google Maps Platform |
-| Payments (Phase 3) | Razorpay Test Mode / Stripe Sandbox |
+| Mobile (Worker) | React Native / Expo |
+| Web (Admin) | React + Vite / Vercel |
+| Backend | Node.js / Express → Render |
+| Database | PostgreSQL / Supabase |
+| Trigger APIs | IMD Weather, Google Maps Platform |
+| Payments | Razorpay / UPI (Phase 2) |
+
+---
+
+## Repo Structure
+
+```
+QuickCover/
+├── mobile/          # React Native (Expo) — worker-facing app
+├── mock-backend/    # Express.js API server
+├── admin/           # Vite admin dashboard
+├── FINANCIAL_MODEL.md  # Full financial model & research
+└── README.md
+```
+
+---
+
+## Running Locally
+
+### Backend
+```bash
+cd mock-backend
+npm install
+npm start
+# API at http://localhost:4000
+```
+
+### Mobile App
+```bash
+cd mobile
+npm install
+npx expo start
+# Press 'a' for Android emulator, scan QR for Expo Go
+```
+
+### Admin Dashboard
+```bash
+cd admin
+npm install
+npm run dev
+```
+
+---
+
+## Cloud Deployment
+
+| Service | Platform | URL |
+|---|---|---|
+| Backend API | Render | https://quickcover.onrender.com |
+| Admin Dashboard | Vercel | https://quick-cover-neon.vercel.app |
+| Database | Supabase | PostgreSQL (pooler, ap-northeast-2) |
 
 ---
 
 ## Why This Wins
 
-- **Real market need** — 15M+ underserved workers with measurable, recurring income risk
-- **Scalable unit economics** — ₹2 per order creates a self-sustaining premium pool without burdening workers
-- **Parametric = fast + fraud-resistant** — no adjusters, no disputes, no delays
-- **Platform-neutral** — works with any Q-commerce API via webhook integration
-- **Regulatory-ready** — income-loss parametric products fit within IRDAI's sandbox framework for microinsurance innovation
+- **Real market need** — 15M+ underserved workers, ₹6,000–₹12,000/year of income at risk per worker
+- **Zero friction adoption** — driver pays nothing; consumers already accept small surcharges
+- **Scalable unit economics** — ₹3/order creates a self-sustaining pool; break-even at 2–3% participation
+- **Parametric = fast + fraud-resistant** — no adjusters, no disputes, automatic payouts
+- **Platform-neutral** — works across Blinkit, Zepto, Swiggy via webhook integration
+- **Regulatory-ready** — fits IRDAI's micro-insurance sandbox; no own license required initially
 
 ---
 
-*QuickCover does not cover health, vehicle damage, or life events. Coverage is strictly limited to verified loss of income from parametric disruption triggers.*
+*QuickCover covers strictly verified loss of income from parametric disruption triggers.
+It does not cover health, vehicle damage, or life events.*
