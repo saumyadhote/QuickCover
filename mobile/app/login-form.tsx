@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../context/AuthContext';
 import { AppLogo } from './components/AppLogo';
 
@@ -32,82 +31,95 @@ export default function LoginScreen() {
     }
   };
 
+  const inputStyle = {
+    backgroundColor: '#f8fafc',
+    color: '#0f172a',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
+    fontSize: 15,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    marginBottom: 14,
+  } as const;
+
+  const labelStyle = {
+    color: '#475569',
+    fontSize: 11,
+    fontWeight: '600' as const,
+    textTransform: 'uppercase' as const,
+    letterSpacing: 0.8,
+    marginBottom: 6,
+  };
+
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: '#050714' }}
+      style={{ flex: 1, backgroundColor: '#ffffff' }}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView
-        contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingHorizontal: 24, paddingVertical: 40 }}
+        contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 28, paddingTop: 56, paddingBottom: 40 }}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        {/* Logo + heading */}
+        {/* Logo */}
         <View style={{ alignItems: 'center', marginBottom: 32 }}>
-          <View style={{ marginBottom: 20 }}>
-            <AppLogo size={40} />
-          </View>
-          <Text style={{ fontSize: 28, fontWeight: '800', color: '#ffffff', textAlign: 'center' }}>Welcome Back</Text>
-          <Text style={{ color: '#94a3b8', textAlign: 'center', marginTop: 10, fontSize: 15, paddingHorizontal: 16 }}>
-            Sign in to your QuickCover account.
-          </Text>
+          <AppLogo size={30} />
         </View>
 
-        {/* Form card */}
-        <View style={{ backgroundColor: '#1e2538', borderRadius: 24, borderWidth: 1, borderColor: 'rgba(51,65,85,0.6)', padding: 24, marginBottom: 16 }}>
+        {/* Heading */}
+        <Text style={{ fontSize: 28, fontWeight: '800', color: '#1e1b4b', fontFamily: 'Georgia, serif', marginBottom: 6 }}>
+          Welcome Back
+        </Text>
+        <Text style={{ color: '#64748b', fontSize: 14, marginBottom: 32 }}>
+          Sign in to your QuickCover account.
+        </Text>
 
-          {/* Email */}
-          <Text style={{ color: '#94a3b8', fontSize: 11, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Email</Text>
-          <TextInput
-            style={{ backgroundColor: 'rgba(30,41,59,0.8)', color: '#ffffff', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14, marginBottom: 16, fontSize: 15, borderWidth: 1, borderColor: 'rgba(51,65,85,0.5)' }}
-            placeholder="you@example.com"
-            placeholderTextColor="#64748b"
-            autoCapitalize="none"
-            keyboardType="email-address"
-            value={email}
-            onChangeText={setEmail}
-          />
+        {/* Email */}
+        <Text style={labelStyle}>Email</Text>
+        <TextInput
+          style={inputStyle}
+          placeholder="you@example.com"
+          placeholderTextColor="#94a3b8"
+          autoCapitalize="none"
+          keyboardType="email-address"
+          value={email}
+          onChangeText={setEmail}
+        />
 
-          {/* Password */}
-          <Text style={{ color: '#94a3b8', fontSize: 11, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Password</Text>
-          <TextInput
-            style={{ backgroundColor: 'rgba(30,41,59,0.8)', color: '#ffffff', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14, marginBottom: 16, fontSize: 15, borderWidth: 1, borderColor: 'rgba(51,65,85,0.5)' }}
-            placeholder="••••••••"
-            placeholderTextColor="#64748b"
-            secureTextEntry
-            value={password}
-            onChangeText={setPassword}
-          />
+        {/* Password */}
+        <Text style={labelStyle}>Password</Text>
+        <TextInput
+          style={{ ...inputStyle, marginBottom: error ? 10 : 24 }}
+          placeholder="••••••••"
+          placeholderTextColor="#94a3b8"
+          secureTextEntry
+          value={password}
+          onChangeText={setPassword}
+        />
 
-          {error ? (
-            <Text style={{ color: '#f87171', fontSize: 13, marginBottom: 12, textAlign: 'center' }}>{error}</Text>
-          ) : null}
+        {error ? (
+          <Text style={{ color: '#dc2626', fontSize: 13, marginBottom: 16, textAlign: 'center' }}>{error}</Text>
+        ) : null}
 
-          {/* Login button */}
-          <TouchableOpacity
-            onPress={handleLogin}
-            disabled={loading}
-            style={{ borderRadius: 16, overflow: 'hidden' }}
-          >
-            <LinearGradient
-              colors={['#3b82f6', '#6366f1']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={{ paddingVertical: 16, alignItems: 'center', justifyContent: 'center' }}
-            >
-              {loading ? (
-                <ActivityIndicator color="#fff" size="small" />
-              ) : (
-                <Text style={{ color: '#ffffff', fontWeight: '700', fontSize: 17 }}>Log In</Text>
-              )}
-            </LinearGradient>
-          </TouchableOpacity>
-        </View>
+        {/* Log In button */}
+        <TouchableOpacity
+          onPress={handleLogin}
+          disabled={loading}
+          style={{ backgroundColor: '#3b1f8c', borderRadius: 14, paddingVertical: 17, alignItems: 'center', marginBottom: 20 }}
+        >
+          {loading ? (
+            <ActivityIndicator color="#fff" size="small" />
+          ) : (
+            <Text style={{ color: '#ffffff', fontWeight: '700', fontSize: 17, fontFamily: 'Georgia, serif' }}>Log In</Text>
+          )}
+        </TouchableOpacity>
 
         {/* Sign up link */}
         <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}>
-          <Text style={{ color: '#64748b', fontSize: 14 }}>Don't have an account? </Text>
+          <Text style={{ color: '#94a3b8', fontSize: 14 }}>Don't have an account? </Text>
           <TouchableOpacity onPress={() => router.push('/signup')}>
-            <Text style={{ color: '#60a5fa', fontWeight: '700', fontSize: 14 }}>Sign Up</Text>
+            <Text style={{ color: '#a855f7', fontWeight: '700', fontSize: 14 }}>Sign Up</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
