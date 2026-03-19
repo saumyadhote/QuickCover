@@ -94,7 +94,7 @@ export function MockDataProvider({ children }: { children: React.ReactNode }) {
   // Fast-poll while a claim is in-flight so the timeline updates within ~2s of each transition
   useEffect(() => {
     const isInFlight = state.claimStatus === 'processing' || state.claimStatus === 'approved';
-    if (!isInFlight || !backendOnline) return;
+    if (!isInFlight) return;
 
     let cancelled = false;
     const fastPoll = async () => {
@@ -105,12 +105,13 @@ export function MockDataProvider({ children }: { children: React.ReactNode }) {
       } catch { /* silent */ }
     };
 
+    fastPoll(); // fire immediately — don't wait 2s for first tick
     const interval = setInterval(fastPoll, 2000);
     return () => {
       cancelled = true;
       clearInterval(interval);
     };
-  }, [state.claimStatus, backendOnline]);
+  }, [state.claimStatus]); // backendOnline removed — catch handles offline silently
 
   // ---- acceptTrip -------------------------------------------------------
   const acceptTrip = async () => {
