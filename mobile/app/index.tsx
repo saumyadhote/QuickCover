@@ -1,48 +1,60 @@
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
-import Svg, { Circle, Path, G } from 'react-native-svg';
+import Svg, { Circle, Path, Line } from 'react-native-svg';
 
-function HeroShield({ size = 200 }: { size?: number }) {
+// Shield with concentric rings — matches reference design exactly
+function HeroGraphic({ size = 240 }: { size?: number }) {
+  // All coords in a 280×300 viewBox
+  // Shield centered at (140, 140), rings around it, three icon circles at bottom
   return (
-    <Svg width={size} height={size} viewBox="0 0 260 260" fill="none">
-      {/* Concentric rings */}
-      <Circle cx="130" cy="130" r="118" stroke="rgba(168,85,247,0.15)" strokeWidth="1" fill="none" />
-      <Circle cx="130" cy="130" r="100" stroke="rgba(168,85,247,0.20)" strokeWidth="1" strokeDasharray="8 6" fill="none" />
-      <Circle cx="130" cy="130" r="80"  stroke="rgba(168,85,247,0.25)" strokeWidth="1" fill="none" />
-      <Circle cx="130" cy="130" r="60"  stroke="rgba(168,85,247,0.30)" strokeWidth="1" strokeDasharray="6 5" fill="none" />
+    <Svg width={size} height={(size * 300) / 280} viewBox="0 0 280 300" fill="none">
 
-      {/* Dark circle background for shield */}
-      <Circle cx="130" cy="118" r="44" fill="#1e1b4b" />
+      {/* ── Concentric rings ── */}
+      <Circle cx="140" cy="130" r="118" stroke="rgba(168,85,247,0.12)" strokeWidth="1.5" fill="none" />
+      <Circle cx="140" cy="130" r="96"  stroke="rgba(168,85,247,0.18)" strokeWidth="1.5" strokeDasharray="8 5" fill="none" />
+      <Circle cx="140" cy="130" r="74"  stroke="rgba(168,85,247,0.24)" strokeWidth="1.5" fill="none" />
+      <Circle cx="140" cy="130" r="52"  stroke="rgba(168,85,247,0.30)" strokeWidth="1.5" strokeDasharray="5 4" fill="none" />
 
-      {/* Shield body — purple */}
+      {/* ── Shield — large, purple outline + fill, no background circle ── */}
+      {/* Outer shield (slightly lighter for depth) */}
       <Path
-        d="M130 86 L154 97 L154 118 C154 134 130 142 130 142 C130 142 106 134 106 118 L106 97 Z"
+        d="M140 60 L190 84 L190 130 C190 162 140 180 140 180 C140 180 90 162 90 130 L90 84 Z"
+        fill="#c084fc"
+        opacity="0.25"
+      />
+      {/* Main shield fill */}
+      <Path
+        d="M140 66 L184 88 L184 130 C184 159 140 175 140 175 C140 175 96 159 96 130 L96 88 Z"
         fill="#a855f7"
       />
 
-      {/* Delivery person icon inside shield (simplified) */}
-      <Circle cx="130" cy="104" r="6" fill="#ffffff" />
-      <Path d="M118 122 C118 114 142 114 142 122" stroke="#ffffff" strokeWidth="3" fill="none" strokeLinecap="round" />
-      <Path d="M122 122 L122 130 L138 130 L138 122" stroke="#ffffff" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+      {/* Checkmark — bold, very dark navy */}
+      <Path
+        d="M112 128 L130 148 L168 106"
+        stroke="#1e1b4b"
+        strokeWidth="11"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
 
-      {/* Small verified badge on bottom-right of circle */}
-      <Circle cx="163" cy="145" r="11" fill="#a855f7" />
-      <Path d="M157 145 L161 149 L169 140" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+      {/* ── Horizontal line connecting the three small circles ── */}
+      <Line x1="60" y1="218" x2="220" y2="218" stroke="rgba(168,85,247,0.3)" strokeWidth="1" />
 
-      {/* Three small icon circles below */}
-      <Circle cx="90"  cy="172" r="14" fill="none" stroke="rgba(168,85,247,0.4)" strokeWidth="1.5" />
-      <Circle cx="130" cy="172" r="14" fill="#a855f7" />
-      <Circle cx="170" cy="172" r="14" fill="none" stroke="rgba(168,85,247,0.4)" strokeWidth="1.5" />
+      {/* ── Three small icon circles ── */}
+      {/* Left: person */}
+      <Circle cx="60"  cy="218" r="16" fill="none" stroke="rgba(168,85,247,0.4)" strokeWidth="1.5" />
+      <Circle cx="60"  cy="213" r="4"  fill="#a855f7" />
+      <Path d="M52 224 C52 219 68 219 68 224" stroke="#a855f7" strokeWidth="1.8" fill="none" strokeLinecap="round" />
 
-      {/* Person icon (left circle) */}
-      <Circle cx="90" cy="169" r="3" fill="#a855f7" />
-      <Path d="M85 177 C85 173 95 173 95 177" stroke="#a855f7" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+      {/* Center: lightning — filled purple */}
+      <Circle cx="140" cy="218" r="16" fill="#a855f7" />
+      <Path d="M143 208 L136 218 L141 218 L137 228 L145 217 L140 217 Z" fill="#ffffff" />
 
-      {/* Lightning icon (center circle — filled) */}
-      <Path d="M132 165 L127 173 L131 173 L128 181 L135 172 L131 172 Z" fill="#ffffff" />
+      {/* Right: checkmark */}
+      <Circle cx="220" cy="218" r="16" fill="none" stroke="rgba(168,85,247,0.4)" strokeWidth="1.5" />
+      <Path d="M213 218 L218 223 L227 212" stroke="#a855f7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
 
-      {/* Check icon (right circle) */}
-      <Path d="M165 172 L169 176 L175 167" stroke="#a855f7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
     </Svg>
   );
 }
@@ -52,42 +64,46 @@ export default function LandingScreen() {
 
   return (
     <ScrollView
-      contentContainerStyle={{ flexGrow: 1, backgroundColor: '#ffffff', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32, paddingVertical: 48 }}
+      contentContainerStyle={{ flexGrow: 1, backgroundColor: '#ffffff', paddingHorizontal: 28, paddingTop: 40, paddingBottom: 48 }}
       showsVerticalScrollIndicator={false}
     >
-      {/* Hero graphic */}
-      <HeroShield size={200} />
-
-      {/* Wordmark */}
-      <View style={{ flexDirection: 'row', alignItems: 'baseline', marginTop: 12, marginBottom: 20 }}>
-        <Text style={{ fontSize: 40, fontWeight: '800', color: '#a855f7', fontFamily: 'Georgia' }}>Quick</Text>
-        <Text style={{ fontSize: 40, fontWeight: '800', color: '#1e1b4b', fontFamily: 'Georgia' }}>Cover</Text>
+      {/* Hero graphic — centered */}
+      <View style={{ alignItems: 'center', marginBottom: 8 }}>
+        <HeroGraphic size={240} />
       </View>
 
-      {/* Tagline */}
-      <Text style={{ fontSize: 24, fontWeight: '800', color: '#a855f7', textAlign: 'center', lineHeight: 30 }}>
-        Every delivery.
-      </Text>
-      <Text style={{ fontSize: 24, fontWeight: '800', color: '#1e1b4b', textAlign: 'center', lineHeight: 32, marginBottom: 16 }}>
-        We've got{'\n'}your back.
-      </Text>
+      {/* Wordmark — left aligned, Georgia, large */}
+      <View style={{ flexDirection: 'row', alignItems: 'baseline', marginBottom: 4 }}>
+        <Text style={{ fontSize: 44, fontWeight: '800', color: '#a855f7', fontFamily: 'Georgia, serif' }}>Quick</Text>
+        <Text style={{ fontSize: 44, fontWeight: '800', color: '#1e1b4b', fontFamily: 'Georgia, serif' }}>Cover</Text>
+      </View>
 
-      {/* Description */}
-      <Text style={{ color: '#64748b', fontSize: 13, lineHeight: 20, textAlign: 'center', marginBottom: 40, paddingHorizontal: 8 }}>
+      {/* Tagline — left aligned */}
+      <View style={{ marginBottom: 14 }}>
+        <Text style={{ fontSize: 28, fontWeight: '800', color: '#a855f7', fontFamily: 'Georgia, serif', lineHeight: 36 }}>
+          Every{'\n'}delivery.
+        </Text>
+        <Text style={{ fontSize: 28, fontWeight: '800', color: '#1e1b4b', fontFamily: 'Georgia, serif', lineHeight: 36 }}>
+          We've got{'\n'}your back.
+        </Text>
+      </View>
+
+      {/* Description — left aligned */}
+      <Text style={{ color: '#64748b', fontSize: 13, lineHeight: 20, marginBottom: 40 }}>
         When heavy rain, curfews, or sudden closures stop deliveries, QuickCover helps support you with simple disruption coverage.
       </Text>
 
       {/* Log In button */}
       <TouchableOpacity
         onPress={() => router.push('/login')}
-        style={{ backgroundColor: '#3b1f8c', borderRadius: 16, paddingVertical: 16, alignItems: 'center', width: '100%', marginBottom: 20 }}
+        style={{ backgroundColor: '#3b1f8c', borderRadius: 14, paddingVertical: 18, alignItems: 'center', width: '100%', marginBottom: 20 }}
       >
-        <Text style={{ color: '#ffffff', fontWeight: '700', fontSize: 17 }}>Log In</Text>
+        <Text style={{ color: '#ffffff', fontWeight: '700', fontSize: 17, fontFamily: 'Georgia, serif' }}>Log In</Text>
       </TouchableOpacity>
 
       {/* Sign Up link */}
-      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-        <Text style={{ color: '#64748b', fontSize: 14 }}>Don't have an account? </Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+        <Text style={{ color: '#94a3b8', fontSize: 14 }}>Don't have an account? </Text>
         <TouchableOpacity onPress={() => router.push('/signup')}>
           <Text style={{ color: '#a855f7', fontWeight: '700', fontSize: 14 }}>Sign Up</Text>
         </TouchableOpacity>
