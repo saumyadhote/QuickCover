@@ -1,6 +1,14 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Activity as WebActivity, AlertTriangle, ShieldAlert as WebShieldAlert, Users as WebUsers, CloudLightning as WebCloudLightning, ShieldCheck as WebShieldCheck, RefreshCw as WebRefreshCw } from 'lucide-react';
+import {
+  Activity as WebActivity,
+  AlertTriangle,
+  ShieldAlert as WebShieldAlert,
+  Users as WebUsers,
+  CloudLightning as WebCloudLightning,
+  ShieldCheck as WebShieldCheck,
+  RefreshCw as WebRefreshCw,
+} from 'lucide-react';
 import qcLogo from './assets/qclogo.png';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
@@ -14,11 +22,50 @@ type DashboardState = {
   currentRiskLevel: RiskLevel;
 };
 
+function RiskBadge({ level }: { level: RiskLevel }) {
+  const styles: Record<string, string> = {
+    Low: 'bg-[#F0FDF4] text-[#16A34A] border-[#BBF7D0]',
+    Medium: 'bg-[#FFFBEB] text-[#D97706] border-[#FDE68A]',
+    High: 'bg-[#FEF2F2] text-[#DC2626] border-[#FECACA]',
+  };
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-[6px] text-[12px] font-semibold border uppercase tracking-[0.05em] ${styles[level] || 'bg-[#F5F5F5] text-[#888888] border-[#E5E5E5]'
+        }`}
+    >
+      <span
+        className={`w-2 h-2 rounded-full ${level === 'Low'
+          ? 'bg-[#16A34A]'
+          : level === 'Medium'
+            ? 'bg-[#D97706]'
+            : 'bg-[#DC2626]'
+          }`}
+      />
+      {level}
+    </span>
+  );
+}
+
+function StatusDot({ active }: { active: boolean }) {
+  return (
+    <span className="flex items-center gap-1.5">
+      <span
+        className={`w-2 h-2 rounded-full ${active ? 'bg-[#16A34A]' : 'bg-[#DC2626]'}`}
+      />
+      <span
+        className={`text-[12px] font-semibold uppercase tracking-[0.05em] ${active ? 'text-[#16A34A]' : 'text-[#DC2626]'
+          }`}
+      >
+        {active ? 'Connected' : 'Offline'}
+      </span>
+    </span>
+  );
+}
+
 function App() {
   const [state, setState] = useState<DashboardState | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Poll backend every 2s
   useEffect(() => {
     const fetchStatus = async () => {
       try {
@@ -41,7 +88,7 @@ function App() {
         type,
         zone: 'NCR Region',
         severity,
-        message
+        message,
       });
     } catch (err) {
       console.error(err);
@@ -58,7 +105,7 @@ function App() {
 
   if (loading || !state) {
     return (
-      <div className="flex h-screen w-full items-center justify-center bg-[#FAFAFA] text-[#333333]">
+      <div className="flex h-screen w-full items-center justify-center bg-[#FAFAFA]">
         <div className="animate-pulse text-[#2563EB] font-bold text-xl flex items-center gap-3">
           <WebRefreshCw className="animate-spin" /> Connecting to Core...
         </div>
@@ -66,286 +113,270 @@ function App() {
     );
   }
 
+  const grossPremium = (state.currentMicroFee || 2.0) * 213120;
+  const marginRate =
+    state.currentRiskLevel === 'Low'
+      ? 0.92
+      : state.currentRiskLevel === 'Medium'
+        ? 0.78
+        : 0.45;
+  const netProfit = state.disruption ? grossPremium * 0.15 : grossPremium * marginRate;
+
   return (
-    <div className="min-h-screen w-full bg-[#FAFAFA] text-[#333333] flex">
-      {/* Sidebar */}
-      <aside className="w-[240px] flex-shrink-0 bg-white border-r border-[#E5E5E5] p-6">
-        <div className="flex items-center gap-3 mb-8">
-          <div className="w-10 h-10 rounded-[8px] bg-[#2563EB] flex items-center justify-center text-white font-semibold text-sm">
-            QC
-          </div>
-          <div className="leading-tight">
-            <div className="font-bold text-sm">QuickCover</div>
-            <div className="text-[14px] text-[#333333]">Admin</div>
-          </div>
-        </div>
+    <div className="min-h-screen bg-[#FAFAFA] text-[#333333]">
 
-        <nav className="space-y-2">
-          <a className="block rounded-[8px] px-3 py-2 text-[14px] text-[#333333] hover:bg-[#2563EB]/5 transition-colors" href="#">
-            Dashboard
-          </a>
-          <a className="block rounded-[8px] px-3 py-2 text-[14px] text-[#333333] hover:bg-[#2563EB]/5 transition-colors" href="#">
-            Integrations
-          </a>
-          <a className="block rounded-[8px] px-3 py-2 text-[14px] text-[#333333] hover:bg-[#2563EB]/5 transition-colors" href="#">
-            Simulator
-          </a>
+      {/* Top Navbar */}
+      <header className="h-14 bg-[#111111] border-b border-[#333333] flex items-center justify-between px-8 mt-5 mx-6 rounded-[12px]">        <div className="flex items-center gap-6">
+        <img src={qcLogo} alt="QuickCover" className="h-7 w-auto" />
+        <div className="h-4 w-px bg-[#333333]" />
+        <nav className="flex items-center gap-1">
+        
+
         </nav>
+      </div>
 
-        <div className="mt-8 text-[14px] text-[#333333]">
-          Live Telemetry & Underwriting
-        </div>
-      </aside>
-
-      <div className="flex-1 flex flex-col">
-        {/* Top Navbar */}
-        <header className="h-14 bg-white border-b border-[#E5E5E5] shadow-sm flex items-center justify-between px-6">
-          <div className="flex flex-col">
-            <img src={qcLogo} alt="QuickCover" className="h-8 w-auto mb-1" />
-            <div className="text-[14px] text-[#333333]">Live Telemetry & Underwriting</div>
-          </div>
-
+        <div className="flex items-center gap-4">
+          {state.disruption && (
+            <span className="flex items-center gap-1.5 px-3 py-1 rounded-[6px] bg-[#FEF2F2] border border-[#FECACA] text-[#DC2626] text-[12px] font-semibold uppercase tracking-[0.05em]">
+              <span className="w-2 h-2 rounded-full bg-[#DC2626] animate-pulse" />
+              Disruption Active
+            </span>
+          )}
           <button
             onClick={resetAll}
-            className="flex items-center gap-2 px-5 py-3 rounded-[8px] bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-semibold text-[14px] transition-colors"
+            className="flex items-center gap-2 px-4 py-2 rounded-[8px] bg-[#111111] hover:bg-[#222222] text-white text-[13px] font-semibold transition-colors"
           >
-            <WebRefreshCw size={18} /> Reset Demo Data
+            <WebRefreshCw size={14} /> Reset Demo
           </button>
-        </header>
+        </div>
+      </header >
 
-        <main className="flex-1 p-6 overflow-auto bg-[#FAFAFA]">
-          <div className="max-w-7xl mx-auto">
-            {/* Global Metrics Row */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-              {/* Active Deliveries */}
-              <div className="bg-white border border-[#E5E5E5] rounded-[8px] p-4 transition-shadow hover:shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
-                <div className="flex justify-between items-start mb-4">
-                  <div className="p-3 bg-[#2563EB]/5 rounded-[8px] border border-[#E5E5E5]">
-                    <WebUsers className="text-[#2563EB]" size={24} />
-                  </div>
-                  <span className="px-3 py-1 bg-white text-[#888888] text-[12px] font-medium rounded-[8px] border border-[#E5E5E5] uppercase tracking-[0.05em]">
-                    MOCK SCALE
-                  </span>
-                </div>
-                <h3 className="text-[12px] font-medium text-[#888888] uppercase tracking-[0.05em] mb-1">Live Active Deliveries</h3>
-                <p className="text-4xl font-semibold">{state.isTripActive ? '24,893' : '24,892'}</p>
+      {/* Main Content */}
+      < main className="p-6 max-w-7xl mx-auto" >
+
+        {/* Bento Grid */}
+        < div className="grid grid-cols-4 gap-4 auto-rows-auto" >
+
+          {/* Card 1 — Live Active Deliveries (span 1) */}
+          < div className="col-span-1 bg-white border border-[#E5E5E5] rounded-[12px] p-5 hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] transition-shadow" >
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-2 bg-[#EFF6FF] rounded-[8px]">
+                <WebUsers className="text-[#2563EB]" size={18} />
               </div>
+              <span className="text-[11px] font-medium text-[#888888] uppercase tracking-[0.06em]">Mock Scale</span>
+            </div>
+            <p className="text-[11px] font-medium text-[#888888] uppercase tracking-[0.06em] mb-1">
+              Live Active Deliveries
+            </p>
+            <p className="text-[32px] font-bold text-[#111111] leading-tight">
+              {state.isTripActive ? '24,893' : '24,892'}
+            </p>
+            <div className="mt-3">
+              <StatusDot active={true} />
+            </div>
+          </div >
 
-              {/* Daily Premium Volume */}
-              <div className="bg-white border border-[#E5E5E5] rounded-[8px] p-4 transition-shadow hover:shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
-                <div className="flex justify-between items-start mb-4">
-                  <div className="p-3 bg-[#2563EB]/5 rounded-[8px] border border-[#E5E5E5]">
-                    <WebActivity className="text-[#2563EB]" size={24} />
-                  </div>
-                </div>
-                <h3 className="text-[12px] font-medium text-[#888888] uppercase tracking-[0.05em] mb-1">24h Premium Volume (Gross)</h3>
-                <p className="text-4xl font-semibold text-[#2563EB]">
-                  ₹{((state.currentMicroFee || 2.0) * 213120).toLocaleString('en-IN', { maximumFractionDigits: 0 })}
-                </p>
+          {/* Card 2 — Gross Premium (span 1) */}
+          < div className="col-span-1 bg-white border border-[#E5E5E5] rounded-[12px] p-5 hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] transition-shadow" >
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-2 bg-[#EFF6FF] rounded-[8px]">
+                <WebActivity className="text-[#2563EB]" size={18} />
               </div>
+            </div>
+            <p className="text-[11px] font-medium text-[#888888] uppercase tracking-[0.06em] mb-1">
+              24h Premium Volume
+            </p>
+            <p className="text-[32px] font-bold text-[#2563EB] leading-tight">
+              ₹{grossPremium.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+            </p>
+            <p className="text-[12px] text-[#888888] mt-2">Gross collected today</p>
+          </div >
 
-              {/* Estimated Daily Profit */}
-              <div className="bg-white rounded-[8px] p-4 border border-[#E5E5E5] transition-shadow hover:shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
-                <div className="flex justify-between items-start mb-4">
-                  <div
-                    className={`p-3 rounded-[8px] border ${
-                      state.disruption ? 'bg-red-50 border-red-200' : 'bg-[#2563EB]/5 border-[#E5E5E5]'
-                    }`}
-                  >
-                    {state.disruption ? (
-                      <AlertTriangle className="text-red-600" size={24} />
-                    ) : (
-                      <WebShieldCheck className="text-[#2563EB]" size={24} />
-                    )}
-                  </div>
-                  <span
-                    className="px-3 py-1 bg-white text-[#888888] text-[12px] font-medium rounded-[8px] border border-[#E5E5E5] uppercase tracking-[0.05em]"
-                  >
-                    {state.disruption
-                      ? 'PAYOUT RISK SPIKE'
-                      : `${state.currentRiskLevel === 'Low' ? '92%' : state.currentRiskLevel === 'Medium' ? '78%' : '45%'} MARGIN`}
-                  </span>
-                </div>
-                <h3 className="text-[12px] font-medium text-[#888888] uppercase tracking-[0.05em] mb-1">Estimated Net Profit (Daily)</h3>
-                <p
-                  className={`text-4xl font-semibold ${
-                    state.disruption ? 'text-red-600' : 'text-emerald-700'
+          {/* Card 3 — Net Profit (span 1) */}
+          < div
+            className={`col-span-1 rounded-[12px] p-5 border hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] transition-shadow ${state.disruption
+              ? 'bg-[#FEF2F2] border-[#FECACA]'
+              : 'bg-[#F0FDF4] border-[#BBF7D0]'
+              }`
+            }
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div
+                className={`p-2 rounded-[8px] ${state.disruption ? 'bg-[#FECACA]' : 'bg-[#BBF7D0]'
                   }`}
-                >
-                  {state.disruption
-                    ? '₹' +
-                      (((state.currentMicroFee || 2.0) * 213120) * 0.15).toLocaleString('en-IN', {
-                        maximumFractionDigits: 0
-                      })
-                    : '₹' +
-                      (((state.currentMicroFee || 2.0) * 213120) *
-                        (state.currentRiskLevel === 'Low'
-                          ? 0.92
-                          : state.currentRiskLevel === 'Medium'
-                            ? 0.78
-                            : 0.45)).toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+              >
+                {state.disruption ? (
+                  <AlertTriangle className="text-[#DC2626]" size={18} />
+                ) : (
+                  <WebShieldCheck className="text-[#16A34A]" size={18} />
+                )}
+              </div>
+              <span
+                className={`text-[11px] font-semibold uppercase tracking-[0.06em] ${state.disruption ? 'text-[#DC2626]' : 'text-[#16A34A]'
+                  }`}
+              >
+                {state.disruption ? 'Payout Risk' : `${Math.round(marginRate * 100)}% Margin`}
+              </span>
+            </div>
+            <p className="text-[11px] font-medium text-[#888888] uppercase tracking-[0.06em] mb-1">
+              Est. Net Profit (Daily)
+            </p>
+            <p
+              className={`text-[32px] font-bold leading-tight ${state.disruption ? 'text-[#DC2626]' : 'text-[#16A34A]'
+                }`}
+            >
+              ₹{netProfit.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+            </p>
+          </div >
+
+          {/* Card 4 — Risk Level (span 1) */}
+          < div className="col-span-1 bg-white border border-[#E5E5E5] rounded-[12px] p-5 hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] transition-shadow" >
+            <div className="mb-4">
+              <p className="text-[11px] font-medium text-[#888888] uppercase tracking-[0.06em] mb-3">
+                Current Risk Level
+              </p>
+              <RiskBadge level={state.currentRiskLevel} />
+            </div>
+            <p className="text-[11px] font-medium text-[#888888] uppercase tracking-[0.06em] mb-1">
+              Current Micro-Fee
+            </p>
+            <div className="flex items-baseline gap-1">
+              <p className="text-[28px] font-bold text-[#111111]">
+                ₹{state.currentMicroFee?.toFixed(2)}
+              </p>
+              <p className="text-[13px] text-[#888888]">/ order</p>
+            </div>
+          </div >
+
+          {/* Card 5 — Blinkit Integration (span 2) */}
+          < div className="col-span-2 bg-white border border-[#E5E5E5] rounded-[12px] p-5 hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] transition-shadow" >
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-[8px] bg-yellow-400 flex items-center justify-center font-bold text-[#111111] text-[15px]">
+                  B
+                </div>
+                <div>
+                  <h3 className="text-[14px] font-semibold text-[#111111]">Blinkit</h3>
+                  <p className="text-[12px] text-[#888888]">Delivery Partner API</p>
+                </div>
+              </div>
+              <StatusDot active={true} />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-[#FAFAFA] p-3 rounded-[8px] border border-[#E5E5E5]">
+                <p className="text-[11px] font-medium text-[#888888] uppercase tracking-[0.06em] mb-1">
+                  Active Webhook
+                </p>
+                <p className="text-[12px] text-[#333333] break-all">
+                  api.blinkit.co.in/v1/quickcover/payout
+                </p>
+              </div>
+              <div className="bg-[#FAFAFA] p-3 rounded-[8px] border border-[#E5E5E5]">
+                <p className="text-[11px] font-medium text-[#888888] uppercase tracking-[0.06em] mb-1">
+                  Worker Pool
+                </p>
+                <p className="text-[14px] font-semibold text-[#111111]">114,208 Riders</p>
+                <p className="text-[12px] text-[#888888]">NCR Region</p>
+              </div>
+            </div>
+          </div >
+
+          {/* Card 6 — ML Forecast Engine (span 2) */}
+          < div className="col-span-2 bg-white border border-[#E5E5E5] rounded-[12px] p-5 hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] transition-shadow" >
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-[#EFF6FF] rounded-[8px]">
+                  <WebActivity className="text-[#2563EB]" size={18} />
+                </div>
+                <h3 className="text-[14px] font-semibold text-[#111111]">ML Forecast Engine</h3>
+              </div>
+              <button
+                onClick={async () => {
+                  try {
+                    await axios.post(`${API_URL}/refresh-forecast`);
+                  } catch (err) {
+                    console.error(err);
+                  }
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-[#F5F5F5] hover:bg-[#EBEBEB] rounded-[6px] text-[12px] font-semibold text-[#111111] border border-[#E5E5E5] transition-colors"
+              >
+                <WebRefreshCw size={12} /> Refresh
+              </button>
+            </div>
+
+            <p className="text-[12px] text-[#888888] bg-[#FAFAFA] p-3 rounded-[8px] border border-[#E5E5E5]">
+              Fee auto-fluctuates (₹1.5 – ₹4) based on real-time IMD Weather, Traffic & AQI streams.
+            </p>
+          </div >
+
+          {/* Card 7 — Disruption Simulator (span 4) */}
+          < div className="col-span-4 bg-white border border-[#E5E5E5] rounded-[12px] p-5 hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] transition-shadow" >
+            <div className="flex items-start justify-between mb-2">
+              <div>
+                <h2 className="text-[16px] font-semibold text-[#111111] flex items-center gap-2 mb-1">
+                  <WebCloudLightning className="text-[#2563EB]" size={18} /> API Disruption Simulator
+                </h2>
+                <p className="text-[13px] text-[#888888] max-w-2xl">
+                  Trigger mock API events simulating civic or environmental hazards. Active trip workers auto-generate claims when thresholds are breached.
                 </p>
               </div>
             </div>
 
-            {/* Enterprise Partners B2B Section */}
-            <div className="mb-10">
-              <h2 className="text-[20px] font-semibold text-[#111111] mb-6 flex items-center gap-3">
-                <WebCloudLightning className="text-[#2563EB]" /> Enterprise Integrations (B2B)
-              </h2>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Blinkit Partner Card */}
-                <div className="bg-white border border-[#E5E5E5] rounded-[8px] p-4 transition-shadow hover:shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
-                  <div className="flex justify-between items-start mb-6">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-[8px] bg-yellow-400 flex items-center justify-center font-semibold text-[#111111] text-[14px]">
-                        B
-                      </div>
-                      <div>
-                        <h3 className="text-[14px] font-semibold text-[#111111]">Blinkit</h3>
-                        <p className="text-[14px] text-[#333333]">Delivery Partner API</p>
-                      </div>
-                    </div>
-                    <span className="px-3 py-1 bg-white text-[#888888] text-[12px] font-medium rounded-[8px] border border-[#E5E5E5] uppercase tracking-[0.05em]">
-                      CONNECTED
-                    </span>
+            <div className="grid grid-cols-3 gap-4 mt-5">
+              {/* Flash Flood */}
+              <button
+                onClick={() => triggerDisruption('Flood', 'critical', 'Severe waterlogging reported in Sector 42.')}
+                className="bg-[#FAFAFA] border border-[#E5E5E5] p-4 rounded-[10px] text-left hover:border-[#2563EB] hover:bg-[#EFF6FF] group transition-all"
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="p-1.5 bg-[#EFF6FF] rounded-[6px] group-hover:scale-105 transition-transform">
+                    <WebCloudLightning className="text-[#2563EB]" size={16} />
                   </div>
-
-                  <div className="space-y-4">
-                    <div className="bg-white p-4 rounded-[8px] border border-[#E5E5E5] transition-shadow hover:shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
-                      <p className="text-[12px] font-medium text-[#888888] uppercase tracking-[0.05em] mb-1">
-                        Active Webhook (Payout Sync)
-                      </p>
-                      <p className="text-[14px] text-[#333333] break-all">
-                        https://api.blinkit.co.in/v1/quickcover/payout
-                      </p>
-                    </div>
-                    <div className="bg-white p-4 rounded-[8px] border border-[#E5E5E5] transition-shadow hover:shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
-                      <p className="text-[12px] font-medium text-[#888888] uppercase tracking-[0.05em] mb-1">
-                        Live Worker Telemetry Pool
-                      </p>
-                      <p className="text-[14px] font-medium text-[#333333]">114,208 Riders (NCR Region)</p>
-                    </div>
-                  </div>
+                  <h4 className="text-[12px] font-semibold text-[#111111] uppercase tracking-[0.05em]">Flash Flood</h4>
                 </div>
+                <p className="text-[12px] text-[#888888]">
+                  Simulates sudden rainfall and zone waterlogging thresholds breached.
+                </p>
+              </button>
 
-                {/* ML Dynamic Pricing Engine Card */}
-                <div className="bg-white border border-[#E5E5E5] rounded-[8px] p-4 transition-shadow hover:shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
-                  <div className="flex justify-between items-start mb-6">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-[#2563EB]/10 rounded-[8px] text-[#2563EB]">
-                        <WebActivity size={24} />
-                      </div>
-                      <h3 className="text-[14px] font-semibold text-[#111111]">ML Forecast Engine</h3>
-                    </div>
-                    <button
-                      onClick={async () => {
-                        try {
-                          await axios.post(`${API_URL}/refresh-forecast`);
-                        } catch (err) {
-                          console.error(err);
-                        }
-                      }}
-                      className="px-5 py-3 bg-white hover:bg-[#F5F5F5] rounded-[8px] text-[14px] font-semibold text-[#111111] flex items-center gap-1.5 transition-colors border border-[#E5E5E5]"
-                    >
-                      <WebRefreshCw size={14} /> REFRESH
-                    </button>
+              {/* AQI Spike */}
+              <button
+                onClick={() => triggerDisruption('Pollution', 'high', 'AQI crossed 450 in primary delivery grid.')}
+                className="bg-[#FAFAFA] border border-[#E5E5E5] p-4 rounded-[10px] text-left hover:border-orange-400 hover:bg-orange-50 group transition-all"
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="p-1.5 bg-orange-100 rounded-[6px] group-hover:scale-105 transition-transform">
+                    <WebActivity className="text-orange-600" size={16} />
                   </div>
-
-                  <div className="grid grid-cols-2 gap-4 mb-6">
-                    <div>
-                      <p className="text-[12px] font-medium text-[#888888] uppercase tracking-[0.05em] mb-1">
-                        Current Micro-Fee
-                      </p>
-                      <div className="flex items-baseline gap-1">
-                        <p className="text-3xl font-semibold text-[#111111]">₹{state.currentMicroFee?.toFixed(2)}</p>
-                        <p className="text-[14px] text-[#333333] font-medium">/ order</p>
-                      </div>
-                    </div>
-
-                    <div>
-                      <p className="text-[12px] font-medium text-[#888888] uppercase tracking-[0.05em] mb-1">
-                        Predicted Risk
-                      </p>
-                      <div
-                        className="inline-flex px-3 py-1 rounded-[8px] text-[12px] font-medium border border-[#E5E5E5] text-[#888888] uppercase tracking-[0.05em]"
-                      >
-                        {state.currentRiskLevel?.toUpperCase()}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="text-[14px] text-[#333333] bg-white p-4 rounded-[8px] border border-[#E5E5E5] transition-shadow hover:shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
-                    <p>Fee auto-fluctuates (₹1.5 - ₹4) based on real-time external API streams (IMD Weather, Traffic, AQI).</p>
-                  </div>
+                  <h4 className="text-[12px] font-semibold text-[#111111] uppercase tracking-[0.05em]">AQI Spike</h4>
                 </div>
-              </div>
+                <p className="text-[12px] text-[#888888]">
+                  Triggers hazardous air quality limits. Auto-protects outdoor workers.
+                </p>
+              </button>
+
+              {/* Civic Disruption */}
+              <button
+                onClick={() => triggerDisruption('Curfew', 'critical', 'Unplanned Section 144 grid disruption.')}
+                className="bg-[#FAFAFA] border border-[#E5E5E5] p-4 rounded-[10px] text-left hover:border-purple-400 hover:bg-purple-50 group transition-all"
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="p-1.5 bg-purple-100 rounded-[6px] group-hover:scale-105 transition-transform">
+                    <WebShieldAlert className="text-purple-700" size={16} />
+                  </div>
+                  <h4 className="text-[12px] font-semibold text-[#111111] uppercase tracking-[0.05em]">Civic Disruption</h4>
+                </div>
+                <p className="text-[12px] text-[#888888]">
+                  Mocks a localized curfew or emergency roadblock zone mapping.
+                </p>
+              </button>
             </div>
+          </div >
 
-            {/* Disruption Simulator */}
-            <div className="bg-white rounded-[8px] p-4 border border-[#E5E5E5] transition-shadow hover:shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
-              <h2 className="text-[20px] font-semibold text-[#111111] mb-2 flex items-center gap-3">
-                <WebCloudLightning className="text-[#2563EB]" /> API Disruption Simulator
-              </h2>
-              <p className="text-[14px] text-[#333333] mb-8 max-w-2xl">
-                As an underwriter, trigger Mock API events simulating external civic or environmental hazards. If a gig worker has an active trip when standard thresholds are breached, a claim is auto-generated.
-              </p>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                {/* Action 1 */}
-                <button
-                  onClick={() => triggerDisruption('Flood', 'critical', 'Severe waterlogging reported in Sector 42.')}
-                  className="bg-white border border-[#E5E5E5] p-4 rounded-[8px] text-left transition-colors hover:bg-[#F5F5F5] group text-[#111111]"
-                >
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="p-2 bg-[#2563EB]/10 rounded-[8px] text-[#2563EB] group-hover:scale-105 transition-transform">
-                      <WebCloudLightning size={20} />
-                    </div>
-                    <h4 className="text-[12px] font-medium text-[#888888] uppercase tracking-[0.05em]">Flash Flood Warning</h4>
-                  </div>
-                  <p className="text-[14px] text-[#333333]">
-                    Simulates sudden heavy rainfall and zone waterlogging thresholds breached.
-                  </p>
-                </button>
-
-                {/* Action 2 */}
-                <button
-                  onClick={() => triggerDisruption('Pollution', 'high', 'AQI crossed 450 in primary delivery grid.')}
-                  className="bg-white border border-[#E5E5E5] p-4 rounded-[8px] text-left transition-colors hover:bg-[#F5F5F5] group text-[#111111]"
-                >
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="p-2 bg-orange-100 rounded-[8px] text-orange-700 group-hover:scale-105 transition-transform">
-                      <WebActivity size={20} />
-                    </div>
-                    <h4 className="text-[12px] font-medium text-[#888888] uppercase tracking-[0.05em]">Severe AQI Spike</h4>
-                  </div>
-                  <p className="text-[14px] text-[#333333]">
-                    Triggers hazardous air quality limits. Automatically protects workers outdoors.
-                  </p>
-                </button>
-
-                {/* Action 3 */}
-                <button
-                  onClick={() => triggerDisruption('Curfew', 'critical', 'Unplanned Section 144 grid disruption.')}
-                  className="bg-white border border-[#E5E5E5] p-4 rounded-[8px] text-left transition-colors hover:bg-[#F5F5F5] group text-[#111111]"
-                >
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="p-2 bg-purple-100 rounded-[8px] text-purple-700 group-hover:scale-105 transition-transform">
-                      <WebShieldAlert size={20} />
-                    </div>
-                    <h4 className="text-[12px] font-medium text-[#888888] uppercase tracking-[0.05em]">Civic Disruption</h4>
-                  </div>
-                  <p className="text-[14px] text-[#333333]">
-                    Mocks an external localized curfew or emergency roadblock zone mapping.
-                  </p>
-                </button>
-              </div>
-            </div>
-          </div>
-        </main>
-      </div>
-    </div>
+        </div >
+      </main >
+    </div >
   );
 }
 
