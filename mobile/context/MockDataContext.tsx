@@ -16,6 +16,8 @@ type AppState = {
   claimStatus: 'none' | 'processing' | 'approved' | 'paid';
   weeklyEarnings: number;
   weeklyProtected: number;
+  currentMicroFee: number;
+  currentRiskLevel: 'Low' | 'Medium' | 'High';
 };
 
 type MockDataContextType = {
@@ -24,6 +26,7 @@ type MockDataContextType = {
   backendOnline: boolean;
   acceptTrip: () => Promise<void>;
   completeTrip: () => Promise<void>;
+  submitClaim: (type: string, message: string) => Promise<void>;
 };
 
 const FALLBACK_STATE: AppState = {
@@ -32,6 +35,8 @@ const FALLBACK_STATE: AppState = {
   claimStatus: 'none',
   weeklyEarnings: 3200,
   weeklyProtected: 0,
+  currentMicroFee: 2.0,
+  currentRiskLevel: 'Low',
 };
 
 const MockDataContext = createContext<MockDataContextType | null>(null);
@@ -112,6 +117,26 @@ export function MockDataProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // ---- submitClaim -------------------------------------------------------
+  const submitClaim = async (type: string, message: string) => {
+    if (!backendOnline) {
+      // Offline: optimistically move to processing state
+      setState(prev => prev ? { ...prev, claimStatus: 'processing' } : prev);
+      return;
+    }
+    try {
+      const res = await axios.post(`${API_URL}/trigger-disruption`, {
+        type,
+        zone: 'ZONE_A',
+        severity: 'HIGH',
+        message,
+      });
+      setState(res.data.state);
+    } catch {
+      setState(prev => prev ? { ...prev, claimStatus: 'processing' } : prev);
+    }
+  };
+
   // ---- completeTrip -----------------------------------------------------
   const completeTrip = async () => {
     if (!backendOnline) {
@@ -138,7 +163,7 @@ export function MockDataProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <MockDataContext.Provider value={{ state, loading, backendOnline, acceptTrip, completeTrip }}>
+    <MockDataContext.Provider value={{ state, loading, backendOnline, acceptTrip, completeTrip, submitClaim }}>
       {children}
     </MockDataContext.Provider>
   );

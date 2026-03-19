@@ -2,6 +2,7 @@ import { Platform } from 'react-native';
 
 /**
  * Resolves the backend API URL for the current environment:
+ *   - Web (browser)     → https://quickcover.onrender.com  (live Render backend)
  *   - Android emulator  → 10.0.2.2:4000  (host machine alias)
  *   - iOS simulator     → localhost:4000
  *   - Physical device   → EXPO_PUBLIC_API_URL from mobile/.env
@@ -13,6 +14,7 @@ import { Platform } from 'react-native';
 export function resolveApiUrl(): string {
   const envUrl = process.env.EXPO_PUBLIC_API_URL;
   if (envUrl) return envUrl;
+  if (Platform.OS === 'web') return 'https://quickcover.onrender.com';
   if (Platform.OS === 'android') return 'http://10.0.2.2:4000';
   return 'http://localhost:4000';
 }

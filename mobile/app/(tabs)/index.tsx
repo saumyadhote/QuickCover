@@ -3,7 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, Modal, TouchableWithoutFeedba
 import { useRouter } from 'expo-router';
 import { useMockData } from '../../context/MockDataContext';
 import { useAuth } from '../../context/AuthContext';
-import { ShieldCheck, ShieldAlert, AlertTriangle, CheckCircle, Bell, X, CloudRain, Clock, Zap } from 'lucide-react-native';
+import { ShieldCheck, ShieldAlert, AlertTriangle, CheckCircle, Bell, X, CloudRain, Clock, Zap, TrendingUp } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 // ── Build notification list from live state ──────────────────────────────────
@@ -207,7 +207,7 @@ export default function DashboardScreen() {
     );
   }
 
-  const { isTripActive, disruption, claimStatus, weeklyEarnings, weeklyProtected } = state;
+  const { isTripActive, disruption, claimStatus, weeklyEarnings, weeklyProtected, currentMicroFee, currentRiskLevel } = state;
   const firstName = user?.name?.split(' ')[0] ?? 'there';
   const initial = user?.name?.[0]?.toUpperCase() ?? '?';
   const today = new Date();
@@ -307,6 +307,27 @@ export default function DashboardScreen() {
               <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: isTripActive ? '#bbf7d0' : '#94a3b8' }} />
             </View>
           </TouchableOpacity>
+
+          {/* ── Live Consumer Surcharge Pill ── */}
+          {(() => {
+            const riskColor = currentRiskLevel === 'Low' ? '#16a34a' : currentRiskLevel === 'High' ? '#dc2626' : '#d97706';
+            const riskBg    = currentRiskLevel === 'Low' ? '#f0fdf4' : currentRiskLevel === 'High' ? '#fef2f2' : '#fffbeb';
+            const riskBorder= currentRiskLevel === 'Low' ? '#bbf7d0' : currentRiskLevel === 'High' ? '#fecaca' : '#fde68a';
+            return (
+              <View style={{ backgroundColor: riskBg, borderRadius: 14, paddingVertical: 10, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 1, borderColor: riskBorder }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <TrendingUp color={riskColor} size={15} />
+                  <Text style={{ marginLeft: 7, fontSize: 13, color: riskColor, fontWeight: '600' }}>Consumer surcharge today</Text>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Text style={{ fontSize: 15, fontWeight: '700', color: '#0f172a' }}>₹{currentMicroFee.toFixed(2)}/order</Text>
+                  <View style={{ backgroundColor: riskColor, borderRadius: 8, paddingHorizontal: 7, paddingVertical: 3 }}>
+                    <Text style={{ color: '#ffffff', fontSize: 11, fontWeight: '700' }}>{currentRiskLevel.toUpperCase()}</Text>
+                  </View>
+                </View>
+              </View>
+            );
+          })()}
 
           {/* ── Disruption Alert → File a Claim CTA ── */}
           {disruption && claimStatus === 'none' && (

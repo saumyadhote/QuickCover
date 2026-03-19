@@ -53,7 +53,7 @@ export default function SignupScreen() {
         platform: selectedPlatform.toLowerCase(),
       };
       await register(data);
-      router.replace('/(tabs)');
+      router.replace('/onboarding' as any);
     } catch (err: any) {
       const msg = err?.response?.data?.error || 'Registration failed. Please try again.';
       setError(msg);

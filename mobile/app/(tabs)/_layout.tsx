@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { Home, ShieldCheck, FileText, User } from 'lucide-react-native';
+import { Home, FileText, User } from 'lucide-react-native';
 
 export default function TabLayout() {
   return (
@@ -9,13 +9,13 @@ export default function TabLayout() {
         tabBarStyle: {
           backgroundColor: '#ffffff',
           borderTopWidth: 2,
-          borderTopColor: '#a855f7', // Purple border top
+          borderTopColor: '#a855f7',
           height: 65,
           paddingBottom: 10,
           paddingTop: 10,
         },
-        tabBarActiveTintColor: '#2563eb', // Blue active icon
-        tabBarInactiveTintColor: '#64748b', // Slate inactive icon
+        tabBarActiveTintColor: '#2563eb',
+        tabBarInactiveTintColor: '#64748b',
       }}
     >
       <Tabs.Screen
@@ -33,18 +33,16 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="coverage"
-        options={{
-          title: 'Coverage',
-          tabBarIcon: ({ color }) => <ShieldCheck color={color} size={24} />,
-        }}
-      />
-      <Tabs.Screen
         name="profile"
         options={{
           title: 'Profile',
           tabBarIcon: ({ color }) => <User color={color} size={24} />,
         }}
+      />
+      {/* coverage.tsx still exists as a file but is not a visible tab */}
+      <Tabs.Screen
+        name="coverage"
+        options={{ href: null }}
       />
     </Tabs>
   );

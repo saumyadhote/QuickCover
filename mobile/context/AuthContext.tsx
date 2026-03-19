@@ -1,10 +1,27 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
 import axios from 'axios';
 import { API_URL } from '../utils/apiUrl';
 
 export { API_URL };
 const TOKEN_KEY = 'qc_auth_token';
+
+// Platform-aware token storage: localStorage on web, SecureStore on native
+const tokenStorage = {
+  get: async (key: string): Promise<string | null> => {
+    if (Platform.OS === 'web') return localStorage.getItem(key);
+    return SecureStore.getItemAsync(key);
+  },
+  set: async (key: string, value: string): Promise<void> => {
+    if (Platform.OS === 'web') { localStorage.setItem(key, value); return; }
+    await SecureStore.setItemAsync(key, value);
+  },
+  delete: async (key: string): Promise<void> => {
+    if (Platform.OS === 'web') { localStorage.removeItem(key); return; }
+    await SecureStore.deleteItemAsync(key);
+  },
+};
 
 export type User = {
   id: number;
@@ -45,7 +62,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const restoreSession = async () => {
       try {
-        const stored = await SecureStore.getItemAsync(TOKEN_KEY);
+        const stored = await tokenStorage.get(TOKEN_KEY);
         if (stored) {
           const res = await axios.get(`${API_URL}/auth/me`, {
             headers: { Authorization: `Bearer ${stored}` },
@@ -56,7 +73,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       } catch {
         // Token expired or backend unavailable — clear it
-        await SecureStore.deleteItemAsync(TOKEN_KEY);
+        await tokenStorage.delete(TOKEN_KEY);
       } finally {
         setLoading(false);
       }
@@ -66,20 +83,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = async (email: string, password: string) => {
     const res = await axios.post(`${API_URL}/auth/login`, { email, password }, { timeout: 5000 });
-    await SecureStore.setItemAsync(TOKEN_KEY, res.data.token);
+    await tokenStorage.set(TOKEN_KEY, res.data.token);
     setToken(res.data.token);
     setUser(res.data.user);
   };
 
   const register = async (data: RegisterData) => {
     const res = await axios.post(`${API_URL}/auth/register`, data, { timeout: 5000 });
-    await SecureStore.setItemAsync(TOKEN_KEY, res.data.token);
+    await tokenStorage.set(TOKEN_KEY, res.data.token);
     setToken(res.data.token);
     setUser(res.data.user);
   };
 
   const logout = async () => {
-    await SecureStore.deleteItemAsync(TOKEN_KEY);
+    await tokenStorage.delete(TOKEN_KEY);
     setToken(null);
     setUser(null);
   };

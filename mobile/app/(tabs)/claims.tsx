@@ -128,7 +128,7 @@ function ClaimForm({ onClose, onSubmit }: { onClose: () => void; onSubmit: (type
 }
 
 export default function ClaimsScreen() {
-  const { state } = useMockData();
+  const { state, submitClaim } = useMockData();
   const [formOpen, setFormOpen] = useState(false);
 
   const isEmptyState = !state?.claimStatus || state?.claimStatus === 'none';
@@ -137,10 +137,9 @@ export default function ClaimsScreen() {
   const isPayoutProcessing = state?.claimStatus === 'approved' || state?.claimStatus === 'paid';
   const isPayoutCompleted = state?.claimStatus === 'paid';
 
-  const handleSubmit = (type: string, desc: string) => {
-    // In production: POST /trigger-disruption with { type, message: desc }
-    // For now just close the form — the demo admin panel triggers disruptions separately
+  const handleSubmit = async (type: string, desc: string) => {
     setFormOpen(false);
+    await submitClaim(type, desc);
   };
 
   return (

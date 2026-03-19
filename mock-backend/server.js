@@ -95,8 +95,12 @@ app.post('/trigger-disruption', async (req, res) => {
 
   try {
     const currentState = await dbGet('SELECT * FROM state WHERE id = 1');
-    if (!currentState.isTripActive) {
-      return res.status(400).json({ error: 'Cannot trigger disruption: No active trip.' });
+
+    // Allow manual claim filing even if trip has just ended — drivers report disruptions
+    // after the fact (e.g. flooding forced them off the road mid-trip). Only block if
+    // a claim is already in-flight to prevent duplicate submissions.
+    if (currentState.claimStatus === 'processing' || currentState.claimStatus === 'approved') {
+      return res.status(400).json({ error: 'A claim is already under review. Please wait for it to resolve.' });
     }
 
     const disruption = {
@@ -123,7 +127,7 @@ app.post('/trigger-disruption', async (req, res) => {
       await dbRun(`
         UPDATE state
         SET "claimStatus" = 'approved', "weeklyProtected" = "weeklyProtected" + $1
-        WHERE id = 1 AND "isTripActive" = TRUE AND "claimStatus" = 'processing'
+        WHERE id = 1 AND "claimStatus" = 'processing'
       `, [payoutAmount]);
 
       await dbRun(
