@@ -123,14 +123,19 @@ html = html.replace(
   </style>`
 );
 
+// Strip Expo's pre-rendered SSR content from #root — leave it empty so the
+// MutationObserver correctly detects when React hydrates and adds app-ready.
+// This prevents the 1-2s flash of unstyled pre-rendered HTML (FOUC).
+html = html.replace(/<div id="root">[\s\S]*?<\/div>(?=\s*<script)/, '<div id="root"></div>');
+
 // Wrap <div id="root"> with phone-frame div
 html = html.replace(
-  '<div id="root">',
+  '<div id="root"></div>',
   `<div class="phone-frame">
     <div class="phone-side-btn vol-up"></div>
     <div class="phone-side-btn vol-down"></div>
     <div class="phone-side-btn power"></div>
-    <div id="root">`
+    <div id="root"></div>`
 );
 
 // Close the phone-frame div before </body>
@@ -149,8 +154,8 @@ html = html.replace(
         }
       });
       observer.observe(root, { childList: true, subtree: true });
-      // Safety fallback: always show after 800ms even if observer missed
-      setTimeout(function() { root.classList.add('app-ready'); }, 800);
+      // Safety fallback: always show after 400ms even if observer missed
+      setTimeout(function() { root.classList.add('app-ready'); }, 400);
     })();
   </script>
 </body>`
