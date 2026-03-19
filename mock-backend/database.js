@@ -16,8 +16,11 @@ if (usePostgres) {
   const { Pool } = require('pg');
   pool = new Pool({
     connectionString: process.env.DATABASE_URL,
-    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+    ssl: { rejectUnauthorized: false },
     family: 4,
+    max: 3,
+    idleTimeoutMillis: 10000,
+    connectionTimeoutMillis: 5000,
   });
 }
 
