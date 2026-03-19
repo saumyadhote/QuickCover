@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, Modal,
-  TextInput, TouchableWithoutFeedback, KeyboardAvoidingView, Platform
+  View, Text, ScrollView, TouchableOpacity,
+  TextInput, KeyboardAvoidingView, Platform
 } from 'react-native';
 import { useMockData } from '../../context/MockDataContext';
 import {
   CheckCircle2, Clock, Circle, Camera, Image as ImageIcon,
-  CloudRain, Thermometer, WifiOff, AlertOctagon, ChevronDown, X, FileText
+  ChevronDown, X, FileText
 } from 'lucide-react-native';
 
 const DISRUPTION_TYPES = [
@@ -26,13 +26,19 @@ function ClaimForm({ onClose, onSubmit }: { onClose: () => void; onSubmit: (type
   const canSubmit = description.trim().length > 10;
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' }}>
-        <TouchableWithoutFeedback onPress={onClose}>
-          <View style={{ flex: 1 }} />
-        </TouchableWithoutFeedback>
-
-        <View style={{ backgroundColor: '#ffffff', borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingBottom: 36 }}>
+    <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 100 }}>
+      {/* Backdrop */}
+      <TouchableOpacity
+        activeOpacity={1}
+        onPress={onClose}
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.45)' }}
+      />
+      {/* Sheet */}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ position: 'absolute', bottom: 0, left: 0, right: 0 }}
+      >
+        <View style={{ backgroundColor: '#ffffff', borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingBottom: 20, maxHeight: 600 }}>
           {/* Handle */}
           <View style={{ alignItems: 'center', paddingTop: 12, marginBottom: 4 }}>
             <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: '#e2e8f0' }} />
@@ -48,13 +54,13 @@ function ClaimForm({ onClose, onSubmit }: { onClose: () => void; onSubmit: (type
 
           <ScrollView style={{ paddingHorizontal: 20 }} contentContainerStyle={{ paddingTop: 20, paddingBottom: 8 }} keyboardShouldPersistTaps="handled">
             {/* Disruption type */}
-            <Text style={{ fontSize: 13, fontWeight: '600', color: '#475569', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>Disruption Type</Text>
+            <Text style={{ fontSize: 11, fontWeight: '600', color: '#475569', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>Disruption Type</Text>
             <TouchableOpacity
               onPress={() => setShowTypePicker(!showTypePicker)}
               style={{ backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 13, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}
             >
-              <Text style={{ fontSize: 15, color: '#0f172a' }}>{selectedType.icon}  {selectedType.label}</Text>
-              <ChevronDown color="#94a3b8" size={18} style={{ transform: [{ rotate: showTypePicker ? '180deg' : '0deg' }] }} />
+              <Text style={{ fontSize: 14, color: '#0f172a' }}>{selectedType.icon}  {selectedType.label}</Text>
+              <ChevronDown color="#94a3b8" size={18} />
             </TouchableOpacity>
 
             {showTypePicker && (
@@ -71,44 +77,46 @@ function ClaimForm({ onClose, onSubmit }: { onClose: () => void; onSubmit: (type
               </View>
             )}
 
-            <View style={{ marginBottom: 20 }} />
+            <View style={{ marginBottom: 16 }} />
 
             {/* Description */}
-            <Text style={{ fontSize: 13, fontWeight: '600', color: '#475569', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>What happened?</Text>
+            <Text style={{ fontSize: 11, fontWeight: '600', color: '#475569', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>What happened?</Text>
             <TextInput
               multiline
-              numberOfLines={4}
-              placeholder="Describe the disruption — e.g. 'Heavy flooding on MG Road, orders stopped for 2+ hours, couldn't complete any deliveries'"
+              numberOfLines={3}
+              placeholder="Describe the disruption — e.g. 'Heavy flooding on MG Road, orders stopped for 2+ hours'"
               placeholderTextColor="#94a3b8"
               value={description}
               onChangeText={setDescription}
-              style={{ backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 12, paddingHorizontal: 14, paddingTop: 12, paddingBottom: 12, fontSize: 14, color: '#0f172a', minHeight: 100, textAlignVertical: 'top', marginBottom: 20 }}
+              style={{ backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 12, paddingHorizontal: 14, paddingTop: 12, paddingBottom: 12, fontSize: 13, color: '#0f172a', minHeight: 80, textAlignVertical: 'top', marginBottom: 16 }}
             />
 
             {/* Photo evidence */}
-            <Text style={{ fontSize: 13, fontWeight: '600', color: '#475569', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>Evidence <Text style={{ color: '#94a3b8', fontWeight: '400', textTransform: 'none' }}>(optional but speeds up approval)</Text></Text>
-            <View style={{ flexDirection: 'row', gap: 10, marginBottom: 24 }}>
+            <Text style={{ fontSize: 11, fontWeight: '600', color: '#475569', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+              Evidence <Text style={{ color: '#94a3b8', fontWeight: '400', textTransform: 'none', fontSize: 11 }}>(optional)</Text>
+            </Text>
+            <View style={{ flexDirection: 'row', gap: 10, marginBottom: 16 }}>
               <TouchableOpacity
                 onPress={() => setPhotoAdded(true)}
-                style={{ flex: 1, borderWidth: 1.5, borderStyle: 'dashed', borderColor: photoAdded ? '#16a34a' : '#cbd5e1', borderRadius: 12, paddingVertical: 18, alignItems: 'center', backgroundColor: photoAdded ? '#f0fdf4' : '#f8fafc' }}
+                style={{ flex: 1, borderWidth: 1.5, borderStyle: 'dashed', borderColor: photoAdded ? '#16a34a' : '#cbd5e1', borderRadius: 12, paddingVertical: 14, alignItems: 'center', backgroundColor: photoAdded ? '#f0fdf4' : '#f8fafc' }}
               >
-                <Camera color={photoAdded ? '#16a34a' : '#94a3b8'} size={24} />
-                <Text style={{ fontSize: 12, color: photoAdded ? '#16a34a' : '#64748b', marginTop: 6, fontWeight: '500' }}>{photoAdded ? 'Photo added ✓' : 'Take Photo'}</Text>
+                <Camera color={photoAdded ? '#16a34a' : '#94a3b8'} size={20} />
+                <Text style={{ fontSize: 11, color: photoAdded ? '#16a34a' : '#64748b', marginTop: 4, fontWeight: '500' }}>{photoAdded ? 'Added ✓' : 'Take Photo'}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => setPhotoAdded(true)}
-                style={{ flex: 1, borderWidth: 1.5, borderStyle: 'dashed', borderColor: '#cbd5e1', borderRadius: 12, paddingVertical: 18, alignItems: 'center', backgroundColor: '#f8fafc' }}
+                style={{ flex: 1, borderWidth: 1.5, borderStyle: 'dashed', borderColor: '#cbd5e1', borderRadius: 12, paddingVertical: 14, alignItems: 'center', backgroundColor: '#f8fafc' }}
               >
-                <ImageIcon color="#94a3b8" size={24} />
-                <Text style={{ fontSize: 12, color: '#64748b', marginTop: 6, fontWeight: '500' }}>Upload Image</Text>
+                <ImageIcon color="#94a3b8" size={20} />
+                <Text style={{ fontSize: 11, color: '#64748b', marginTop: 4, fontWeight: '500' }}>Upload Image</Text>
               </TouchableOpacity>
             </View>
 
             {/* Note */}
-            <View style={{ backgroundColor: '#fffbeb', borderRadius: 10, padding: 12, marginBottom: 20, borderWidth: 1, borderColor: '#fde68a' }}>
-              <Text style={{ fontSize: 12, color: '#92400e', lineHeight: 18 }}>
+            <View style={{ backgroundColor: '#fffbeb', borderRadius: 10, padding: 12, marginBottom: 16, borderWidth: 1, borderColor: '#fde68a' }}>
+              <Text style={{ fontSize: 11, color: '#92400e', lineHeight: 17 }}>
                 <Text style={{ fontWeight: '700' }}>Note: </Text>
-                Claims are reviewed within 30 minutes. You must have an active or recently ended trip to be eligible. False claims will result in account suspension.
+                Claims are reviewed within 30 minutes. You must have an active or recently ended trip to be eligible.
               </Text>
             </View>
 
@@ -116,14 +124,14 @@ function ClaimForm({ onClose, onSubmit }: { onClose: () => void; onSubmit: (type
             <TouchableOpacity
               onPress={() => canSubmit && onSubmit(selectedType.id, description)}
               disabled={!canSubmit}
-              style={{ backgroundColor: canSubmit ? '#2563eb' : '#cbd5e1', borderRadius: 14, paddingVertical: 16, alignItems: 'center' }}
+              style={{ backgroundColor: canSubmit ? '#2563eb' : '#cbd5e1', borderRadius: 14, paddingVertical: 14, alignItems: 'center', marginBottom: 4 }}
             >
-              <Text style={{ color: canSubmit ? '#ffffff' : '#94a3b8', fontWeight: '700', fontSize: 16 }}>Submit Claim</Text>
+              <Text style={{ color: canSubmit ? '#ffffff' : '#94a3b8', fontWeight: '700', fontSize: 15 }}>Submit Claim</Text>
             </TouchableOpacity>
           </ScrollView>
         </View>
-      </View>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
@@ -147,14 +155,6 @@ export default function ClaimsScreen() {
       {/* Header */}
       <View style={{ paddingHorizontal: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 16 }}>
         <Text style={{ fontSize: 22, fontWeight: '700', color: '#0f172a' }}>Claims & Payouts</Text>
-        {isEmptyState && (
-          <TouchableOpacity
-            onPress={() => setFormOpen(true)}
-            style={{ backgroundColor: '#2563eb', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 8 }}
-          >
-            <Text style={{ color: '#ffffff', fontWeight: '700', fontSize: 13 }}>+ File Claim</Text>
-          </TouchableOpacity>
-        )}
       </View>
 
       <ScrollView style={{ flex: 1, paddingHorizontal: 16 }} contentContainerStyle={{ paddingBottom: 100 }}>
@@ -227,51 +227,19 @@ export default function ClaimsScreen() {
               <Text style={{ fontWeight: '700', fontSize: 17, color: '#0f172a', marginBottom: 20 }}>Claim Status</Text>
 
               {[
-                {
-                  label: 'Disruption reported',
-                  sub: 'You submitted a disruption report',
-                  done: isClaimSubmitted,
-                  active: isClaimSubmitted && !isVerifying,
-                },
-                {
-                  label: 'Claim submitted',
-                  sub: 'Your claim is in the review queue',
-                  done: isVerifying,
-                  active: isClaimSubmitted && !isVerifying,
-                },
-                {
-                  label: 'Under review',
-                  sub: 'Team + AI verification in progress',
-                  done: isPayoutProcessing,
-                  active: isVerifying && !isPayoutProcessing,
-                },
-                {
-                  label: 'Payout processing',
-                  sub: 'Approved — payment being sent',
-                  done: isPayoutCompleted,
-                  active: isPayoutProcessing && !isPayoutCompleted,
-                },
-                {
-                  label: 'Payout completed',
-                  sub: 'Funds credited to your wallet',
-                  done: isPayoutCompleted,
-                  active: false,
-                },
+                { label: 'Disruption reported', sub: 'You submitted a disruption report', done: isClaimSubmitted, active: isClaimSubmitted && !isVerifying },
+                { label: 'Claim submitted', sub: 'Your claim is in the review queue', done: isVerifying, active: isClaimSubmitted && !isVerifying },
+                { label: 'Under review', sub: 'Team + AI verification in progress', done: isPayoutProcessing, active: isVerifying && !isPayoutProcessing },
+                { label: 'Payout processing', sub: 'Approved — payment being sent', done: isPayoutCompleted, active: isPayoutProcessing && !isPayoutCompleted },
+                { label: 'Payout completed', sub: 'Funds credited to your wallet', done: isPayoutCompleted, active: false },
               ].map((step, i, arr) => (
-                <View key={i} style={{ flexDirection: 'row', marginBottom: i < arr.length - 1 ? 0 : 0, position: 'relative' }}>
-                  {/* Connector line */}
+                <View key={i} style={{ flexDirection: 'row', position: 'relative' }}>
                   {i < arr.length - 1 && (
                     <View style={{ position: 'absolute', left: 11, top: 26, bottom: -20, width: 2, backgroundColor: step.done ? '#86efac' : '#e2e8f0' }} />
                   )}
-                  {/* Dot */}
                   <View style={{ width: 24, height: 24, borderRadius: 12, marginRight: 14, marginTop: 2, zIndex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: step.done ? '#dcfce7' : step.active ? '#dbeafe' : '#f1f5f9' }}>
-                    {step.done
-                      ? <CheckCircle2 color="#16a34a" size={16} />
-                      : step.active
-                        ? <Clock color="#2563eb" size={15} />
-                        : <Circle color="#cbd5e1" size={15} />}
+                    {step.done ? <CheckCircle2 color="#16a34a" size={16} /> : step.active ? <Clock color="#2563eb" size={15} /> : <Circle color="#cbd5e1" size={15} />}
                   </View>
-                  {/* Text */}
                   <View style={{ flex: 1, paddingBottom: 24 }}>
                     <Text style={{ fontSize: 14, fontWeight: '600', color: step.done || step.active ? '#0f172a' : '#94a3b8' }}>{step.label}</Text>
                     <Text style={{ fontSize: 12, color: step.active ? '#2563eb' : '#94a3b8', marginTop: 2 }}>{step.sub}</Text>
@@ -280,7 +248,6 @@ export default function ClaimsScreen() {
               ))}
             </View>
 
-            {/* File another claim CTA (if current one is resolved) */}
             {isPayoutCompleted && (
               <TouchableOpacity
                 onPress={() => setFormOpen(true)}
@@ -297,10 +264,8 @@ export default function ClaimsScreen() {
         )}
       </ScrollView>
 
-      {/* Claim filing modal */}
-      <Modal visible={formOpen} transparent animationType="slide" onRequestClose={() => setFormOpen(false)}>
-        <ClaimForm onClose={() => setFormOpen(false)} onSubmit={handleSubmit} />
-      </Modal>
+      {/* Claim form — rendered inside the screen so it stays within the phone frame */}
+      {formOpen && <ClaimForm onClose={() => setFormOpen(false)} onSubmit={handleSubmit} />}
     </View>
   );
 }
