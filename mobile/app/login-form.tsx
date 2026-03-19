@@ -103,14 +103,6 @@ export default function LoginScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Demo shortcut */}
-        <TouchableOpacity
-          onPress={() => { setEmail('demo@quickcover.in'); setPassword('demo1234'); }}
-          style={{ alignItems: 'center', paddingVertical: 12, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(99,102,241,0.4)', backgroundColor: 'rgba(99,102,241,0.08)', marginBottom: 24 }}
-        >
-          <Text style={{ color: '#a5b4fc', fontSize: 13, fontWeight: '600' }}>⚡ Fill Demo Credentials</Text>
-        </TouchableOpacity>
-
         {/* Sign up link */}
         <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}>
           <Text style={{ color: '#64748b', fontSize: 14 }}>Don't have an account? </Text>

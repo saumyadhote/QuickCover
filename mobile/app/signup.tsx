@@ -140,8 +140,21 @@ export default function SignupScreen() {
           {!showPlatformPicker && <View style={{ marginBottom: 16 }} />}
 
           {/* Driver ID */}
-          <Text style={labelStyle}>Driver / Partner ID</Text>
-          <Text style={{ color: '#64748b', fontSize: 11, marginBottom: 8, marginTop: -4 }}>Your unique ID from your gig platform partner portal</Text>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+            <Text style={labelStyle}>Driver / Partner ID</Text>
+            <TouchableOpacity
+              onPress={() => {
+                const prefix = selectedPlatform.slice(0, 3).toUpperCase();
+                const year = new Date().getFullYear();
+                const num = Math.floor(10000 + Math.random() * 89999);
+                setDriverId(`${prefix}-${year}-${num}`);
+              }}
+              style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, backgroundColor: 'rgba(99,102,241,0.15)', borderWidth: 1, borderColor: 'rgba(99,102,241,0.3)' }}
+            >
+              <Text style={{ color: '#a5b4fc', fontSize: 11, fontWeight: '600' }}>Auto-generate</Text>
+            </TouchableOpacity>
+          </View>
+          <Text style={{ color: '#64748b', fontSize: 11, marginBottom: 8 }}>Your unique ID from your gig platform partner portal</Text>
           <TextInput style={inputStyle} placeholder="e.g. BLK-2024-78432" placeholderTextColor="#64748b" autoCapitalize="characters" value={driverId} onChangeText={setDriverId} />
 
           {/* Password */}

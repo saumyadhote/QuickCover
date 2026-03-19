@@ -424,6 +424,19 @@ This approach eliminates false positives caused by infrastructure failures while
 
 ## Running Locally
 
+### 🔑 Demo Account (Live Web App)
+
+A pre-seeded account is available on the live Vercel deployment for immediate access:
+
+| Field | Value |
+|---|---|
+| **Email** | `demo@quickcover.in` |
+| **Password** | `demo1234` |
+| **Driver ID** | `DEMO-2024-00001` |
+| **Platform** | Blinkit |
+
+> Alternatively, create your own account via Sign Up — Driver IDs can be auto-generated on the signup form.
+
 ### Backend
 ```bash
 cd mock-backend
