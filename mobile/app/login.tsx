@@ -1,6 +1,5 @@
-import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useFonts, PlayfairDisplay_700Bold, PlayfairDisplay_400Regular } from '@expo-google-fonts/playfair-display';
 import Svg, { Circle, Path } from 'react-native-svg';
 
 function ScooterIcon({ size = 120 }: { size?: number }) {
@@ -75,18 +74,6 @@ function ScooterIcon({ size = 120 }: { size?: number }) {
 
 export default function WelcomeScreen() {
   const router = useRouter();
-  const [fontsLoaded] = useFonts({
-    PlayfairDisplay_700Bold,
-    PlayfairDisplay_400Regular,
-  });
-
-  if (!fontsLoaded) {
-    return (
-      <View style={{ flex: 1, backgroundColor: '#ffffff', alignItems: 'center', justifyContent: 'center' }}>
-        <ActivityIndicator color="#7c3aed" />
-      </View>
-    );
-  }
 
   return (
     <View style={{ flex: 1, backgroundColor: '#ffffff' }}>
@@ -101,10 +88,10 @@ export default function WelcomeScreen() {
 
           {/* App name */}
           <View style={{ flexDirection: 'row', alignItems: 'baseline', marginBottom: 20 }}>
-            <Text style={{ fontFamily: 'PlayfairDisplay_700Bold', fontSize: 44, color: '#7c3aed', letterSpacing: -0.5 }}>
+            <Text style={{ fontFamily: 'Georgia', fontWeight: '700', fontSize: 44, color: '#7c3aed', letterSpacing: -0.5 }}>
               Quick
             </Text>
-            <Text style={{ fontFamily: 'PlayfairDisplay_700Bold', fontSize: 44, color: '#1e1b4b', letterSpacing: -0.5 }}>
+            <Text style={{ fontFamily: 'Georgia', fontWeight: '700', fontSize: 44, color: '#1e1b4b', letterSpacing: -0.5 }}>
               Cover
             </Text>
           </View>
@@ -123,13 +110,13 @@ export default function WelcomeScreen() {
           </View>
 
           {/* Tagline */}
-          <Text style={{ fontFamily: 'PlayfairDisplay_700Bold', fontSize: 28, color: '#7c3aed', textAlign: 'center', lineHeight: 36 }}>
+          <Text style={{ fontFamily: 'Georgia', fontWeight: '700', fontSize: 28, color: '#7c3aed', textAlign: 'center', lineHeight: 36 }}>
             Every delivery.
           </Text>
-          <Text style={{ fontFamily: 'PlayfairDisplay_700Bold', fontSize: 28, color: '#1e1b4b', textAlign: 'center', lineHeight: 36 }}>
+          <Text style={{ fontFamily: 'Georgia', fontWeight: '700', fontSize: 28, color: '#1e1b4b', textAlign: 'center', lineHeight: 36 }}>
             We've got
           </Text>
-          <Text style={{ fontFamily: 'PlayfairDisplay_700Bold', fontSize: 28, color: '#1e1b4b', textAlign: 'center', lineHeight: 36, marginBottom: 16 }}>
+          <Text style={{ fontFamily: 'Georgia', fontWeight: '700', fontSize: 28, color: '#1e1b4b', textAlign: 'center', lineHeight: 36, marginBottom: 16 }}>
             your back.
           </Text>
 
