@@ -26,17 +26,17 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="coverage"
-        options={{
-          title: 'Coverage',
-          tabBarIcon: ({ color }) => <ShieldCheck color={color} size={24} />,
-        }}
-      />
-      <Tabs.Screen
         name="claims"
         options={{
           title: 'Claims',
           tabBarIcon: ({ color }) => <FileText color={color} size={24} />,
+        }}
+      />
+      <Tabs.Screen
+        name="coverage"
+        options={{
+          title: 'Coverage',
+          tabBarIcon: ({ color }) => <ShieldCheck color={color} size={24} />,
         }}
       />
       <Tabs.Screen
