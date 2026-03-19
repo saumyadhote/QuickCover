@@ -39,8 +39,10 @@ const dbGet = (sql, params = []) => {
     // pg uses $1,$2… placeholders — caller must pass pg-style SQL
     return pool.query(sql, params).then(r => r.rows[0]);
   }
+  // SQLite uses ? placeholders; convert pg-style $1,$2 → ? and strip quoted identifiers
+  const sqliteSql = sql.replace(/\$\d+/g, '?').replace(/"(\w+)"/g, '$1');
   return new Promise((resolve, reject) => {
-    sqliteDb.get(sql, params, (err, row) => (err ? reject(err) : resolve(row)));
+    sqliteDb.get(sqliteSql, params, (err, row) => (err ? reject(err) : resolve(row)));
   });
 };
 
@@ -49,8 +51,8 @@ const dbRun = (sql, params = []) => {
   if (usePostgres) {
     return pool.query(sql, params);
   }
-  // SQLite uses ? placeholders; convert pg-style $1,$2 → ? for compatibility
-  const sqliteSql = sql.replace(/\$\d+/g, '?');
+  // SQLite uses ? placeholders; convert pg-style $1,$2 → ? and strip quoted identifiers
+  const sqliteSql = sql.replace(/\$\d+/g, '?').replace(/"(\w+)"/g, '$1');
   return new Promise((resolve, reject) => {
     sqliteDb.run(sqliteSql, params, function (err) {
       if (err) reject(err);

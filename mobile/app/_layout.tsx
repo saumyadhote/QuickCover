@@ -11,13 +11,13 @@ function AuthGuard() {
     if (loading) return;
 
     const inAuthGroup = segments[0] === '(tabs)';
-    const onLoginOrSignup = segments[0] === 'login' || segments[0] === 'login-form' || segments[0] === 'signup';
+    const onLoginOrSignup = segments[0] === 'login' || segments[0] === 'login-form' || segments[0] === 'signup' || segments[0] === undefined || segments.length === 0;
     // onboarding is post-signup — accessible only when authenticated, not redirected away
     const onOnboarding = segments[0] === 'onboarding';
 
     if (!user && (inAuthGroup || onOnboarding)) {
       // Not logged in but trying to access the app or onboarding — redirect to login
-      router.replace('/login');
+      router.replace('/login-form');
     } else if (user && onLoginOrSignup) {
       // If signup just fired, it already navigated to /onboarding — don't override it.
       // Only redirect to tabs when coming from login (not signup).

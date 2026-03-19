@@ -95,7 +95,7 @@ export default function LandingScreen() {
 
       {/* Log In button */}
       <TouchableOpacity
-        onPress={() => router.push('/login')}
+        onPress={() => router.push('/login-form')}
         style={{ backgroundColor: '#3b1f8c', borderRadius: 14, paddingVertical: 18, alignItems: 'center', width: '100%', marginBottom: 20 }}
       >
         <Text style={{ color: '#ffffff', fontWeight: '700', fontSize: 17, fontFamily: 'Georgia, serif' }}>Log In</Text>

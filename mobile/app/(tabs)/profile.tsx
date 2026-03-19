@@ -13,7 +13,7 @@ export default function ProfileScreen() {
 
   const handleSignOut = async () => {
     await logout();
-    router.replace('/login');
+    router.replace('/login-form');
   };
 
   return (
