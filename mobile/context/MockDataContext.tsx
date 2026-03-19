@@ -91,6 +91,27 @@ export function MockDataProvider({ children }: { children: React.ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Fast-poll while a claim is in-flight so the timeline updates within ~2s of each transition
+  useEffect(() => {
+    const isInFlight = state.claimStatus === 'processing' || state.claimStatus === 'approved';
+    if (!isInFlight || !backendOnline) return;
+
+    let cancelled = false;
+    const fastPoll = async () => {
+      if (cancelled) return;
+      try {
+        const res = await axios.get(`${API_URL}/status`, { timeout: 4000 });
+        if (!cancelled) setState(res.data);
+      } catch { /* silent */ }
+    };
+
+    const interval = setInterval(fastPoll, 2000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [state.claimStatus, backendOnline]);
+
   // ---- acceptTrip -------------------------------------------------------
   const acceptTrip = async () => {
     if (!backendOnline) {
