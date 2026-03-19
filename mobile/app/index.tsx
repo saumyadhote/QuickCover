@@ -2,8 +2,76 @@ import { useEffect } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useMockData } from '../context/MockDataContext';
-import { LinearGradient } from 'expo-linear-gradient';
-import { AppLogo } from './components/AppLogo';
+import Svg, { Circle, Path, G } from 'react-native-svg';
+
+// Shield with rings — the large hero graphic
+function HeroShield({ size = 220 }: { size?: number }) {
+  const cx = size / 2;
+  const cy = size / 2;
+  const scale = size / 260;
+
+  return (
+    <Svg width={size} height={size} viewBox="0 0 260 260" fill="none">
+      {/* Concentric rings */}
+      <Circle cx="130" cy="130" r="120" stroke="rgba(168,85,247,0.18)" strokeWidth="1.5" fill="none" />
+      <Circle cx="130" cy="130" r="100" stroke="rgba(168,85,247,0.22)" strokeWidth="1.5" fill="none" />
+      <Circle cx="130" cy="130" r="80"  stroke="rgba(168,85,247,0.28)" strokeWidth="1.5" fill="none" />
+      <Circle cx="130" cy="130" r="60"  stroke="rgba(168,85,247,0.35)" strokeWidth="1.5" fill="none" />
+
+      {/* Shield body — purple fill */}
+      <Path
+        d="M130 62 L178 84 L178 130 C178 158 130 176 130 176 C130 176 82 158 82 130 L82 84 Z"
+        fill="#a855f7"
+      />
+      {/* Shield inner lighter highlight */}
+      <Path
+        d="M130 72 L170 91 L170 130 C170 153 130 168 130 168 C130 168 90 153 90 130 L90 91 Z"
+        fill="#c084fc"
+        opacity="0.35"
+      />
+
+      {/* Checkmark — dark/black */}
+      <Path
+        d="M108 128 L124 146 L154 112"
+        stroke="#1e1b4b"
+        strokeWidth="10"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+
+      {/* Small icons below shield on the ring */}
+      {/* Person icon at left */}
+      <G transform="translate(46, 154)">
+        <Circle cx="10" cy="10" r="10" fill="rgba(168,85,247,0.15)" />
+        <Circle cx="10" cy="7" r="3" fill="#a855f7" />
+        <Path d="M4 16 C4 12 16 12 16 16" stroke="#a855f7" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+      </G>
+
+      {/* Lightning / zap icon at center */}
+      <G transform="translate(120, 154)">
+        <Circle cx="10" cy="10" r="10" fill="rgba(168,85,247,0.15)" />
+        <Path d="M12 4 L7 11 L11 11 L8 18 L14 10 L10 10 Z" fill="#a855f7" />
+      </G>
+
+      {/* Check icon at right */}
+      <G transform="translate(194, 154)">
+        <Circle cx="10" cy="10" r="10" fill="rgba(168,85,247,0.15)" />
+        <Path d="M5 10 L9 14 L15 7" stroke="#a855f7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+      </G>
+    </Svg>
+  );
+}
+
+// Wordmark: "Quick" purple + "Cover" dark
+function WordMark() {
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'baseline', marginBottom: 24 }}>
+      <Text style={{ fontSize: 42, fontWeight: '800', color: '#a855f7', fontFamily: 'Georgia' }}>Quick</Text>
+      <Text style={{ fontSize: 42, fontWeight: '800', color: '#1e1b4b', fontFamily: 'Georgia' }}>Cover</Text>
+    </View>
+  );
+}
 
 export default function LandingScreen() {
   const router = useRouter();
@@ -19,43 +87,45 @@ export default function LandingScreen() {
   }, [loading]);
 
   return (
-    <View className="flex-1 bg-[#020617] items-center justify-center relative overflow-hidden">
-      {/* Background ambient glows */}
-      <View className="absolute top-[-150px] left-[-100px] w-96 h-96 bg-purple-600/30 rounded-full blur-[120px]" />
-      <View className="absolute bottom-[-120px] right-[-120px] w-96 h-96 bg-indigo-700/20 rounded-full blur-[120px]" />
+    <View style={{ flex: 1, backgroundColor: '#ffffff', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 }}>
 
-      <View className="items-center z-10">
-        <View className="mb-8">
-          <AppLogo size={52} />
-        </View>
+      {/* Hero shield graphic */}
+      <HeroShield size={220} />
 
-        <Text className="text-purple-200 mt-4 font-bold text-xl tracking-wide">Every delivery.</Text>
-        <Text className="text-white font-semibold text-xl">We've got your back.</Text>
+      {/* Wordmark */}
+      <WordMark />
 
-        <Text className="text-slate-400 text-center mt-6 text-sm leading-6 px-10">
-          When heavy rain, curfews, or sudden closures stop deliveries,
-          QuickCover helps support you with simple disruption coverage.
-        </Text>
+      {/* Tagline */}
+      <Text style={{ fontSize: 26, fontWeight: '800', color: '#a855f7', textAlign: 'left', alignSelf: 'flex-start', lineHeight: 32 }}>
+        Every delivery.
+      </Text>
+      <Text style={{ fontSize: 26, fontWeight: '800', color: '#1e1b4b', textAlign: 'left', alignSelf: 'flex-start', lineHeight: 36, marginBottom: 16 }}>
+        We've got{'\n'}your back.
+      </Text>
 
-        <TouchableOpacity
-          onPress={() => router.push('/login')}
-          disabled={loading}
-          className="mt-10 w-64 rounded-full py-4 items-center overflow-hidden"
-        >
-          <LinearGradient
-            colors={['#7c3aed', '#4f46e5', '#3b82f6']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            className="absolute inset-0"
-          />
-          <Text className="text-white font-bold text-lg tracking-wide z-10">Log In</Text>
+      {/* Description */}
+      <Text style={{ color: '#64748b', fontSize: 13, lineHeight: 20, textAlign: 'left', alignSelf: 'flex-start', marginBottom: 36 }}>
+        When heavy rain, curfews, or sudden closures stop deliveries,{'\n'}
+        QuickCover helps support you with simple disruption coverage.
+      </Text>
+
+      {/* Log In button */}
+      <TouchableOpacity
+        onPress={() => router.push('/login')}
+        disabled={loading}
+        style={{ backgroundColor: '#3b1f8c', borderRadius: 16, paddingVertical: 16, alignItems: 'center', width: '100%', marginBottom: 20 }}
+      >
+        <Text style={{ color: '#ffffff', fontWeight: '700', fontSize: 17 }}>Log In</Text>
+      </TouchableOpacity>
+
+      {/* Sign Up link */}
+      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <Text style={{ color: '#64748b', fontSize: 14 }}>Don't have an account? </Text>
+        <TouchableOpacity onPress={() => router.push('/signup')}>
+          <Text style={{ color: '#a855f7', fontWeight: '700', fontSize: 14 }}>Sign Up</Text>
         </TouchableOpacity>
-
-        <View className="flex-row items-center mt-6">
-          <Text className="text-slate-400 text-sm">Don't have an account? </Text>
-          <Text className="text-purple-400 font-bold text-sm">Sign Up</Text>
-        </View>
       </View>
+
     </View>
   );
 }
