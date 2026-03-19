@@ -8,11 +8,8 @@ const authRouter = require('./auth');
 
 const app = express();
 
-// CORS — restrict to known origins in production, open in dev
-const allowedOrigins = process.env.CORS_ORIGIN
-  ? process.env.CORS_ORIGIN.split(',').map(o => o.trim())
-  : true; // true = all origins in dev
-app.use(cors({ origin: allowedOrigins }));
+// CORS — open to all origins (demo/hackathon build)
+app.use(cors());
 app.use(express.json());
 
 // Auth routes
