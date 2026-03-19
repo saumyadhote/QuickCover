@@ -89,7 +89,7 @@ export default function SignupScreen() {
         {/* Header */}
         <View style={{ alignItems: 'center', marginBottom: 28 }}>
           <View style={{ marginBottom: 16 }}>
-            <AppLogo size={90} />
+            <AppLogo size={40} />
           </View>
           <Text style={{ fontSize: 24, fontWeight: '800', color: '#ffffff', textAlign: 'center' }}>Create Account</Text>
           <Text style={{ color: '#94a3b8', textAlign: 'center', marginTop: 8, fontSize: 13, paddingHorizontal: 16 }}>

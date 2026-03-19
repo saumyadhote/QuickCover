@@ -1,48 +1,74 @@
 import React from 'react';
 import { View } from 'react-native';
-import Svg, { Circle, Path } from 'react-native-svg';
+import Svg, { Text as SvgText, Path, G } from 'react-native-svg';
 
-// Fixed 120×120 coordinate space.
-// Rings fill the full canvas. Badge at bottom-right.
-// No background — transparent so it works on any screen color.
+/**
+ * QuickCover wordmark logo.
+ * "Quick" in purple (#a855f7), "Cover" in white with a shield replacing the "v".
+ * viewBox is 340×80 — wide wordmark, no square padding.
+ * The `size` prop controls the rendered height; width scales proportionally.
+ */
+export function AppLogo({ size = 48 }: { size?: number }) {
+  // viewBox aspect ratio: 340 × 80
+  const width = (size * 340) / 80;
+  const height = size;
 
-export function AppLogo({ size = 80 }: { size?: number }) {
   return (
-    <View style={{ width: size, height: size }}>
-      <Svg width={size} height={size} viewBox="0 0 120 120" fill="none">
+    <View style={{ width, height }}>
+      <Svg width={width} height={height} viewBox="0 0 340 80" fill="none">
+        {/* "Quick" — purple */}
+        <SvgText
+          x="0"
+          y="62"
+          fontSize="68"
+          fontWeight="bold"
+          fill="#a855f7"
+          fontFamily="Georgia, serif"
+        >
+          Quick
+        </SvgText>
 
-        {/* Ring 1 — outermost */}
-        <Circle cx="60" cy="60" r="56" stroke="rgba(124,58,237,0.85)" strokeWidth="2" fill="none" />
+        {/* "Co" — white */}
+        <SvgText
+          x="172"
+          y="62"
+          fontSize="68"
+          fontWeight="bold"
+          fill="#ffffff"
+          fontFamily="Georgia, serif"
+        >
+          Co
+        </SvgText>
 
-        {/* Ring 2 — dashed (gap effect) */}
-        <Circle cx="60" cy="60" r="45" stroke="rgba(124,58,237,0.70)" strokeWidth="2" fill="none"
-          strokeDasharray="14 7" />
+        {/* Shield icon replacing "v" — centered around x=252 */}
+        <G transform="translate(238, 10)">
+          {/* Shield path: ~28×34px, top center at (14,0) */}
+          <Path
+            d="M14 0 L28 7 L28 21 C28 30 14 36 14 36 C14 36 0 30 0 21 L0 7 Z"
+            fill="#a855f7"
+          />
+          {/* Checkmark inside shield */}
+          <Path
+            d="M7 18 L12 24 L22 12"
+            stroke="#ffffff"
+            strokeWidth="3"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            fill="none"
+          />
+        </G>
 
-        {/* Ring 3 */}
-        <Circle cx="60" cy="60" r="34" stroke="rgba(124,58,237,0.65)" strokeWidth="2" fill="none" />
-
-        {/* Ring 4 — innermost */}
-        <Circle cx="60" cy="60" r="23" stroke="rgba(124,58,237,0.60)" strokeWidth="2" fill="none" />
-
-        {/* Badge — dark navy circle at bottom-right, sitting on ring 2 */}
-        <Circle cx="78" cy="78" r="17" fill="#2d1b69" />
-
-        {/* Shield inside badge */}
-        <Path
-          d="M78 66 L85.5 70.5 L85.5 76.5 C85.5 82.5 78 85.5 78 85.5 C78 85.5 70.5 82.5 70.5 76.5 L70.5 70.5 Z"
-          fill="#7c3aed"
-        />
-
-        {/* Checkmark */}
-        <Path
-          d="M74.5 77.5 L77.5 80.5 L82.5 73"
-          stroke="#ffffff"
-          strokeWidth="2.2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          fill="none"
-        />
-
+        {/* "er" — white, positioned after shield */}
+        <SvgText
+          x="272"
+          y="62"
+          fontSize="68"
+          fontWeight="bold"
+          fill="#ffffff"
+          fontFamily="Georgia, serif"
+        >
+          er
+        </SvgText>
       </Svg>
     </View>
   );

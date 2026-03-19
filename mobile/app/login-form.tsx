@@ -44,7 +44,7 @@ export default function LoginScreen() {
         {/* Logo + heading */}
         <View style={{ alignItems: 'center', marginBottom: 32 }}>
           <View style={{ marginBottom: 20 }}>
-            <AppLogo size={100} />
+            <AppLogo size={40} />
           </View>
           <Text style={{ fontSize: 28, fontWeight: '800', color: '#ffffff', textAlign: 'center' }}>Welcome Back</Text>
           <Text style={{ color: '#94a3b8', textAlign: 'center', marginTop: 10, fontSize: 15, paddingHorizontal: 16 }}>

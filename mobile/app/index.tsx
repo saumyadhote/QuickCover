@@ -25,14 +25,9 @@ export default function LandingScreen() {
       <View className="absolute bottom-[-120px] right-[-120px] w-96 h-96 bg-indigo-700/20 rounded-full blur-[120px]" />
 
       <View className="items-center z-10">
-        <View className="w-28 h-28 rounded-3xl items-center justify-center mb-6 border border-purple-600/30 shadow-2xl shadow-purple-900/40 overflow-hidden">
-          <AppLogo size={84} />
+        <View className="mb-8">
+          <AppLogo size={52} />
         </View>
-
-        <Text className="text-5xl font-extrabold text-white tracking-tight">
-          Quick
-          <Text className="text-purple-400">Cover</Text>
-        </Text>
 
         <Text className="text-purple-200 mt-4 font-bold text-xl tracking-wide">Every delivery.</Text>
         <Text className="text-white font-semibold text-xl">We've got your back.</Text>
