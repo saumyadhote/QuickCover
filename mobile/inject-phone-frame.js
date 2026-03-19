@@ -161,5 +161,9 @@ html = html.replace(
 </body>`
 );
 
+// Remove `defer` from the main entry script so JS executes immediately
+// instead of after HTML parse — eliminates the window where empty root is visible
+html = html.replace(/(<script src="[^"]*entry-[^"]*\.js") defer>/g, '$1>');
+
 fs.writeFileSync(distHtml, html, 'utf8');
 console.log('✅ Phone frame injected into dist/index.html');
