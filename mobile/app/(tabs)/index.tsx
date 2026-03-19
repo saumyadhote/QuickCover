@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Modal, TouchableWithoutFeedback } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useMockData } from '../../context/MockDataContext';
 import { useAuth } from '../../context/AuthContext';
@@ -370,166 +370,116 @@ export default function DashboardScreen() {
           {/* ── Today's Journey ── */}
           <TodaysJourney isTripActive={isTripActive} />
 
-          {/* ── Recent Payout Card ── */}
-          {claimStatus === 'paid' && weeklyProtected > 0 ? (
-            <View style={{
-              backgroundColor: '#ffffff',
-              borderRadius: 20,
-              padding: 20,
-              borderWidth: 1,
-              borderColor: '#e2e8f0',
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 1 },
-              shadowOpacity: 0.06,
-              shadowRadius: 6,
-              elevation: 2,
-            }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-                <Text style={{ fontWeight: '700', fontSize: 17, color: '#0f172a' }}>Recent Payout</Text>
+          {/* ── Last Payout Card ── */}
+          <View style={{ backgroundColor: '#ffffff', borderRadius: 20, padding: 20, borderWidth: 1, borderColor: '#e2e8f0', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <Text style={{ fontWeight: '700', fontSize: 17, color: '#0f172a' }}>Last Payout</Text>
+              {claimStatus === 'paid' && weeklyProtected > 0 ? (
                 <View style={{ backgroundColor: '#dcfce7', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 }}>
                   <Text style={{ color: '#166534', fontWeight: '700', fontSize: 12 }}>Completed</Text>
                 </View>
-              </View>
-
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' }}>
-                <Text style={{ color: '#64748b', fontSize: 14 }}>Amount</Text>
-                <Text style={{ color: '#0f172a', fontWeight: '700', fontSize: 22 }}>₹ {weeklyProtected.toLocaleString()}</Text>
-              </View>
-
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' }}>
-                <Text style={{ color: '#64748b', fontSize: 14 }}>Destination</Text>
-                <Text style={{ color: '#0f172a', fontWeight: '600', fontSize: 14 }}>{destinationLabel}</Text>
-              </View>
-
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12, marginBottom: 6 }}>
-                <Text style={{ color: '#64748b', fontSize: 14 }}>Date</Text>
-                <Text style={{ color: '#0f172a', fontWeight: '600', fontSize: 14 }}>{dateStr}</Text>
-              </View>
-
-              <View style={{ backgroundColor: '#f0fdf4', borderRadius: 12, padding: 14, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#bbf7d0' }}>
-                <CheckCircle color="#16a34a" size={20} />
-                <View style={{ marginLeft: 10 }}>
-                  <Text style={{ color: '#14532d', fontWeight: '700', fontSize: 13 }}>Payment Successful</Text>
-                  <Text style={{ color: '#166534', fontSize: 12, marginTop: 2 }}>Processed via Razorpay</Text>
+              ) : (
+                <View style={{ backgroundColor: '#f1f5f9', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 }}>
+                  <Text style={{ color: '#64748b', fontWeight: '600', fontSize: 12 }}>No claim yet</Text>
                 </View>
-              </View>
+              )}
             </View>
-          ) : (
-            /* ── This Week Summary (no paid payout yet) ── */
-            <View style={{
-              backgroundColor: '#ffffff',
-              borderRadius: 20,
-              padding: 20,
-              borderWidth: 1,
-              borderColor: '#e2e8f0',
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 1 },
-              shadowOpacity: 0.06,
-              shadowRadius: 6,
-              elevation: 2,
-            }}>
-              <Text style={{ fontWeight: '700', fontSize: 17, color: '#0f172a', marginBottom: 18 }}>This Week</Text>
 
-              <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' }}>
-                <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: '#f0fdf4', alignItems: 'center', justifyContent: 'center', marginRight: 14 }}>
-                  <Text style={{ color: '#16a34a', fontSize: 20, fontWeight: '700' }}>↗</Text>
+            {claimStatus === 'paid' && weeklyProtected > 0 ? (
+              <>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 11, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' }}>
+                  <Text style={{ color: '#64748b', fontSize: 14 }}>Amount</Text>
+                  <Text style={{ color: '#0f172a', fontWeight: '700', fontSize: 22 }}>₹{weeklyProtected.toLocaleString()}</Text>
                 </View>
-                <View>
-                  <Text style={{ color: '#64748b', fontSize: 13 }}>Earnings This Week</Text>
-                  <Text style={{ color: '#0f172a', fontWeight: '700', fontSize: 22 }}>₹{weeklyEarnings.toLocaleString()}</Text>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 11, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' }}>
+                  <Text style={{ color: '#64748b', fontSize: 14 }}>Trigger</Text>
+                  <Text style={{ color: '#0f172a', fontWeight: '600', fontSize: 14 }}>Heavy Rain / Disruption</Text>
                 </View>
-              </View>
-
-              <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 10 }}>
-                <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: '#eff6ff', alignItems: 'center', justifyContent: 'center', marginRight: 14 }}>
-                  <ShieldCheck color="#3b82f6" size={22} />
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 11, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' }}>
+                  <Text style={{ color: '#64748b', fontSize: 14 }}>Destination</Text>
+                  <Text style={{ color: '#0f172a', fontWeight: '600', fontSize: 14 }}>{destinationLabel}</Text>
                 </View>
-                <View>
-                  <Text style={{ color: '#64748b', fontSize: 13 }}>Max Weekly Coverage</Text>
-                  <Text style={{ color: '#0f172a', fontWeight: '700', fontSize: 22 }}>₹5,000</Text>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 11, marginBottom: 12 }}>
+                  <Text style={{ color: '#64748b', fontSize: 14 }}>Date</Text>
+                  <Text style={{ color: '#0f172a', fontWeight: '600', fontSize: 14 }}>{dateStr}</Text>
                 </View>
-              </View>
-
-              <View style={{ backgroundColor: '#f8fafc', borderRadius: 12, padding: 14, flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
-                <ShieldCheck color="#64748b" size={16} />
-                <Text style={{ color: '#64748b', fontSize: 13, flex: 1, marginLeft: 8 }}>Covered by platform</Text>
-                <Text style={{ color: '#0f172a', fontWeight: '700', fontSize: 13 }}>₹0 Out-of-pocket</Text>
-              </View>
-            </View>
-          )}
+                <View style={{ backgroundColor: '#f0fdf4', borderRadius: 12, padding: 14, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#bbf7d0' }}>
+                  <CheckCircle color="#16a34a" size={20} />
+                  <View style={{ marginLeft: 10 }}>
+                    <Text style={{ color: '#14532d', fontWeight: '700', fontSize: 13 }}>Payment Successful</Text>
+                    <Text style={{ color: '#166534', fontSize: 12, marginTop: 2 }}>Processed via Razorpay</Text>
+                  </View>
+                </View>
+              </>
+            ) : (
+              <>
+                {/* Payout schedule from the financial model */}
+                <Text style={{ color: '#64748b', fontSize: 13, marginBottom: 14 }}>
+                  Payouts are triggered automatically when disruption thresholds are met:
+                </Text>
+                {[
+                  { icon: '🌧️', trigger: 'Heavy rain (IMD >15mm/hr)', amount: '₹300–500/shift' },
+                  { icon: '🌡️', trigger: 'Extreme heat (>43°C, 2+ hrs)', amount: '₹250–400/shift' },
+                  { icon: '📵', trigger: 'Platform outage (>90 min)', amount: '₹200–350' },
+                  { icon: '🚧', trigger: 'Curfew / lockdown', amount: '₹500–700/day' },
+                ].map((row, i, arr) => (
+                  <View key={i} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: i < arr.length - 1 ? 1 : 0, borderBottomColor: '#f1f5f9' }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                      <Text style={{ fontSize: 16, marginRight: 10 }}>{row.icon}</Text>
+                      <Text style={{ color: '#334155', fontSize: 13, flex: 1 }}>{row.trigger}</Text>
+                    </View>
+                    <Text style={{ color: '#16a34a', fontWeight: '700', fontSize: 13 }}>{row.amount}</Text>
+                  </View>
+                ))}
+                <View style={{ backgroundColor: '#f8fafc', borderRadius: 12, padding: 12, marginTop: 14, flexDirection: 'row', alignItems: 'center' }}>
+                  <ShieldCheck color="#64748b" size={15} />
+                  <Text style={{ color: '#64748b', fontSize: 12, marginLeft: 8 }}>File a claim on the Claims tab after a disruption</Text>
+                </View>
+              </>
+            )}
+          </View>
         </View>
       </ScrollView>
 
-      {/* ── Notification Overlay ── */}
-      <Modal
-        visible={notifOpen}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setNotifOpen(false)}
-      >
-        <TouchableWithoutFeedback onPress={() => setNotifOpen(false)}>
-          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.35)' }}>
-            <TouchableWithoutFeedback onPress={() => {}}>
-              <View style={{
-                position: 'absolute',
-                top: 100,
-                right: 16,
-                width: 300,
-                backgroundColor: '#ffffff',
-                borderRadius: 18,
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.18,
-                shadowRadius: 16,
-                elevation: 12,
-                overflow: 'hidden',
-              }}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' }}>
-                  <Text style={{ fontWeight: '700', fontSize: 15, color: '#0f172a' }}>Notifications</Text>
-                  <TouchableOpacity onPress={() => setNotifOpen(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                    <X color="#94a3b8" size={18} />
-                  </TouchableOpacity>
-                </View>
+      {/* ── Notification Overlay (inside screen so it stays in phone frame) ── */}
+      {notifOpen && (
+        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 100 }}>
+          <TouchableOpacity activeOpacity={1} onPress={() => setNotifOpen(false)} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.35)' }} />
+          <View style={{ position: 'absolute', top: 100, right: 16, left: 16, backgroundColor: '#ffffff', borderRadius: 18, overflow: 'hidden' }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' }}>
+              <Text style={{ fontWeight: '700', fontSize: 15, color: '#0f172a' }}>Notifications</Text>
+              <TouchableOpacity onPress={() => setNotifOpen(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <X color="#94a3b8" size={18} />
+              </TouchableOpacity>
+            </View>
 
-                {!hasNotifs ? (
-                  <View style={{ paddingVertical: 36, alignItems: 'center' }}>
-                    <Bell color="#cbd5e1" size={32} />
-                    <Text style={{ color: '#94a3b8', fontSize: 14, marginTop: 12, fontWeight: '500' }}>No notifications</Text>
-                    <Text style={{ color: '#cbd5e1', fontSize: 12, marginTop: 4 }}>You're all caught up.</Text>
-                  </View>
-                ) : (
-                  <ScrollView style={{ maxHeight: 360 }} showsVerticalScrollIndicator={false}>
-                    {notifications.map((n, idx) => (
-                      <View
-                        key={n.id}
-                        style={{
-                          flexDirection: 'row',
-                          alignItems: 'flex-start',
-                          paddingHorizontal: 16,
-                          paddingVertical: 12,
-                          borderBottomWidth: idx < notifications.length - 1 ? 1 : 0,
-                          borderBottomColor: '#f8fafc',
-                        }}
-                      >
-                        <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: `${n.color}18`, alignItems: 'center', justifyContent: 'center', marginRight: 12, marginTop: 1 }}>
-                          <NotifIcon type={n.icon} color={n.color} />
-                        </View>
-                        <View style={{ flex: 1 }}>
-                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
-                            <Text style={{ fontWeight: '700', fontSize: 13, color: '#0f172a', flex: 1, marginRight: 8 }}>{n.title}</Text>
-                            <Text style={{ fontSize: 11, color: '#94a3b8' }}>{n.time}</Text>
-                          </View>
-                          <Text style={{ fontSize: 12, color: '#64748b', lineHeight: 17 }}>{n.body}</Text>
-                        </View>
-                      </View>
-                    ))}
-                  </ScrollView>
-                )}
+            {!hasNotifs ? (
+              <View style={{ paddingVertical: 36, alignItems: 'center' }}>
+                <Bell color="#cbd5e1" size={32} />
+                <Text style={{ color: '#94a3b8', fontSize: 14, marginTop: 12, fontWeight: '500' }}>No notifications</Text>
+                <Text style={{ color: '#cbd5e1', fontSize: 12, marginTop: 4 }}>You're all caught up.</Text>
               </View>
-            </TouchableWithoutFeedback>
+            ) : (
+              <ScrollView style={{ maxHeight: 360 }} showsVerticalScrollIndicator={false}>
+                {notifications.map((n, idx) => (
+                  <View key={n.id} style={{ flexDirection: 'row', alignItems: 'flex-start', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: idx < notifications.length - 1 ? 1 : 0, borderBottomColor: '#f8fafc' }}>
+                    <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: `${n.color}18`, alignItems: 'center', justifyContent: 'center', marginRight: 12, marginTop: 1 }}>
+                      <NotifIcon type={n.icon} color={n.color} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
+                        <Text style={{ fontWeight: '700', fontSize: 13, color: '#0f172a', flex: 1, marginRight: 8 }}>{n.title}</Text>
+                        <Text style={{ fontSize: 11, color: '#94a3b8' }}>{n.time}</Text>
+                      </View>
+                      <Text style={{ fontSize: 12, color: '#64748b', lineHeight: 17 }}>{n.body}</Text>
+                    </View>
+                  </View>
+                ))}
+              </ScrollView>
+            )}
           </View>
-        </TouchableWithoutFeedback>
-      </Modal>
+        </View>
+      )}
     </View>
   );
 }
