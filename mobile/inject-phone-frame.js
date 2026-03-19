@@ -79,12 +79,11 @@ html = html.replace(
       height: 100%;
       overflow: hidden;
       display: flex;
-      opacity: 0;
-      transition: opacity 0.15s ease-in;
+      visibility: hidden;
     }
 
     #root.app-ready {
-      opacity: 1;
+      visibility: visible;
     }
 
     .page-label {
@@ -154,8 +153,8 @@ html = html.replace(
         }
       });
       observer.observe(root, { childList: true, subtree: true });
-      // Safety fallback: always show after 400ms even if observer missed
-      setTimeout(function() { root.classList.add('app-ready'); }, 400);
+      // Safety fallback: always show after 200ms even if observer missed
+      setTimeout(function() { root.classList.add('app-ready'); }, 200);
     })();
   </script>
 </body>`
