@@ -27,9 +27,9 @@ if (usePostgres) {
 // ---- SQLite (local dev) ------------------------------------------------
 let sqliteDb;
 if (!usePostgres) {
-  const sqlite3 = require('sqlite3').verbose();
+  const Database = require('better-sqlite3');
   const dbPath = path.resolve(__dirname, 'quickcover.db');
-  sqliteDb = new sqlite3.Database(dbPath);
+  sqliteDb = new Database(dbPath);
 }
 
 // -----------------------------------------------------------------------
@@ -39,14 +39,10 @@ if (!usePostgres) {
 // dbGet  — returns one row
 const dbGet = (sql, params = []) => {
   if (usePostgres) {
-    // pg uses $1,$2… placeholders — caller must pass pg-style SQL
     return pool.query(sql, params).then(r => r.rows[0]);
   }
-  // SQLite uses ? placeholders; convert pg-style $1,$2 → ? and strip quoted identifiers
   const sqliteSql = sql.replace(/\$\d+/g, '?').replace(/"(\w+)"/g, '$1');
-  return new Promise((resolve, reject) => {
-    sqliteDb.get(sqliteSql, params, (err, row) => (err ? reject(err) : resolve(row)));
-  });
+  return Promise.resolve(sqliteDb.prepare(sqliteSql).get(params));
 };
 
 // dbRun  — INSERT / UPDATE / DELETE
@@ -54,14 +50,8 @@ const dbRun = (sql, params = []) => {
   if (usePostgres) {
     return pool.query(sql, params);
   }
-  // SQLite uses ? placeholders; convert pg-style $1,$2 → ? and strip quoted identifiers
   const sqliteSql = sql.replace(/\$\d+/g, '?').replace(/"(\w+)"/g, '$1');
-  return new Promise((resolve, reject) => {
-    sqliteDb.run(sqliteSql, params, function (err) {
-      if (err) reject(err);
-      else resolve(this);
-    });
-  });
+  return Promise.resolve(sqliteDb.prepare(sqliteSql).run(params));
 };
 
 // -----------------------------------------------------------------------
@@ -114,43 +104,39 @@ async function initializeDatabase() {
       client.release();
     }
   } else {
-    // SQLite — promise-wrap the serialize block
-    await new Promise((resolve, reject) => {
-      sqliteDb.serialize(() => {
-        sqliteDb.run(`CREATE TABLE IF NOT EXISTS users (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          name TEXT NOT NULL,
-          email TEXT NOT NULL UNIQUE,
-          passwordHash TEXT NOT NULL,
-          phone TEXT,
-          driverId TEXT NOT NULL UNIQUE,
-          platform TEXT DEFAULT 'blinkit',
-          createdAt TEXT NOT NULL
-        )`);
-        sqliteDb.run(`CREATE TABLE IF NOT EXISTS state (
-          id INTEGER PRIMARY KEY CHECK (id = 1),
-          isTripActive BOOLEAN DEFAULT 0,
-          disruptionType TEXT,
-          disruptionZone TEXT,
-          disruptionSeverity TEXT,
-          disruptionMessage TEXT,
-          disruptionTimestamp TEXT,
-          claimStatus TEXT DEFAULT 'none',
-          weeklyEarnings REAL DEFAULT 3200,
-          weeklyProtected REAL DEFAULT 0,
-          currentMicroFee REAL DEFAULT 2.0,
-          currentRiskLevel TEXT DEFAULT 'Low'
-        )`);
-        sqliteDb.run(`INSERT OR IGNORE INTO state (id) VALUES (1)`);
-        sqliteDb.run(`CREATE TABLE IF NOT EXISTS trips (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          status TEXT,
-          earnings REAL,
-          protectedAmount REAL,
-          timestamp TEXT
-        )`, resolve);
-      });
-    });
+    // better-sqlite3 is synchronous — no promise wrapping needed
+    sqliteDb.exec(`CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      email TEXT NOT NULL UNIQUE,
+      passwordHash TEXT NOT NULL,
+      phone TEXT,
+      driverId TEXT NOT NULL UNIQUE,
+      platform TEXT DEFAULT 'blinkit',
+      createdAt TEXT NOT NULL
+    )`);
+    sqliteDb.exec(`CREATE TABLE IF NOT EXISTS state (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      isTripActive BOOLEAN DEFAULT 0,
+      disruptionType TEXT,
+      disruptionZone TEXT,
+      disruptionSeverity TEXT,
+      disruptionMessage TEXT,
+      disruptionTimestamp TEXT,
+      claimStatus TEXT DEFAULT 'none',
+      weeklyEarnings REAL DEFAULT 3200,
+      weeklyProtected REAL DEFAULT 0,
+      currentMicroFee REAL DEFAULT 2.0,
+      currentRiskLevel TEXT DEFAULT 'Low'
+    )`);
+    sqliteDb.prepare(`INSERT OR IGNORE INTO state (id) VALUES (1)`).run();
+    sqliteDb.exec(`CREATE TABLE IF NOT EXISTS trips (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      status TEXT,
+      earnings REAL,
+      protectedAmount REAL,
+      timestamp TEXT
+    )`);
   }
 
   console.log(`Database initialised (${usePostgres ? 'PostgreSQL' : 'SQLite local dev'})`);
