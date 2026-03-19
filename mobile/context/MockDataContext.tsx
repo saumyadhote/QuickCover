@@ -1,0 +1,151 @@
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
+import axios from 'axios';
+import { API_URL } from '../utils/apiUrl';
+
+type Disruption = {
+  type: string;
+  zone: string;
+  severity: string;
+  message: string;
+  timestamp: string;
+};
+
+type AppState = {
+  isTripActive: boolean;
+  disruption: Disruption | null;
+  claimStatus: 'none' | 'processing' | 'approved' | 'paid';
+  weeklyEarnings: number;
+  weeklyProtected: number;
+};
+
+type MockDataContextType = {
+  state: AppState | null;
+  loading: boolean;
+  backendOnline: boolean;
+  acceptTrip: () => Promise<void>;
+  completeTrip: () => Promise<void>;
+};
+
+const FALLBACK_STATE: AppState = {
+  isTripActive: false,
+  disruption: null,
+  claimStatus: 'none',
+  weeklyEarnings: 3200,
+  weeklyProtected: 0,
+};
+
+const MockDataContext = createContext<MockDataContextType | null>(null);
+
+export function MockDataProvider({ children }: { children: React.ReactNode }) {
+  const [state, setState] = useState<AppState | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [backendOnline, setBackendOnline] = useState(false);
+  // Track whether we've already warned so we don't spam the console
+  const warnedRef = useRef(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    let retryCount = 0;
+    const maxRetries = 6;
+
+    const fetchStatus = async (attempt = 1) => {
+      try {
+        console.log(`[QuickCover] Connecting to ${API_URL}...`);
+        const res = await axios.get(`${API_URL}/status`, { timeout: 2500 });
+        if (!cancelled) {
+          setState(res.data);
+          setBackendOnline(true);
+          warnedRef.current = false;
+          console.log(`✅ [QuickCover] Connected!`);
+          setLoading(false);
+        }
+      } catch (err: any) {
+        if (!cancelled) {
+          const errMsg = err.code || err.message || 'Unknown';
+          console.log(`❌ [QuickCover] Connection failed (${errMsg}) - attempt ${attempt}/${maxRetries}`);
+          setBackendOnline(false);
+          if (!state) setState(FALLBACK_STATE);
+
+          if (attempt < maxRetries) {
+            const delayMs = 500 * Math.pow(2, attempt - 1);
+            setTimeout(() => {
+              if (!cancelled) fetchStatus(attempt + 1);
+            }, delayMs);
+          } else {
+            setLoading(false);
+            if (!warnedRef.current) {
+              console.warn(
+                `[QuickCover] ⚠️  Backend unavailable at ${API_URL}.\n` +
+                `→ ANDROID EMULATOR? Run: adb reverse tcp:4000 tcp:4000\n` +
+                `→ Then restart the app (npm start → press 'a')\n` +
+                `→ PHYSICAL DEVICE? Set EXPO_PUBLIC_API_URL=http://<your-local-ip>:4000 in mobile/.env\n` +
+                `→ Running in OFFLINE MODE for now — local state only.`
+              );
+              warnedRef.current = true;
+            }
+          }
+        }
+      }
+    };
+
+    fetchStatus();
+    const interval = setInterval(() => fetchStatus(), 12000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ---- acceptTrip -------------------------------------------------------
+  const acceptTrip = async () => {
+    if (!backendOnline) {
+      // Offline: mutate local state so the UI still responds
+      setState(prev => prev ? { ...prev, isTripActive: true } : prev);
+      return;
+    }
+    try {
+      const res = await axios.post(`${API_URL}/accept-trip`);
+      setState(res.data.state);
+    } catch {
+      setState(prev => prev ? { ...prev, isTripActive: true } : prev);
+    }
+  };
+
+  // ---- completeTrip -----------------------------------------------------
+  const completeTrip = async () => {
+    if (!backendOnline) {
+      setState(prev =>
+        prev
+          ? {
+              ...prev,
+              isTripActive: false,
+              weeklyEarnings: prev.weeklyEarnings + 45,
+              weeklyProtected: prev.weeklyProtected + prev.weeklyEarnings * 0.1,
+            }
+          : prev
+      );
+      return;
+    }
+    try {
+      const res = await axios.post(`${API_URL}/complete-trip`);
+      setState(res.data.state);
+    } catch {
+      setState(prev =>
+        prev ? { ...prev, isTripActive: false } : prev
+      );
+    }
+  };
+
+  return (
+    <MockDataContext.Provider value={{ state, loading, backendOnline, acceptTrip, completeTrip }}>
+      {children}
+    </MockDataContext.Provider>
+  );
+}
+
+export function useMockData() {
+  const context = useContext(MockDataContext);
+  if (!context) throw new Error('useMockData must be used within MockDataProvider');
+  return context;
+}
