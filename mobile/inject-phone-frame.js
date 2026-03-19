@@ -79,6 +79,12 @@ html = html.replace(
       height: 100%;
       overflow: hidden;
       display: flex;
+      opacity: 0;
+      transition: opacity 0.15s ease-in;
+    }
+
+    #root.app-ready {
+      opacity: 1;
     }
 
     .page-label {
@@ -132,6 +138,21 @@ html = html.replace(
   '</body>',
   `  </div><!-- /phone-frame -->
   <span class="page-label">QuickCover &nbsp;·&nbsp; Worker App &nbsp;·&nbsp; Demo</span>
+  <script>
+    // Reveal app only after React has hydrated — eliminates FOUC
+    (function() {
+      var root = document.getElementById('root');
+      var observer = new MutationObserver(function() {
+        if (root.children.length > 0) {
+          root.classList.add('app-ready');
+          observer.disconnect();
+        }
+      });
+      observer.observe(root, { childList: true, subtree: true });
+      // Safety fallback: always show after 800ms even if observer missed
+      setTimeout(function() { root.classList.add('app-ready'); }, 800);
+    })();
+  </script>
 </body>`
 );
 

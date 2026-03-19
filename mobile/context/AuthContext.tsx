@@ -64,15 +64,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const stored = await tokenStorage.get(TOKEN_KEY);
         if (stored) {
-          const res = await axios.get(`${API_URL}/auth/me`, {
-            headers: { Authorization: `Bearer ${stored}` },
-            timeout: 3000,
-          });
-          setToken(stored);
-          setUser(res.data.user);
+          // Local token (offline/web fallback) — restore from localStorage
+          if (Platform.OS === 'web' && stored.startsWith('local_')) {
+            const raw = localStorage.getItem('qc_local_user');
+            if (raw) { setToken(stored); setUser(JSON.parse(raw)); }
+            else await tokenStorage.delete(TOKEN_KEY);
+          } else {
+            const res = await axios.get(`${API_URL}/auth/me`, {
+              headers: { Authorization: `Bearer ${stored}` },
+              timeout: 3000,
+            });
+            setToken(stored);
+            setUser(res.data.user);
+          }
         }
       } catch {
-        // Token expired or backend unavailable — clear it
         await tokenStorage.delete(TOKEN_KEY);
       } finally {
         setLoading(false);
@@ -82,17 +88,55 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = async (email: string, password: string) => {
-    const res = await axios.post(`${API_URL}/auth/login`, { email, password }, { timeout: 5000 });
-    await tokenStorage.set(TOKEN_KEY, res.data.token);
-    setToken(res.data.token);
-    setUser(res.data.user);
+    try {
+      const res = await axios.post(`${API_URL}/auth/login`, { email, password }, { timeout: 8000 });
+      await tokenStorage.set(TOKEN_KEY, res.data.token);
+      setToken(res.data.token);
+      setUser(res.data.user);
+    } catch (err: any) {
+      // If backend is unreachable (cold start / offline), fall back to local auth on web
+      if (Platform.OS === 'web' && (!err.response || err.code === 'ECONNABORTED' || err.code === 'ERR_NETWORK')) {
+        const stored = localStorage.getItem('qc_local_users');
+        const users: (RegisterData & { id: number; createdAt: string })[] = stored ? JSON.parse(stored) : [];
+        const match = users.find(u => u.email === email && u.password === password);
+        if (!match) throw new Error('Invalid email or password.');
+        const fakeToken = `local_${Date.now()}`;
+        const fakeUser: User = { id: match.id, name: match.name, email: match.email, phone: match.phone, driverId: match.driverId, platform: match.platform, createdAt: match.createdAt };
+        await tokenStorage.set(TOKEN_KEY, fakeToken);
+        localStorage.setItem('qc_local_user', JSON.stringify(fakeUser));
+        setToken(fakeToken);
+        setUser(fakeUser);
+        return;
+      }
+      throw err;
+    }
   };
 
   const register = async (data: RegisterData) => {
-    const res = await axios.post(`${API_URL}/auth/register`, data, { timeout: 5000 });
-    await tokenStorage.set(TOKEN_KEY, res.data.token);
-    setToken(res.data.token);
-    setUser(res.data.user);
+    try {
+      const res = await axios.post(`${API_URL}/auth/register`, data, { timeout: 8000 });
+      await tokenStorage.set(TOKEN_KEY, res.data.token);
+      setToken(res.data.token);
+      setUser(res.data.user);
+    } catch (err: any) {
+      // If backend is unreachable, register locally on web
+      if (Platform.OS === 'web' && (!err.response || err.code === 'ECONNABORTED' || err.code === 'ERR_NETWORK')) {
+        const stored = localStorage.getItem('qc_local_users');
+        const users: any[] = stored ? JSON.parse(stored) : [];
+        if (users.find(u => u.email === data.email)) throw new Error('An account with this email already exists.');
+        const newUser = { ...data, id: Date.now(), createdAt: new Date().toISOString() };
+        users.push(newUser);
+        localStorage.setItem('qc_local_users', JSON.stringify(users));
+        const fakeToken = `local_${Date.now()}`;
+        const fakeUser: User = { id: newUser.id, name: newUser.name, email: newUser.email, phone: newUser.phone, driverId: newUser.driverId, platform: newUser.platform, createdAt: newUser.createdAt };
+        await tokenStorage.set(TOKEN_KEY, fakeToken);
+        localStorage.setItem('qc_local_user', JSON.stringify(fakeUser));
+        setToken(fakeToken);
+        setUser(fakeUser);
+        return;
+      }
+      throw err;
+    }
   };
 
   const logout = async () => {
