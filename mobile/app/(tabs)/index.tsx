@@ -51,7 +51,7 @@ function buildNotifications(state: {
       id: 'processing',
       icon: 'clock',
       title: 'Claim Under Review',
-      body: 'Your report has been received. Our team is reviewing it — usually under 30 mins.',
+      body: 'Your report has been received. AI verification is running — typically completes in seconds.',
       time: 'Just now',
       color: '#d97706',
     });
@@ -358,7 +358,7 @@ export default function DashboardScreen() {
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={{ color: '#1e40af', fontWeight: '700', fontSize: 13 }}>
-                    {claimStatus === 'processing' ? 'Claim under review…' : 'Claim approved — payout processing'}
+                    {claimStatus === 'processing' ? 'AI reviewing your claim…' : 'Claim approved — payout processing'}
                   </Text>
                   <Text style={{ color: '#3b82f6', fontSize: 12, marginTop: 1 }}>Tap to track progress</Text>
                 </View>

@@ -122,7 +122,7 @@ app.post('/trigger-disruption', async (req, res) => {
     const processingRow = await dbGet('SELECT * FROM state WHERE id = 1');
     res.json({ message: 'Disruption triggered successfully.', state: formatState(processingRow) });
 
-    // Simulate AI cross-verification delay in background
+    // AI cross-verification: processing → approved in 4s, approved → paid in 3s (7s total)
     setTimeout(async () => {
       const payoutAmount = 450;
       await dbRun(`
@@ -144,9 +144,9 @@ app.post('/trigger-disruption', async (req, res) => {
           SET "claimStatus" = 'paid'
           WHERE id = 1 AND "claimStatus" = 'approved'
         `);
-      }, 5000);
+      }, 3000);
 
-    }, 5000);
+    }, 4000);
 
   } catch (error) {
     res.status(500).json({ error: 'Database error' });

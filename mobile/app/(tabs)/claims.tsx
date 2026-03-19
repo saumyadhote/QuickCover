@@ -116,7 +116,7 @@ function ClaimForm({ onClose, onSubmit }: { onClose: () => void; onSubmit: (type
             <View style={{ backgroundColor: '#fffbeb', borderRadius: 10, padding: 12, marginBottom: 16, borderWidth: 1, borderColor: '#fde68a' }}>
               <Text style={{ fontSize: 11, color: '#92400e', lineHeight: 17 }}>
                 <Text style={{ fontWeight: '700' }}>Note: </Text>
-                Claims are reviewed within 30 minutes. You must have an active or recently ended trip to be eligible.
+                Claims are AI-verified in seconds. You must have an active or recently ended trip to be eligible.
               </Text>
             </View>
 
@@ -173,7 +173,7 @@ export default function ClaimsScreen() {
                 </View>
               </View>
               <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 13, lineHeight: 20, marginBottom: 16 }}>
-                If deliveries stopped due to heavy rain, extreme heat, a platform outage, or a curfew — report it here. Our team reviews claims within 30 minutes.
+                If deliveries stopped due to heavy rain, extreme heat, a platform outage, or a curfew — report it here. Our AI verifies claims in seconds.
               </Text>
               <TouchableOpacity
                 onPress={() => setFormOpen(true)}
@@ -229,7 +229,7 @@ export default function ClaimsScreen() {
               {[
                 { label: 'Disruption reported', sub: 'You submitted a disruption report', done: isClaimSubmitted, active: isClaimSubmitted && !isVerifying },
                 { label: 'Claim submitted', sub: 'Your claim is in the review queue', done: isVerifying, active: isClaimSubmitted && !isVerifying },
-                { label: 'Under review', sub: 'Team + AI verification in progress', done: isPayoutProcessing, active: isVerifying && !isPayoutProcessing },
+                { label: 'AI verification', sub: 'Automated cross-check in progress (5–10s)', done: isPayoutProcessing, active: isVerifying && !isPayoutProcessing },
                 { label: 'Payout processing', sub: 'Approved — payment being sent', done: isPayoutCompleted, active: isPayoutProcessing && !isPayoutCompleted },
                 { label: 'Payout completed', sub: 'Funds credited to your wallet', done: isPayoutCompleted, active: false },
               ].map((step, i, arr) => (
