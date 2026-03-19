@@ -141,7 +141,6 @@ html = html.replace(
 html = html.replace(
   '</body>',
   `  </div><!-- /phone-frame -->
-  <span class="page-label">QuickCover &nbsp;·&nbsp; Worker App &nbsp;·&nbsp; Demo</span>
   <script>
     // Reveal app only after React has hydrated — eliminates FOUC
     (function() {

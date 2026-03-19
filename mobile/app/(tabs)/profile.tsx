@@ -17,163 +17,161 @@ export default function ProfileScreen() {
   };
 
   return (
-    <View className="flex-1 bg-slate-50 pt-14">
+    <View style={{ flex: 1, backgroundColor: '#f8fafc', paddingTop: 56 }}>
       {/* Header */}
-      <View className="px-6 flex-row items-center pb-6">
+      <View style={{ paddingHorizontal: 24, flexDirection: 'row', alignItems: 'center', paddingBottom: 24 }}>
         <View style={{ marginRight: 16 }}><ArrowLeft color="#1e293b" size={24} /></View>
-        <Text className="text-xl font-bold text-slate-800">Profile</Text>
+        <Text style={{ fontSize: 20, fontWeight: '700', color: '#1e293b' }}>Profile</Text>
       </View>
 
-      <ScrollView className="flex-1 px-4" contentContainerStyle={{ paddingBottom: 100 }}>
+      <ScrollView style={{ flex: 1, paddingHorizontal: 16 }} contentContainerStyle={{ paddingBottom: 100 }}>
 
         {/* User Info Header */}
-        <View className="flex-row items-center mb-8 px-2">
-          <View className="w-16 h-16 rounded-full bg-blue-500 items-center justify-center mr-4">
-            <Text className="text-white font-bold text-2xl">{initial}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 32, paddingHorizontal: 8 }}>
+          <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: '#3b82f6', alignItems: 'center', justifyContent: 'center', marginRight: 16 }}>
+            <Text style={{ color: '#ffffff', fontWeight: '700', fontSize: 24 }}>{initial}</Text>
           </View>
           <View style={{ flex: 1 }}>
-            <Text className="text-xl font-bold text-slate-900 mb-1">{user?.name ?? '—'}</Text>
-            <View className="bg-green-100 flex-row items-center self-start px-2 py-1 rounded-full mb-1">
-              <View className="w-1.5 h-1.5 rounded-full bg-green-500 mr-1.5" />
-              <Text className="text-green-700 text-xs font-bold">{platformLabel}</Text>
+            <Text style={{ fontSize: 20, fontWeight: '700', color: '#0f172a', marginBottom: 4 }}>{user?.name ?? '—'}</Text>
+            <View style={{ backgroundColor: '#dcfce7', flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999, marginBottom: 4 }}>
+              <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#22c55e', marginRight: 6 }} />
+              <Text style={{ color: '#15803d', fontSize: 12, fontWeight: '700' }}>{platformLabel}</Text>
             </View>
-            <Text className="text-slate-400 text-xs">{user?.email}</Text>
-            <Text className="text-slate-400 text-xs">{user?.phone ?? 'No phone'} · ID: {user?.driverId}</Text>
+            <Text style={{ color: '#94a3b8', fontSize: 12 }}>{user?.email}</Text>
+            <Text style={{ color: '#94a3b8', fontSize: 12 }}>{user?.phone ?? 'No phone'} · ID: {user?.driverId}</Text>
           </View>
         </View>
 
         {/* Digital Locker Card */}
-        <View className="bg-white rounded-3xl p-5 mb-6 shadow-sm border border-slate-100">
-          <Text className="font-bold text-lg text-slate-800 mb-4">Digital Locker</Text>
+        <View style={{ backgroundColor: '#ffffff', borderRadius: 24, padding: 20, marginBottom: 24, borderWidth: 1, borderColor: '#f1f5f9' }}>
+          <Text style={{ fontWeight: '700', fontSize: 18, color: '#1e293b', marginBottom: 16 }}>Digital Locker</Text>
 
           {/* Policy Certificate Row */}
-          <View className="flex-row items-center justify-between border border-slate-100 rounded-2xl p-4 mb-3">
-            <View className="flex-row items-center flex-1 pr-3">
-               <View className="w-10 h-10 rounded-full bg-blue-50 items-center justify-center mr-3">
-                 <FileText color="#3b82f6" size={20} />
-               </View>
-               <View style={{ flex: 1 }}>
-                 <Text className="text-slate-800 font-bold text-sm">Policy Certificate</Text>
-                 <Text className="text-slate-500 text-xs mt-0.5">Valid until Dec 2026</Text>
-               </View>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 1, borderColor: '#f1f5f9', borderRadius: 16, padding: 16, marginBottom: 12 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, paddingRight: 12 }}>
+              <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#eff6ff', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+                <FileText color="#3b82f6" size={20} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: '#1e293b', fontWeight: '700', fontSize: 14 }}>Policy Certificate</Text>
+                <Text style={{ color: '#64748b', fontSize: 12, marginTop: 2 }}>Valid until Dec 2026</Text>
+              </View>
             </View>
-            <View className="flex-row items-center gap-4">
-               <Eye color="#64748b" size={20} />
-               <Download color="#64748b" size={20} />
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+              <Eye color="#64748b" size={20} />
+              <Download color="#64748b" size={20} />
             </View>
           </View>
 
           {/* Coverage Terms Row */}
-          <View className="flex-row items-center justify-between border border-slate-100 rounded-2xl p-4 mb-3">
-            <View className="flex-row items-center flex-1 pr-3">
-               <View className="w-10 h-10 rounded-full bg-purple-50 items-center justify-center mr-3">
-                 <ShieldCheck color="#a855f7" size={20} />
-               </View>
-               <View style={{ flex: 1 }}>
-                 <Text className="text-slate-800 font-bold text-sm">Coverage Terms</Text>
-                 <Text className="text-slate-500 text-xs mt-0.5">Updated Mar 2026</Text>
-               </View>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 1, borderColor: '#f1f5f9', borderRadius: 16, padding: 16, marginBottom: 12 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, paddingRight: 12 }}>
+              <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#faf5ff', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+                <ShieldCheck color="#a855f7" size={20} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: '#1e293b', fontWeight: '700', fontSize: 14 }}>Coverage Terms</Text>
+                <Text style={{ color: '#64748b', fontSize: 12, marginTop: 2 }}>Updated Mar 2026</Text>
+              </View>
             </View>
-            <View className="flex-row items-center gap-4">
-               <Eye color="#64748b" size={20} />
-               <Download color="#64748b" size={20} />
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+              <Eye color="#64748b" size={20} />
+              <Download color="#64748b" size={20} />
             </View>
           </View>
 
           {/* Weekly Summary Row */}
-          <View className="flex-row items-center justify-between border border-slate-100 rounded-2xl p-4">
-            <View className="flex-row items-center flex-1 pr-3">
-               <View className="w-10 h-10 rounded-full bg-emerald-50 items-center justify-center mr-3">
-                 <FileText color="#10b981" size={20} />
-               </View>
-               <View style={{ flex: 1 }}>
-                 <Text className="text-slate-800 font-bold text-sm">Weekly Coverage Summary</Text>
-               </View>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 1, borderColor: '#f1f5f9', borderRadius: 16, padding: 16 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, paddingRight: 12 }}>
+              <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#f0fdf4', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+                <FileText color="#10b981" size={20} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: '#1e293b', fontWeight: '700', fontSize: 14 }}>Weekly Coverage Summary</Text>
+              </View>
             </View>
-            <View className="flex-row items-center gap-4 pl-2">
-               <Eye color="#64748b" size={20} />
-               <Download color="#64748b" size={20} />
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+              <Eye color="#64748b" size={20} />
+              <Download color="#64748b" size={20} />
             </View>
           </View>
         </View>
 
         {/* Your Stats Card */}
-        <View className="bg-white rounded-3xl p-5 mb-6 shadow-sm border border-slate-100">
-          <Text className="font-bold text-lg text-slate-800 mb-4">Your Stats</Text>
+        <View style={{ backgroundColor: '#ffffff', borderRadius: 24, padding: 20, marginBottom: 24, borderWidth: 1, borderColor: '#f1f5f9' }}>
+          <Text style={{ fontWeight: '700', fontSize: 18, color: '#1e293b', marginBottom: 16 }}>Your Stats</Text>
 
-          <View className="flex-row justify-between mb-5">
-             <View className="bg-slate-50 items-center justify-center flex-1 rounded-2xl py-4 mr-2">
-                <Text className="text-slate-900 font-bold text-xl mb-1">342</Text>
-                <Text className="text-slate-500 text-[10px] uppercase tracking-wider text-center" numberOfLines={2}>Total Trips</Text>
-             </View>
-
-             <View className="bg-slate-50 items-center justify-center flex-1 rounded-2xl py-4 mx-1">
-                <Text className="text-slate-900 font-bold text-xl mb-1">12</Text>
-                <Text className="text-slate-500 text-[10px] uppercase tracking-wider text-center" numberOfLines={2}>High-Risk{'\n'}Zones</Text>
-             </View>
-
-             <View className="bg-slate-50 items-center justify-center flex-1 rounded-2xl py-4 ml-2">
-                <Text className="text-green-600 font-bold text-xl mb-1">94%</Text>
-                <Text className="text-slate-500 text-[10px] uppercase tracking-wider text-center" numberOfLines={2}>Safety Score</Text>
-             </View>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 }}>
+            <View style={{ backgroundColor: '#f8fafc', alignItems: 'center', justifyContent: 'center', flex: 1, borderRadius: 16, paddingVertical: 16, marginRight: 8 }}>
+              <Text style={{ color: '#0f172a', fontWeight: '700', fontSize: 20, marginBottom: 4 }}>342</Text>
+              <Text style={{ color: '#64748b', fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.5, textAlign: 'center' }}>Total Trips</Text>
+            </View>
+            <View style={{ backgroundColor: '#f8fafc', alignItems: 'center', justifyContent: 'center', flex: 1, borderRadius: 16, paddingVertical: 16, marginHorizontal: 4 }}>
+              <Text style={{ color: '#0f172a', fontWeight: '700', fontSize: 20, marginBottom: 4 }}>12</Text>
+              <Text style={{ color: '#64748b', fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.5, textAlign: 'center' }}>High-Risk{'\n'}Zones</Text>
+            </View>
+            <View style={{ backgroundColor: '#f8fafc', alignItems: 'center', justifyContent: 'center', flex: 1, borderRadius: 16, paddingVertical: 16, marginLeft: 8 }}>
+              <Text style={{ color: '#16a34a', fontWeight: '700', fontSize: 20, marginBottom: 4 }}>94%</Text>
+              <Text style={{ color: '#64748b', fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.5, textAlign: 'center' }}>Safety Score</Text>
+            </View>
           </View>
 
-          <View className="bg-green-100 rounded-2xl p-4 flex-row items-center border border-green-200">
-              <View className="w-10 h-10 rounded-full bg-green-500 items-center justify-center mr-3">
-                 <Award color="#ffffff" size={20} />
-              </View>
-              <View style={{ flex: 1 }}>
-                 <Text className="text-green-900 font-bold text-[15px] mb-0.5">Low-Risk Zone Operator</Text>
-                 <Text className="text-green-700 text-xs">Safe delivery champion</Text>
-              </View>
+          <View style={{ backgroundColor: '#dcfce7', borderRadius: 16, padding: 16, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#bbf7d0' }}>
+            <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#22c55e', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+              <Award color="#ffffff" size={20} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: '#14532d', fontWeight: '700', fontSize: 15, marginBottom: 2 }}>Low-Risk Zone Operator</Text>
+              <Text style={{ color: '#15803d', fontSize: 12 }}>Safe delivery champion</Text>
+            </View>
           </View>
         </View>
 
         {/* Help & Support Card */}
-        <View className="bg-white rounded-3xl p-5 mb-8 shadow-sm border border-slate-100">
-          <Text className="font-bold text-lg text-slate-800 mb-4">Help & Support</Text>
+        <View style={{ backgroundColor: '#ffffff', borderRadius: 24, padding: 20, marginBottom: 32, borderWidth: 1, borderColor: '#f1f5f9' }}>
+          <Text style={{ fontWeight: '700', fontSize: 18, color: '#1e293b', marginBottom: 16 }}>Help & Support</Text>
 
-          <TouchableOpacity className="flex-row items-center mb-5 mt-1">
-             <View className="w-10 h-10 rounded-full bg-blue-50 items-center justify-center mr-4">
-                <Phone color="#3b82f6" size={18} />
-             </View>
-             <View style={{ flex: 1 }}>
-                 <Text className="text-slate-800 font-bold text-[15px]">24×7 Worker Helpline</Text>
-                 <Text className="text-slate-500 text-xs mt-0.5">1800-XXX-XXXX</Text>
-             </View>
+          <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 20, marginTop: 4 }}>
+            <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#eff6ff', alignItems: 'center', justifyContent: 'center', marginRight: 16 }}>
+              <Phone color="#3b82f6" size={18} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: '#1e293b', fontWeight: '700', fontSize: 15 }}>24×7 Worker Helpline</Text>
+              <Text style={{ color: '#64748b', fontSize: 12, marginTop: 2 }}>1800-XXX-XXXX</Text>
+            </View>
           </TouchableOpacity>
 
-          <TouchableOpacity className="flex-row items-center mb-5">
-             <View className="w-10 h-10 rounded-full bg-purple-50 items-center justify-center mr-4">
-                <Info color="#a855f7" size={18} />
-             </View>
-             <View style={{ flex: 1 }}>
-                 <Text className="text-slate-800 font-bold text-[15px]">Government Welfare Programs</Text>
-                 <Text className="text-slate-500 text-xs mt-0.5">Social security benefits</Text>
-             </View>
+          <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 20 }}>
+            <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#faf5ff', alignItems: 'center', justifyContent: 'center', marginRight: 16 }}>
+              <Info color="#a855f7" size={18} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: '#1e293b', fontWeight: '700', fontSize: 15 }}>Government Welfare Programs</Text>
+              <Text style={{ color: '#64748b', fontSize: 12, marginTop: 2 }}>Social security benefits</Text>
+            </View>
           </TouchableOpacity>
 
-          <TouchableOpacity className="flex-row items-center">
-             <View className="w-10 h-10 rounded-full bg-green-50 items-center justify-center mr-4">
-                <HelpCircle color="#10b981" size={18} />
-             </View>
-             <View style={{ flex: 1 }}>
-                 <Text className="text-slate-800 font-bold text-[15px]">Insurance FAQ</Text>
-                 <Text className="text-slate-500 text-xs mt-0.5">Common questions</Text>
-             </View>
+          <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#f0fdf4', alignItems: 'center', justifyContent: 'center', marginRight: 16 }}>
+              <HelpCircle color="#10b981" size={18} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: '#1e293b', fontWeight: '700', fontSize: 15 }}>Insurance FAQ</Text>
+              <Text style={{ color: '#64748b', fontSize: 12, marginTop: 2 }}>Common questions</Text>
+            </View>
           </TouchableOpacity>
         </View>
 
         {/* Bottom Links */}
-        <View className="px-2 mb-10">
-          <TouchableOpacity className="mb-6">
-            <Text className="text-slate-600 font-medium text-sm">Account Settings</Text>
+        <View style={{ paddingHorizontal: 8, marginBottom: 40 }}>
+          <TouchableOpacity style={{ marginBottom: 24 }}>
+            <Text style={{ color: '#475569', fontWeight: '500', fontSize: 14 }}>Account Settings</Text>
           </TouchableOpacity>
-          <TouchableOpacity className="mb-6">
-            <Text className="text-slate-600 font-medium text-sm">Privacy Policy</Text>
+          <TouchableOpacity style={{ marginBottom: 24 }}>
+            <Text style={{ color: '#475569', fontWeight: '500', fontSize: 14 }}>Privacy Policy</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={handleSignOut}>
-            <Text className="text-red-500 font-bold text-sm">Sign Out</Text>
+            <Text style={{ color: '#ef4444', fontWeight: '700', fontSize: 14 }}>Sign Out</Text>
           </TouchableOpacity>
         </View>
 
