@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const bcrypt = require('bcryptjs');
 const { dbGet, dbRun, initializeDatabase, closeDatabase } = require('./database');
 
 const authRouter = require('./auth');
@@ -288,8 +289,26 @@ setInterval(() => { runForecast(); }, 15000);
 const PORT = process.env.PORT || 4000;
 
 // Start server only after DB is ready
+async function seedDemoAccount() {
+  try {
+    const existing = await dbGet('SELECT id FROM users WHERE email = $1', ['demo@quickcover.in']);
+    if (!existing) {
+      const hash = await bcrypt.hash('demo1234', 12);
+      await dbRun(
+        `INSERT INTO users (name, email, "passwordHash", phone, "driverId", platform, "createdAt")
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        ['Demo Driver', 'demo@quickcover.in', hash, '+91 9999999999', 'DEMO-2024-00001', 'blinkit', new Date().toISOString()]
+      );
+      console.log('✅ Demo account seeded: demo@quickcover.in / demo1234');
+    }
+  } catch (err) {
+    console.error('Demo seed error (non-fatal):', err.message);
+  }
+}
+
 initializeDatabase()
-  .then(() => {
+  .then(async () => {
+    await seedDemoAccount();
     const server = app.listen(PORT, '0.0.0.0', () => {
       console.log(`QuickCover backend listening on http://0.0.0.0:${PORT}`);
     });

@@ -4,7 +4,6 @@ import {
   KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ChevronDown } from 'lucide-react-native';
 import { useAuth, RegisterData } from '../context/AuthContext';
@@ -87,8 +86,7 @@ export default function SignupScreen() {
         </View>
 
         {/* Form card */}
-        <BlurView intensity={20} tint="dark" className="w-full rounded-3xl overflow-hidden border border-slate-800/60 p-6">
-          <LinearGradient colors={['rgba(30, 41, 59, 0.3)', 'rgba(2, 6, 23, 0.5)']} className="absolute inset-0" />
+        <View style={{ backgroundColor: '#1e2538', borderRadius: 24, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(51,65,85,0.6)', padding: 24 }}>
 
           {/* Full Name */}
           <Text className="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">Full Name</Text>
@@ -202,7 +200,7 @@ export default function SignupScreen() {
               <Text className="text-white font-bold text-lg tracking-wide">Create Account</Text>
             )}
           </TouchableOpacity>
-        </BlurView>
+        </View>
 
         {/* Login link */}
         <View className="flex-row justify-center mt-6">

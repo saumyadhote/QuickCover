@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
-import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../context/AuthContext';
 import { AppLogo } from './components/AppLogo';
@@ -58,8 +57,7 @@ export default function LoginScreen() {
         </View>
 
         {/* Form card */}
-        <BlurView intensity={20} tint="dark" className="w-full rounded-3xl overflow-hidden border border-slate-800/60 p-6">
-          <LinearGradient colors={['rgba(30, 41, 59, 0.3)', 'rgba(2, 6, 23, 0.5)']} className="absolute inset-0" />
+        <View style={{ backgroundColor: '#1e2538', borderRadius: 24, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(51,65,85,0.6)', padding: 24 }}>
 
           {/* Email */}
           <Text className="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">Email</Text>
@@ -107,7 +105,15 @@ export default function LoginScreen() {
               <Text className="text-white font-bold text-lg tracking-wide">Log In</Text>
             )}
           </TouchableOpacity>
-        </BlurView>
+        </View>
+
+        {/* Demo shortcut */}
+        <TouchableOpacity
+          onPress={() => { setEmail('demo@quickcover.in'); setPassword('demo1234'); }}
+          style={{ marginTop: 16, alignItems: 'center', paddingVertical: 10, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(99,102,241,0.4)', backgroundColor: 'rgba(99,102,241,0.08)' }}
+        >
+          <Text style={{ color: '#a5b4fc', fontSize: 13, fontWeight: '600' }}>⚡ Fill Demo Credentials</Text>
+        </TouchableOpacity>
 
         {/* Sign up link */}
         <View className="flex-row justify-center mt-6">
