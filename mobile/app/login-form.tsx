@@ -25,7 +25,7 @@ export default function LoginScreen() {
       await login(email.trim().toLowerCase(), password);
       router.replace('/(tabs)');
     } catch (err: any) {
-      const msg = err?.response?.data?.error || 'Login failed. Check your credentials.';
+      const msg = err?.response?.data?.error || err?.message || 'Login failed. Check your credentials.';
       setError(msg);
     } finally {
       setLoading(false);
@@ -34,35 +34,31 @@ export default function LoginScreen() {
 
   return (
     <KeyboardAvoidingView
-      className="flex-1 bg-[#050714]"
+      style={{ flex: 1, backgroundColor: '#050714' }}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      {/* Background ambient glows */}
-      <View className="absolute top-[-140px] right-[-120px] w-[580px] h-[580px] bg-purple-600/18 rounded-full blur-[140px]" />
-      <View className="absolute bottom-[-120px] left-[-120px] w-[560px] h-[560px] bg-slate-900/40 rounded-full blur-[140px]" />
-
       <ScrollView
-        contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingHorizontal: 24 }}
+        contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingHorizontal: 24, paddingVertical: 40 }}
         keyboardShouldPersistTaps="handled"
       >
         {/* Logo + heading */}
-        <View className="items-center mb-10">
-          <View className="mb-6">
+        <View style={{ alignItems: 'center', marginBottom: 32 }}>
+          <View style={{ marginBottom: 20 }}>
             <AppLogo size={100} />
           </View>
-          <Text className="text-3xl font-extrabold text-white text-center tracking-wide">Welcome Back</Text>
-          <Text className="text-slate-400 text-center mt-3 text-base px-4">
+          <Text style={{ fontSize: 28, fontWeight: '800', color: '#ffffff', textAlign: 'center' }}>Welcome Back</Text>
+          <Text style={{ color: '#94a3b8', textAlign: 'center', marginTop: 10, fontSize: 15, paddingHorizontal: 16 }}>
             Sign in to your QuickCover account.
           </Text>
         </View>
 
         {/* Form card */}
-        <View style={{ backgroundColor: '#1e2538', borderRadius: 24, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(51,65,85,0.6)', padding: 24 }}>
+        <View style={{ backgroundColor: '#1e2538', borderRadius: 24, borderWidth: 1, borderColor: 'rgba(51,65,85,0.6)', padding: 24, marginBottom: 16 }}>
 
           {/* Email */}
-          <Text className="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">Email</Text>
+          <Text style={{ color: '#94a3b8', fontSize: 11, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Email</Text>
           <TextInput
-            className="bg-slate-800/60 text-white rounded-xl px-4 py-3.5 mb-4 text-base border border-slate-700/50"
+            style={{ backgroundColor: 'rgba(30,41,59,0.8)', color: '#ffffff', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14, marginBottom: 16, fontSize: 15, borderWidth: 1, borderColor: 'rgba(51,65,85,0.5)' }}
             placeholder="you@example.com"
             placeholderTextColor="#64748b"
             autoCapitalize="none"
@@ -72,9 +68,9 @@ export default function LoginScreen() {
           />
 
           {/* Password */}
-          <Text className="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">Password</Text>
+          <Text style={{ color: '#94a3b8', fontSize: 11, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Password</Text>
           <TextInput
-            className="bg-slate-800/60 text-white rounded-xl px-4 py-3.5 mb-4 text-base border border-slate-700/50"
+            style={{ backgroundColor: 'rgba(30,41,59,0.8)', color: '#ffffff', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14, marginBottom: 16, fontSize: 15, borderWidth: 1, borderColor: 'rgba(51,65,85,0.5)' }}
             placeholder="••••••••"
             placeholderTextColor="#64748b"
             secureTextEntry
@@ -82,44 +78,44 @@ export default function LoginScreen() {
             onChangeText={setPassword}
           />
 
-          {/* Error */}
           {error ? (
-            <Text className="text-red-400 text-sm mb-4 text-center">{error}</Text>
+            <Text style={{ color: '#f87171', fontSize: 13, marginBottom: 12, textAlign: 'center' }}>{error}</Text>
           ) : null}
 
           {/* Login button */}
           <TouchableOpacity
             onPress={handleLogin}
             disabled={loading}
-            className="w-full rounded-2xl py-4 flex-row justify-center items-center overflow-hidden"
+            style={{ borderRadius: 16, overflow: 'hidden' }}
           >
             <LinearGradient
               colors={['#3b82f6', '#6366f1']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
-              className="absolute inset-0"
-            />
-            {loading ? (
-              <ActivityIndicator color="#fff" size="small" />
-            ) : (
-              <Text className="text-white font-bold text-lg tracking-wide">Log In</Text>
-            )}
+              style={{ paddingVertical: 16, alignItems: 'center', justifyContent: 'center' }}
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <Text style={{ color: '#ffffff', fontWeight: '700', fontSize: 17 }}>Log In</Text>
+              )}
+            </LinearGradient>
           </TouchableOpacity>
         </View>
 
         {/* Demo shortcut */}
         <TouchableOpacity
           onPress={() => { setEmail('demo@quickcover.in'); setPassword('demo1234'); }}
-          style={{ marginTop: 16, alignItems: 'center', paddingVertical: 10, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(99,102,241,0.4)', backgroundColor: 'rgba(99,102,241,0.08)' }}
+          style={{ alignItems: 'center', paddingVertical: 12, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(99,102,241,0.4)', backgroundColor: 'rgba(99,102,241,0.08)', marginBottom: 24 }}
         >
           <Text style={{ color: '#a5b4fc', fontSize: 13, fontWeight: '600' }}>⚡ Fill Demo Credentials</Text>
         </TouchableOpacity>
 
         {/* Sign up link */}
-        <View className="flex-row justify-center mt-6">
-          <Text className="text-slate-500 text-sm">Don't have an account? </Text>
+        <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}>
+          <Text style={{ color: '#64748b', fontSize: 14 }}>Don't have an account? </Text>
           <TouchableOpacity onPress={() => router.push('/signup')}>
-            <Text className="text-blue-400 font-bold text-sm">Sign Up</Text>
+            <Text style={{ color: '#60a5fa', fontWeight: '700', fontSize: 14 }}>Sign Up</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
