@@ -21,7 +21,7 @@ type AppState = {
 };
 
 type MockDataContextType = {
-  state: AppState | null;
+  state: AppState;
   loading: boolean;
   backendOnline: boolean;
   acceptTrip: () => Promise<void>;
@@ -42,8 +42,8 @@ const FALLBACK_STATE: AppState = {
 const MockDataContext = createContext<MockDataContextType | null>(null);
 
 export function MockDataProvider({ children }: { children: React.ReactNode }) {
-  const [state, setState] = useState<AppState | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [state, setState] = useState<AppState>(FALLBACK_STATE);
+  const [loading, setLoading] = useState(false);
   const [backendOnline, setBackendOnline] = useState(false);
   // Track whether we've already warned so we don't spam the console
   const warnedRef = useRef(false);
@@ -56,38 +56,27 @@ export function MockDataProvider({ children }: { children: React.ReactNode }) {
     const fetchStatus = async (attempt = 1) => {
       try {
         console.log(`[QuickCover] Connecting to ${API_URL}...`);
-        const res = await axios.get(`${API_URL}/status`, { timeout: 2500 });
+        const res = await axios.get(`${API_URL}/status`, { timeout: 4000 });
         if (!cancelled) {
           setState(res.data);
           setBackendOnline(true);
           warnedRef.current = false;
           console.log(`✅ [QuickCover] Connected!`);
-          setLoading(false);
         }
       } catch (err: any) {
         if (!cancelled) {
           const errMsg = err.code || err.message || 'Unknown';
           console.log(`❌ [QuickCover] Connection failed (${errMsg}) - attempt ${attempt}/${maxRetries}`);
           setBackendOnline(false);
-          if (!state) setState(FALLBACK_STATE);
 
           if (attempt < maxRetries) {
-            const delayMs = 500 * Math.pow(2, attempt - 1);
+            // Fixed 3s retry — don't exponentially back off, just keep trying quietly
             setTimeout(() => {
               if (!cancelled) fetchStatus(attempt + 1);
-            }, delayMs);
-          } else {
-            setLoading(false);
-            if (!warnedRef.current) {
-              console.warn(
-                `[QuickCover] ⚠️  Backend unavailable at ${API_URL}.\n` +
-                `→ ANDROID EMULATOR? Run: adb reverse tcp:4000 tcp:4000\n` +
-                `→ Then restart the app (npm start → press 'a')\n` +
-                `→ PHYSICAL DEVICE? Set EXPO_PUBLIC_API_URL=http://<your-local-ip>:4000 in mobile/.env\n` +
-                `→ Running in OFFLINE MODE for now — local state only.`
-              );
-              warnedRef.current = true;
-            }
+            }, 3000);
+          } else if (!warnedRef.current) {
+            console.warn(`[QuickCover] ⚠️  Backend unavailable — running in offline mode.`);
+            warnedRef.current = true;
           }
         }
       }
