@@ -60,14 +60,16 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 
-    const valid = await bcrypt.compare(password, user.passwordHash);
+    // PostgreSQL returns unquoted column names in lowercase (passwordhash, not passwordHash)
+    const hash = user.passwordHash || user.passwordhash;
+    const valid = await bcrypt.compare(password, hash);
     if (!valid) {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 
     const token = jwt.sign({ userId: user.id, email: user.email }, JWT_SECRET, { expiresIn: JWT_EXPIRES });
 
-    const { passwordHash: _, ...safeUser } = user;
+    const { passwordHash: _a, passwordhash: _b, ...safeUser } = user;
     res.json({ token, user: safeUser });
   } catch (error) {
     console.error('Login error:', error);
