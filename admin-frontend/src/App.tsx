@@ -5,7 +5,7 @@ import {
   Zap, TrendingUp, TrendingDown, RefreshCw, Brain,
   AlertTriangle, Droplets, Wind, ShieldCheck, CheckCircle, LoaderCircle,
   Eye, Trash2, KeyRound, ChevronsDown, FileText, Plus,
-  History, Cloud, CloudRain, CloudLightning, Sun, Banknote,
+  History, Cloud, CloudLightning, Sun, Banknote,
   ArrowRight, Activity, Radio,
 } from 'lucide-react';
 
