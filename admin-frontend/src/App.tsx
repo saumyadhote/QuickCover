@@ -159,10 +159,9 @@ function Shell({
         >
           Reset Demo Data
         </button>
-        {/* Logo badge replaces plain QC */}
-        <div className="flex items-center gap-2 bg-[#151b2d] border border-[#4edea3]/20 px-3 py-1.5 rounded-lg">
-          <QCLogo size={22} />
-          <span className="text-[10px] font-bold tracking-wider text-[#4edea3] uppercase">QuickCover</span>
+        {/* Logo badge */}
+        <div className="flex items-center justify-center bg-[#151b2d] border border-[#4edea3]/20 w-9 h-9 rounded-lg">
+          <QCLogo size={24} />
         </div>
       </header>
 
@@ -177,7 +176,9 @@ function Shell({
 // ─────────────────────────────────────────────
 // Live Micro-Fee Sparkline (rolling history)
 // ─────────────────────────────────────────────
+let sparklineIdCounter = 0;
 function FeeSparkline({ history, color = '#adc6ff' }: { history: FeePoint[]; color?: string }) {
+  const gradId = useRef(`spark-fill-${++sparklineIdCounter}`).current;
   if (history.length < 2) return null;
   const fees = history.map(h => h.fee);
   const min = Math.min(...fees);
@@ -194,15 +195,14 @@ function FeeSparkline({ history, color = '#adc6ff' }: { history: FeePoint[]; col
   return (
     <svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
       <defs>
-        <linearGradient id="spark-fill" x1="0" y1="0" x2="0" y2="1">
+        <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor={color} stopOpacity="0.25" />
           <stop offset="100%" stopColor={color} stopOpacity="0" />
         </linearGradient>
       </defs>
-      <polygon points={`${polyline} ${areaClose}`} fill="url(#spark-fill)" />
+      <polygon points={`${polyline} ${areaClose}`} fill={`url(#${gradId})`} />
       <polyline points={polyline} fill="none" stroke={color} strokeWidth="2"
         style={{ filter: `drop-shadow(0 0 4px ${color}88)` }} />
-      {/* live dot */}
       <circle cx={W} cy={pts[pts.length - 1].split(',')[1]} r="3" fill={color} />
     </svg>
   );
@@ -233,9 +233,9 @@ function LiveOpsFeed({ events }: { events: OpsEvent[] }) {
           }`}
           style={{ opacity: Math.max(0.3, 1 - i * 0.045) }}
         >
-          <div className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center mt-0.5"
+          <div className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center mt-0.5 overflow-hidden"
             style={{ backgroundColor: e.color + '22', border: `1px solid ${e.color}44` }}>
-            <span className="material-symbols-outlined text-[14px]" style={{ color: e.color }}>{e.icon}</span>
+            <span className="material-symbols-outlined" style={{ color: e.color, fontSize: '16px', lineHeight: 1 }}>{e.icon}</span>
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-xs text-[#c2c6d6] leading-snug">{e.msg}</p>
