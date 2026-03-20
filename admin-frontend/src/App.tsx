@@ -1,5 +1,13 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
+import {
+  LayoutDashboard, CreditCard, Network, Settings, HelpCircle,
+  Zap, TrendingUp, TrendingDown, RefreshCw, Brain,
+  AlertTriangle, Droplets, Wind, ShieldCheck, CheckCircle, LoaderCircle,
+  Eye, Trash2, KeyRound, ChevronsDown, FileText, Plus,
+  History, Cloud, CloudRain, CloudLightning, Sun, Banknote,
+  ArrowRight, Activity, Radio,
+} from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
 
@@ -88,9 +96,9 @@ function Shell({
   onReset: () => void; children: React.ReactNode;
 }) {
   const nav = [
-    { id: 'overview' as Tab, label: 'Overview', icon: 'dashboard' },
-    { id: 'pricing' as Tab, label: 'Pricing Engine', icon: 'payments' },
-    { id: 'partners' as Tab, label: 'Partner APIs', icon: 'api' },
+    { id: 'overview' as Tab, label: 'Overview', Icon: LayoutDashboard },
+    { id: 'pricing' as Tab, label: 'Pricing Engine', Icon: CreditCard },
+    { id: 'partners' as Tab, label: 'Partner APIs', Icon: Network },
   ];
 
   return (
@@ -115,7 +123,7 @@ function Shell({
                   : 'text-[#c2c6d6] hover:text-[#dce1fb] hover:bg-[#191f31] font-medium border border-transparent'
               }`}
             >
-              <span className="material-symbols-outlined text-lg">{n.icon}</span>
+              <n.Icon size={18} />
               <span>{n.label}</span>
             </button>
           ))}
@@ -132,11 +140,11 @@ function Shell({
             <p className="text-[9px] mt-1.5 text-[#8c909f]">{backendOnline ? 'All systems nominal' : 'Engine offline'}</p>
           </div>
           <button className="w-full flex items-center gap-3 px-3 py-2 text-[#c2c6d6] hover:text-[#dce1fb] hover:bg-[#191f31] transition-colors rounded-lg">
-            <span className="material-symbols-outlined text-lg">settings</span>
+            <Settings size={18} />
             <span className="text-sm font-medium">Settings</span>
           </button>
           <button className="w-full flex items-center gap-3 px-3 py-2 text-[#c2c6d6] hover:text-[#dce1fb] hover:bg-[#191f31] transition-colors rounded-lg">
-            <span className="material-symbols-outlined text-lg">help</span>
+            <HelpCircle size={18} />
             <span className="text-sm font-medium">Support</span>
           </button>
         </div>
@@ -221,7 +229,7 @@ function LiveOpsFeed({ events }: { events: OpsEvent[] }) {
       style={{ scrollbarWidth: 'none' }}>
       {events.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-48 text-center">
-          <span className="material-symbols-outlined text-[#2e3447] text-5xl mb-3">sensors</span>
+          <Radio size={48} className="text-[#2e3447] mb-3" />
           <p className="text-sm text-[#8c909f]">Awaiting engine events…</p>
         </div>
       ) : events.map((e, i) => (
@@ -289,7 +297,7 @@ function OverviewTab({
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-[#2e3447] flex items-center justify-center border border-[#424754]/20">
-                <span className="material-symbols-outlined text-[#4edea3]" style={{ fontVariationSettings: "'FILL' 1" }}>bolt</span>
+                <Zap size={18} className="text-[#4edea3]" fill="#4edea3" />
               </div>
               <div>
                 <h2 className="text-sm font-bold tracking-tight">Active Partner: Blinkit</h2>
@@ -437,11 +445,9 @@ function OverviewTab({
                 state.claimStatus === 'paid' ? 'text-[#4edea3]' :
                 state.claimStatus === 'approved' ? 'text-[#adc6ff]' : 'text-[#ffb95f]'
               }`}>
-                <span className="material-symbols-outlined text-sm"
-                  style={{ fontVariationSettings: "'FILL' 1" }}>
-                  {state.claimStatus === 'paid' ? 'check_circle' :
-                   state.claimStatus === 'approved' ? 'payments' : 'autorenew'}
-                </span>
+                {state.claimStatus === 'paid' && <CheckCircle size={14} />}
+                {state.claimStatus === 'approved' && <Banknote size={14} />}
+                {state.claimStatus === 'processing' && <LoaderCircle size={14} className="animate-spin" />}
                 {state.claimStatus === 'processing' && 'Claim Processing — AI cross-verification in progress…'}
                 {state.claimStatus === 'approved' && `Claim Approved — ₹450 payout authorised`}
                 {state.claimStatus === 'paid' && `₹${state.weeklyProtected.toLocaleString('en-IN')} transferred via UPI`}
@@ -454,16 +460,16 @@ function OverviewTab({
         <section className="bg-[#191f31] p-6 rounded-xl border border-[#424754]/10">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
-              <span className="material-symbols-outlined text-[#ffb95f]">warning</span>
+              <AlertTriangle size={18} className="text-[#ffb95f]" />
               <h3 className="text-sm font-bold uppercase tracking-widest">Disruption Simulator</h3>
             </div>
             <span className="px-2 py-0.5 rounded-full bg-[#ffb95f]/10 text-[#ffb95f] text-[10px] font-bold uppercase border border-[#ffb95f]/20">Live Scenario</span>
           </div>
           <div className="space-y-3 mb-6">
             {[
-              { type: 'WEATHER', sev: 'HIGH', msg: 'Severe waterlogging in Sector 42. IMD: 28mm/hr.', label: 'Flash Flood Warning', sub: 'IMD threshold breached · ₹450 payout', icon: 'water_drop', color: '#adc6ff' },
-              { type: 'POLLUTION', sev: 'HIGH', msg: 'AQI crossed 450 in primary delivery grid.', label: 'Severe AQI Spike', sub: 'CPCB AQI >450 · ₹450 payout', icon: 'air', color: '#ffb95f' },
-              { type: 'CURFEW', sev: 'CRITICAL', msg: 'Unplanned Section 144 grid disruption in NCR.', label: 'Civic Disruption', sub: 'Section 144 / curfew · ₹450 payout', icon: 'shield_with_heart', color: '#ffb4ab' },
+              { type: 'WEATHER', sev: 'HIGH', msg: 'Severe waterlogging in Sector 42. IMD: 28mm/hr.', label: 'Flash Flood Warning', sub: 'IMD threshold breached · ₹450 payout', Icon: Droplets, color: '#adc6ff' },
+              { type: 'POLLUTION', sev: 'HIGH', msg: 'AQI crossed 450 in primary delivery grid.', label: 'Severe AQI Spike', sub: 'CPCB AQI >450 · ₹450 payout', Icon: Wind, color: '#ffb95f' },
+              { type: 'CURFEW', sev: 'CRITICAL', msg: 'Unplanned Section 144 grid disruption in NCR.', label: 'Civic Disruption', sub: 'Section 144 / curfew · ₹450 payout', Icon: ShieldCheck, color: '#ffb4ab' },
             ].map(evt => (
               <button
                 key={evt.type}
@@ -473,7 +479,7 @@ function OverviewTab({
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <span className="material-symbols-outlined group-hover:scale-110 transition-transform" style={{ color: evt.color }}>{evt.icon}</span>
+                    <evt.Icon size={18} className="group-hover:scale-110 transition-transform flex-shrink-0" style={{ color: evt.color }} />
                     <div>
                       <p className="text-sm font-bold">{evt.label}</p>
                       <p className="text-[10px] text-[#8c909f]">{evt.sub}</p>
@@ -489,11 +495,11 @@ function OverviewTab({
           <div className="bg-[#0c1324] rounded-lg border border-[#424754]/20 p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-[#adc6ff] text-sm">psychology</span>
+                <Brain size={14} className="text-[#adc6ff]" />
                 <span className="text-xs font-bold uppercase tracking-widest text-[#c2c6d6]">AI Pricing Engine</span>
               </div>
               <button onClick={refreshForecast} className="text-[10px] font-bold text-[#adc6ff] border border-[#adc6ff]/30 px-2 py-1 rounded hover:bg-[#adc6ff]/10 transition-colors flex items-center gap-1">
-                <span className="material-symbols-outlined text-[12px]">refresh</span>REFRESH
+                <RefreshCw size={10} />REFRESH
               </button>
             </div>
             <div className="mt-3 flex items-center justify-between text-xs">
@@ -511,15 +517,15 @@ function OverviewTab({
 // ─────────────────────────────────────────────
 // Fee Decomposition Bar (animated)
 // ─────────────────────────────────────────────
-function FeeBar({ label, icon, value, max, color, desc }: {
-  label: string; icon: string; value: number; max: number; color: string; desc: string;
+function FeeBar({ label, Icon, value, max, color, desc }: {
+  label: string; Icon: React.ComponentType<{ size?: number; style?: React.CSSProperties }>; value: number; max: number; color: string; desc: string;
 }) {
   const pct = Math.min(100, (value / max) * 100);
   return (
     <div className="mb-5">
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
-          <span className="material-symbols-outlined text-base" style={{ color }}>{icon}</span>
+          <Icon size={16} style={{ color }} />
           <span className="text-sm font-semibold">{label}</span>
         </div>
         <span className="font-mono text-sm font-bold" style={{ color }}>+₹{value.toFixed(2)}</span>
@@ -562,8 +568,8 @@ function PricingTab({
     ? 'Moderate rain and traffic detected — fee elevated'
     : 'Clear conditions across NCR delivery grid — fee near floor';
 
-  const conditionIcon = state.currentRiskLevel === 'High' ? 'thunderstorm'
-    : state.currentRiskLevel === 'Medium' ? 'cloud' : 'wb_sunny';
+  const ConditionIcon = state.currentRiskLevel === 'High' ? CloudLightning
+    : state.currentRiskLevel === 'Medium' ? Cloud : Sun;
 
   // Build SVG path from feeHistory
   const sparkW = 1000, sparkH = 300;
@@ -607,7 +613,7 @@ function PricingTab({
           onClick={refreshForecast}
           className="flex items-center gap-2 px-6 py-3 bg-gradient-to-br from-[#adc6ff] to-[#4d8eff] text-[#002e6a] font-semibold text-sm rounded-lg shadow-lg shadow-[#adc6ff]/10 active:scale-95 transition-transform"
         >
-          <span className="material-symbols-outlined text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>refresh</span>
+          <RefreshCw size={16} />
           Force Recalculate
         </button>
       </div>
@@ -628,7 +634,7 @@ function PricingTab({
             <div className="flex items-center gap-3 mt-4 flex-wrap">
               <span className="text-xs font-bold px-3 py-1.5 rounded-full border flex items-center gap-1.5 transition-colors duration-500"
                 style={{ color: riskColor, backgroundColor: riskColor + '15', borderColor: riskColor + '33' }}>
-                <span className="material-symbols-outlined text-sm">{conditionIcon}</span>
+                <ConditionIcon size={14} />
                 {state.currentRiskLevel} Risk
               </span>
               <span className="text-[10px] text-[#8c909f]">= ₹{baseRate.toFixed(2)} base + risk drivers</span>
@@ -649,7 +655,7 @@ function PricingTab({
           </div>
           {/* Condition summary */}
           <div className="flex items-center gap-2 mb-6 p-3 bg-[#151b2d] rounded-lg border border-[#424754]/10">
-            <span className="material-symbols-outlined text-sm" style={{ color: riskColor }}>{conditionIcon}</span>
+            <ConditionIcon size={14} style={{ color: riskColor }} />
             <p className="text-xs text-[#c2c6d6]">{conditionLabel}</p>
           </div>
           {/* Animated decomposition bars */}
@@ -662,11 +668,11 @@ function PricingTab({
             <div className="h-1 bg-[#2e3447] rounded-full mb-5 overflow-hidden">
               <div className="h-full bg-[#8c909f]/50 rounded-full" style={{ width: `${(baseRate / state.currentMicroFee) * 100}%` }} />
             </div>
-            <FeeBar label="Weather / IMD API" icon="water_drop" value={weatherContrib} max={maxContrib} color="#adc6ff"
+            <FeeBar label="Weather / IMD API" Icon={Droplets} value={weatherContrib} max={maxContrib} color="#adc6ff"
               desc={state.currentRiskLevel === 'High' ? 'Active monsoon alert — peak surcharge applied' : state.currentRiskLevel === 'Medium' ? 'Light precipitation detected in delivery grid' : 'Clear skies — minimal weather surcharge'} />
-            <FeeBar label="AQI / CPCB Signal" icon="air" value={aqiContrib} max={maxContrib} color="#ffb95f"
+            <FeeBar label="AQI / CPCB Signal" Icon={Wind} value={aqiContrib} max={maxContrib} color="#ffb95f"
               desc={state.currentRiskLevel === 'High' ? 'PM2.5 >400 — severe exposure risk' : state.currentRiskLevel === 'Medium' ? 'Moderate air quality degradation' : 'AQI within safe limits'} />
-            <FeeBar label="Historical Volatility" icon="history" value={histContrib} max={maxContrib} color="#ffb4ab"
+            <FeeBar label="Historical Volatility" Icon={History} value={histContrib} max={maxContrib} color="#ffb4ab"
               desc="5-year claim cluster model — rolling anomaly window" />
             <div className="flex items-center justify-between pt-3 border-t border-[#424754]/20">
               <span className="text-sm font-bold">Total Micro-Fee</span>
@@ -756,8 +762,8 @@ function PricingTab({
                       {r.delta === 0 ? '—' : `${r.delta > 0 ? '+' : ''}₹${r.delta.toFixed(2)}`}
                     </td>
                     <td className="py-4 text-center">
-                      {r.delta > 0 && <span className="material-symbols-outlined text-base text-[#ffb95f]">trending_up</span>}
-                      {r.delta < 0 && <span className="material-symbols-outlined text-base text-[#4edea3]">trending_down</span>}
+                      {r.delta > 0 && <TrendingUp size={16} className="text-[#ffb95f] inline" />}
+                      {r.delta < 0 && <TrendingDown size={16} className="text-[#4edea3] inline" />}
                       {r.delta === 0 && <span className="text-[#424754]">—</span>}
                     </td>
                   </tr>
@@ -780,10 +786,10 @@ function PartnersTab({ state }: { state: AppState }) {
   const dailyRevenue = state.currentMicroFee * dailyOrders;
 
   const partners = [
-    { initial: 'B', initialColor: '#ffb95f', name: 'Blinkit', synced: '2m ago', status: 'Connected', statusColor: '#4edea3', latency: '142ms', latencyOk: true, riders: '114,208', premium: `₹${(dailyRevenue * 0.4 / 100000).toFixed(2)}L`, quotaPct: 85, quotaColor: '#adc6ff', quotaLabel: 'Quota Utilization: 85% of 1M requests/day', action: 'View Endpoint Logs', actionIcon: 'arrow_forward' },
-    { initial: 'Z', initialColor: '#adc6ff', name: 'Zepto', synced: '14s ago', status: 'Connected', statusColor: '#4edea3', latency: '98ms', latencyOk: true, riders: '89,442', premium: `₹${(dailyRevenue * 0.28 / 100000).toFixed(2)}L`, quotaPct: 42, quotaColor: '#4edea3', quotaLabel: 'Quota Utilization: 42% of 2M requests/day', action: 'View Endpoint Logs', actionIcon: 'arrow_forward' },
-    { initial: 'S', initialColor: '#ffb95f', name: 'Swiggy Instamart', synced: 'Auth refreshing...', status: 'Pending', statusColor: '#ffb95f', latency: '--', latencyOk: null, riders: '241,500', premium: '₹0.00', quotaPct: 5, quotaColor: '#ffb95f', quotaLabel: 'Initial Handshake In Progress', action: 'Complete Integration', actionIcon: 'login' },
-    { initial: 'Z', initialColor: '#ffb4ab', name: 'Zomato', synced: '1h ago', status: 'Connected', statusColor: '#4edea3', latency: '184ms', latencyOk: false, riders: '312,800', premium: `₹${(dailyRevenue * 0.32 / 100000).toFixed(2)}L`, quotaPct: 98, quotaColor: '#ffb4ab', quotaLabel: 'High Load: Approaching Rate Limit', action: 'Performance Report', actionIcon: 'analytics' },
+    { initial: 'B', initialColor: '#ffb95f', name: 'Blinkit', synced: '2m ago', status: 'Connected', statusColor: '#4edea3', latency: '142ms', latencyOk: true, riders: '114,208', premium: `₹${(dailyRevenue * 0.4 / 100000).toFixed(2)}L`, quotaPct: 85, quotaColor: '#adc6ff', quotaLabel: 'Quota Utilization: 85% of 1M requests/day', action: 'View Endpoint Logs', ActionIcon: ArrowRight },
+    { initial: 'Z', initialColor: '#adc6ff', name: 'Zepto', synced: '14s ago', status: 'Connected', statusColor: '#4edea3', latency: '98ms', latencyOk: true, riders: '89,442', premium: `₹${(dailyRevenue * 0.28 / 100000).toFixed(2)}L`, quotaPct: 42, quotaColor: '#4edea3', quotaLabel: 'Quota Utilization: 42% of 2M requests/day', action: 'View Endpoint Logs', ActionIcon: ArrowRight },
+    { initial: 'S', initialColor: '#ffb95f', name: 'Swiggy Instamart', synced: 'Auth refreshing...', status: 'Pending', statusColor: '#ffb95f', latency: '--', latencyOk: null, riders: '241,500', premium: '₹0.00', quotaPct: 5, quotaColor: '#ffb95f', quotaLabel: 'Initial Handshake In Progress', action: 'Complete Integration', ActionIcon: ArrowRight },
+    { initial: 'Z', initialColor: '#ffb4ab', name: 'Zomato', synced: '1h ago', status: 'Connected', statusColor: '#4edea3', latency: '184ms', latencyOk: false, riders: '312,800', premium: `₹${(dailyRevenue * 0.32 / 100000).toFixed(2)}L`, quotaPct: 98, quotaColor: '#ffb4ab', quotaLabel: 'High Load: Approaching Rate Limit', action: 'Performance Report', ActionIcon: Activity },
   ];
 
   const credentials = [
@@ -801,26 +807,26 @@ function PartnersTab({ state }: { state: AppState }) {
         </div>
         <div className="flex gap-4">
           <button className="flex items-center gap-2 px-4 py-2 bg-[#191f31] text-[#dce1fb] text-sm border border-[#424754]/20 hover:bg-[#23293c] transition-all rounded-lg">
-            <span className="material-symbols-outlined text-sm">description</span>API Documentation
+            <FileText size={14} />API Documentation
           </button>
           <button className="flex items-center gap-2 px-4 py-2 bg-gradient-to-br from-[#adc6ff] to-[#4d8eff] text-[#002e6a] font-bold text-sm rounded-lg shadow-lg shadow-[#adc6ff]/10 hover:opacity-90 transition-all">
-            <span className="material-symbols-outlined text-sm">add</span>Register New Partner
+            <Plus size={14} />Register New Partner
           </button>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
         {[
-          { label: 'Total Riders Protected', value: '1,482,903', sub: '+12.4% from last week', subColor: '#4edea3', icon: 'trending_up', border: '#adc6ff' },
-          { label: 'Avg. API Latency', value: '128ms', sub: 'Within SLA (150ms)', subColor: '#4edea3', icon: 'check_circle', border: '#4edea3' },
-          { label: 'Active Webhooks', value: '24/24', sub: 'Healthy Relay Clusters', subColor: '#c2c6d6', icon: null, border: '#ffb95f' },
-          { label: 'Daily Revenue (B2B)', value: `₹${(dailyRevenue / 100000).toFixed(2)}L`, sub: 'Real-time billing active', subColor: '#4edea3', icon: 'trending_up', border: '#adc6ff' },
+          { label: 'Total Riders Protected', value: '1,482,903', sub: '+12.4% from last week', subColor: '#4edea3', Icon: TrendingUp, border: '#adc6ff' },
+          { label: 'Avg. API Latency', value: '128ms', sub: 'Within SLA (150ms)', subColor: '#4edea3', Icon: CheckCircle, border: '#4edea3' },
+          { label: 'Active Webhooks', value: '24/24', sub: 'Healthy Relay Clusters', subColor: '#c2c6d6', Icon: null, border: '#ffb95f' },
+          { label: 'Daily Revenue (B2B)', value: `₹${(dailyRevenue / 100000).toFixed(2)}L`, sub: 'Real-time billing active', subColor: '#4edea3', Icon: TrendingUp, border: '#adc6ff' },
         ].map(m => (
           <div key={m.label} className="bg-[#191f31] p-5 rounded-lg border-l-4" style={{ borderColor: m.border }}>
             <p className="text-[10px] font-bold tracking-widest text-[#c2c6d6] uppercase mb-2">{m.label}</p>
             <h3 className="text-2xl font-bold tracking-tighter">{m.value}</h3>
             <div className="mt-2 flex items-center gap-1 text-[10px]" style={{ color: m.subColor }}>
-              {m.icon && <span className="material-symbols-outlined text-xs">{m.icon}</span>}
+              {m.Icon && <m.Icon size={12} />}
               <span>{m.sub}</span>
             </div>
           </div>
@@ -866,7 +872,7 @@ function PartnersTab({ state }: { state: AppState }) {
                 </div>
                 <div className="pt-2">
                   <button className="text-xs font-bold text-[#adc6ff] flex items-center gap-1 hover:underline">
-                    {p.action} <span className="material-symbols-outlined text-xs">{p.actionIcon}</span>
+                    {p.action} <p.ActionIcon size={12} />
                   </button>
                 </div>
               </div>
@@ -888,7 +894,7 @@ function PartnersTab({ state }: { state: AppState }) {
             <p className="text-sm text-[#c2c6d6]">Manage API Keys, Webhook Secrets, and OAuth2.0 Client IDs.</p>
           </div>
           <button className="flex items-center gap-2 px-4 py-2 bg-[#2e3447] text-[#dce1fb] text-sm font-semibold rounded-lg hover:bg-[#33394c] transition-colors border border-[#424754]/30">
-            <span className="material-symbols-outlined text-sm">key</span>Rotate All Production Keys
+            <KeyRound size={14} />Rotate All Production Keys
           </button>
         </div>
         <div className="overflow-x-auto">
@@ -915,8 +921,8 @@ function PartnersTab({ state }: { state: AppState }) {
                   <td className="px-6 py-4 text-[#c2c6d6]">{c.access}</td>
                   <td className="px-6 py-4 text-[#c2c6d6]">{c.created}</td>
                   <td className="px-6 py-4 text-right space-x-3">
-                    <button className="text-[#c2c6d6] hover:text-[#adc6ff] transition-colors"><span className="material-symbols-outlined text-lg">visibility</span></button>
-                    <button className="text-[#c2c6d6] hover:text-[#ffb4ab] transition-colors"><span className="material-symbols-outlined text-lg">delete</span></button>
+                    <button className="text-[#c2c6d6] hover:text-[#adc6ff] transition-colors"><Eye size={16} /></button>
+                    <button className="text-[#c2c6d6] hover:text-[#ffb4ab] transition-colors"><Trash2 size={16} /></button>
                   </td>
                 </tr>
               ))}
@@ -925,7 +931,7 @@ function PartnersTab({ state }: { state: AppState }) {
         </div>
         <div className="p-4 bg-[#151b2d] text-center">
           <button className="text-xs font-bold text-[#c2c6d6] hover:text-[#dce1fb] tracking-widest uppercase flex items-center justify-center gap-2 w-full transition-colors">
-            Expand Full Credential Store <span className="material-symbols-outlined text-sm">unfold_more</span>
+            Expand Full Credential Store <ChevronsDown size={14} />
           </button>
         </div>
       </div>
@@ -1053,7 +1059,7 @@ export default function App() {
         <div className="flex flex-col items-center gap-4">
           <QCLogo size={56} />
           <div className="flex items-center gap-3 text-[#adc6ff] font-bold text-lg animate-pulse">
-            <span className="material-symbols-outlined animate-spin">refresh</span>
+            <RefreshCw size={20} className="animate-spin" />
             Connecting to Core Engine…
           </div>
         </div>
