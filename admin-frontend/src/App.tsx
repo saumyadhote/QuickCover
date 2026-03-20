@@ -21,7 +21,6 @@ type OpsEvent = {
   id: number;
   time: string;
   color: string;
-  icon: string;
   msg: string;
   tag?: string;
   tagColor?: string;
@@ -233,10 +232,8 @@ function LiveOpsFeed({ events }: { events: OpsEvent[] }) {
           }`}
           style={{ opacity: Math.max(0.3, 1 - i * 0.045) }}
         >
-          <div className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center mt-0.5 overflow-hidden"
-            style={{ backgroundColor: e.color + '22', border: `1px solid ${e.color}44` }}>
-            <span className="material-symbols-outlined" style={{ color: e.color, fontSize: '16px', lineHeight: 1 }}>{e.icon}</span>
-          </div>
+          <div className="flex-shrink-0 w-2.5 h-2.5 rounded-full mt-1.5"
+            style={{ backgroundColor: e.color, boxShadow: `0 0 6px ${e.color}88`, flexShrink: 0 }} />
           <div className="flex-1 min-w-0">
             <p className="text-xs text-[#c2c6d6] leading-snug">{e.msg}</p>
             <div className="flex items-center gap-2 mt-1">
@@ -941,8 +938,8 @@ function PartnersTab({ state }: { state: AppState }) {
 // ─────────────────────────────────────────────
 
 let opsEventCounter = 0;
-const makeEvent = (color: string, icon: string, msg: string, tag?: string, tagColor?: string): OpsEvent => ({
-  id: ++opsEventCounter, time: nowIST(), color, icon, msg, tag, tagColor,
+const makeEvent = (color: string, msg: string, tag?: string, tagColor?: string): OpsEvent => ({
+  id: ++opsEventCounter, time: nowIST(), color, msg, tag, tagColor,
 });
 
 export default function App() {
@@ -964,10 +961,10 @@ export default function App() {
   useEffect(() => {
     // Seed initial ops feed with mock historic entries
     setOpsEvents([
-      makeEvent('#4edea3', 'check_circle', 'Blinkit API handshake successful — 2,401 riders reconciled.', 'PARTNER', '#4edea3'),
-      makeEvent('#adc6ff', 'psychology', 'XGBoost model epoch recalculated — weather coefficients updated for NCR.', 'ML', '#adc6ff'),
-      makeEvent('#ffb95f', 'warning', 'Heuristic alert: minor liquidity deviation in sub-pool Gamma.', 'RISK', '#ffb95f'),
-      makeEvent('#4edea3', 'payments', 'Zepto daily reconciliation complete — 89,442 riders synced.', 'PARTNER', '#4edea3'),
+      makeEvent('#4edea3', 'Blinkit API handshake successful — 2,401 riders reconciled.', 'PARTNER', '#4edea3'),
+      makeEvent('#adc6ff', 'XGBoost model epoch recalculated — weather coefficients updated for NCR.', 'ML', '#adc6ff'),
+      makeEvent('#ffb95f', 'Heuristic alert: minor liquidity deviation in sub-pool Gamma.', 'RISK', '#ffb95f'),
+      makeEvent('#4edea3', 'Zepto daily reconciliation complete — 89,442 riders synced.', 'PARTNER', '#4edea3'),
     ]);
   }, []);
 
@@ -997,7 +994,6 @@ export default function App() {
             const up = next.currentMicroFee > prev.currentMicroFee;
             pushEvent(makeEvent(
               up ? '#ffb95f' : '#4edea3',
-              up ? 'trending_up' : 'trending_down',
               `AI micro-fee ${up ? 'surged' : 'dropped'} ₹${prev.currentMicroFee.toFixed(2)} → ₹${next.currentMicroFee.toFixed(2)} (${next.currentRiskLevel} risk conditions)`,
               'PRICING', up ? '#ffb95f' : '#4edea3',
             ));
@@ -1005,16 +1001,16 @@ export default function App() {
 
           if (prev.claimStatus !== next.claimStatus) {
             if (next.claimStatus === 'processing') {
-              pushEvent(makeEvent('#ffb95f', 'sensors', `Parametric disruption trigger received — claim auto-filed. AI cross-verification started.`, 'CLAIM', '#ffb95f'));
+              pushEvent(makeEvent('#ffb95f', `Parametric disruption trigger received — claim auto-filed. AI cross-verification started.`, 'CLAIM', '#ffb95f'));
             } else if (next.claimStatus === 'approved') {
-              pushEvent(makeEvent('#adc6ff', 'psychology', `Isolation Forest fraud score: 0.21 / 1.00 — claim approved. Payout of ₹450 authorised.`, 'AI', '#adc6ff'));
+              pushEvent(makeEvent('#adc6ff', `Isolation Forest fraud score: 0.21 / 1.00 — claim approved. Payout of ₹450 authorised.`, 'AI', '#adc6ff'));
             } else if (next.claimStatus === 'paid') {
-              pushEvent(makeEvent('#4edea3', 'check_circle', `₹${next.weeklyProtected.toLocaleString('en-IN')} UPI transfer complete. Claim lifecycle closed.`, 'PAID', '#4edea3'));
+              pushEvent(makeEvent('#4edea3', `₹${next.weeklyProtected.toLocaleString('en-IN')} UPI transfer complete. Claim lifecycle closed.`, 'PAID', '#4edea3'));
             }
           }
 
           if (prev.currentRiskLevel !== next.currentRiskLevel) {
-            pushEvent(makeEvent('#c2c6d6', 'flag', `Risk level shifted: ${prev.currentRiskLevel} → ${next.currentRiskLevel}. Pricing engine recalibrating.`, 'RISK'));
+            pushEvent(makeEvent('#c2c6d6', `Risk level shifted: ${prev.currentRiskLevel} → ${next.currentRiskLevel}. Pricing engine recalibrating.`, 'RISK'));
           }
 
           prevState.current = next;
@@ -1038,7 +1034,7 @@ export default function App() {
     try {
       const res = await axios.post(`${API_URL}/refresh-forecast`);
       if (res.data?.state) {
-        pushEvent(makeEvent('#adc6ff', 'refresh', `Manual forecast refresh — fee recalculated to ₹${res.data.state.currentMicroFee?.toFixed(2)} (${res.data.state.currentRiskLevel} risk).`, 'MANUAL', '#adc6ff'));
+        pushEvent(makeEvent('#adc6ff', `Manual forecast refresh — fee recalculated to ₹${res.data.state.currentMicroFee?.toFixed(2)} (${res.data.state.currentRiskLevel} risk).`, 'MANUAL', '#adc6ff'));
       }
     } catch (e) { console.error(e); }
   }, [pushEvent]);
@@ -1047,7 +1043,7 @@ export default function App() {
     try {
       await axios.post(`${API_URL}/reset`);
       setFeeHistory([]);
-      setOpsEvents([makeEvent('#ffb4ab', 'restart_alt', 'Demo data reset — all state cleared to baseline.', 'SYSTEM', '#ffb4ab')]);
+      setOpsEvents([makeEvent('#ffb4ab', 'Demo data reset — all state cleared to baseline.', 'SYSTEM', '#ffb4ab')]);
     } catch (e) { console.error(e); }
   }, []);
 
