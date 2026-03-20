@@ -232,6 +232,35 @@ async function quarantine_claim(claimId, reason) {
   return { success: false, newStatus: 'pending_review' };
 }
 
+/**
+ * [STUB] Model 3 - Agentic GenAI: Vision-Language Model for Automated Adjudication
+ * TODO: Implement as part of "Adversarial Defense & Anti-Spoofing Strategy" (see README).
+ *
+ * Sends a quarantined claim's photo evidence to a Vision-Language Model (GPT-4o or
+ * Gemini 1.5 Pro) for automated adjudication. The model parses scene content (flooded
+ * streets, police barricades, shuttered stores), cross-references it against the claim
+ * context, and validates EXIF metadata (geotag, capture timestamp) against the worker's
+ * last known GPS coordinate.
+ *
+ * @param {string} image_url     - URL of the timestamped photo submitted by the worker
+ * @param {Object} claim_context - Claim details for cross-referencing against the photo
+ * @param {string} claim_context.disruption_type  - e.g. 'WEATHER', 'OUTAGE', 'CURFEW'
+ * @param {string} claim_context.zone             - Disruption zone (e.g. 'ZONE_A')
+ * @param {string} claim_context.timestamp        - ISO timestamp of the filed claim
+ * @param {number} claim_context.gps_lat          - Worker's last known latitude
+ * @param {number} claim_context.gps_lng          - Worker's last known longitude
+ * @returns {Promise<{ is_authentic_disruption: boolean, confidence_score: number, reason: string }>}
+ *   confidence_score >= 0.75 → auto-release payout
+ *   confidence_score < 0.40  → escalate to human analyst queue
+ */
+async function process_claim_evidence_with_genai(image_url, claim_context) {
+  // TODO: Call OpenAI Vision API or Gemini 1.5 Pro with image_url + claim_context prompt
+  // TODO: Parse structured JSON response for is_authentic_disruption + confidence_score
+  // TODO: Integrate with quarantine_claim() — high confidence clears quarantine, low escalates
+  console.log(`[STUB] process_claim_evidence_with_genai — image: ${image_url}, zone: ${claim_context?.zone}`);
+  return { is_authentic_disruption: false, confidence_score: 0, reason: 'stub — not yet implemented' };
+}
+
 // ------------------------------------------------------------------
 
 // --- ML Pricing Engine Mock ---

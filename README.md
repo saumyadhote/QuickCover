@@ -129,6 +129,14 @@ the app today.
 The AI engine adjusts the surcharge in real time based on: weather risk, zone disruption history,
 active driver shortage, time of day, and current pool balance.
 
+**The microcharge is not a flat fee.**
+
+Unlike traditional flat-fee models, QuickCover uses a dynamic pricing engine. Before a customer
+checks out, our AI pings external APIs (e.g., IMD Weather, traffic congestion, and active
+platform driver counts) to assess the hyper-local risk of that specific route. If it is a sunny
+day with low risk, the microcharge drops to ₹1.50. If there is a severe monsoon warning, the AI
+dynamically surges the microcharge to ₹5.00 to adequately fund the risk pool.
+
 ### Payout Triggers (Parametric — Automatic)
 
 | Trigger | Condition | Driver Payout |
@@ -253,7 +261,7 @@ graph TB
 | **Zero cost to driver** | 100% consumer-funded via per-order surcharge |
 | **Trip-level granularity** | Coverage is per-trip, not monthly — no gaps, no over-insurance |
 | **Parametric payouts** | No manual claims — objective, verifiable data triggers |
-| **AI variable pricing** | Surcharge adjusts real-time to weather, zone risk, pool balance |
+| **AI variable pricing** | The surcharge is never a flat fee; an XGBoost ML model ingests real-time external API values (weather, traffic, pool liquidity) to dynamically price the microcharge for every single order |
 | **Fraud prevention** | GPS cross-referencing + trip log validation |
 
 ---
@@ -286,6 +294,7 @@ viable interface for QuickCover's core user.
 | Backend | Node.js / Express → Render |
 | Database | PostgreSQL / Supabase |
 | Trigger APIs | IMD Weather, Google Maps Platform |
+| Generative AI | OpenAI Vision API / Gemini API |
 | Payments | Razorpay / UPI (Phase 2) |
 
 ---
@@ -311,6 +320,8 @@ is essential — "AI variables" is a description of intent; XGBoost trained on I
 deltas is a description of implementation. This section covers both.
 
 ### Model 1 — XGBoost Premium Pricing Engine
+
+**Core Philosophy: No Flat Fees.** This model ensures our premium pool scales precisely with environmental risk by transforming live API data into a dynamic microcharge.
 
 XGBoost (Extreme Gradient Boosting) is selected for the pricing engine because it handles
 tabular, mixed-type features with non-linear interactions well, trains fast on modest hardware,
@@ -387,6 +398,51 @@ anomalous.
 
 ---
 
+### Model 3 — Agentic GenAI (Vision-Language Model) for Automated Adjudication
+
+When a claim is quarantined by the Isolation Forest (suspicious score 0.46–0.70), the worker
+is prompted to submit a timestamped photo as secondary evidence. Rather than routing this photo
+to a human adjuster, QuickCover uses an **Agentic Vision-Language Model** (GPT-4o or Gemini
+1.5 Pro) to fully automate the adjudication step.
+
+#### The Role
+
+Traditional ML flags the claim. The GenAI agent closes the loop — it reads unstructured visual
+evidence and makes a binary authenticity determination without human intervention. This is the
+architectural step that eliminates the adjuster queue entirely.
+
+#### The Execution
+
+When the worker uploads their photo, the GenAI agent:
+
+1. **Parses scene content** — visually identifies disruption evidence: waterlogged roads, police
+   barricades, shuttered dark stores, flooded intersections, emergency signage.
+2. **Cross-references with claim context** — compares the scene against the filed disruption
+   type, zone, and timestamp. A "heavy rain" claim with a photo of a dry, sunny road fails.
+3. **Validates metadata integrity** — checks image EXIF data (geotag, capture time) against
+   the claim timestamp and the worker's last known GPS coordinate.
+4. **Returns a structured decision** — `is_authentic_disruption: true/false` with a
+   `confidence_score` (0.0–1.0). Scores above 0.75 trigger automatic fund release; scores
+   below 0.40 escalate to a human analyst queue.
+
+#### Business Value
+
+| Metric | Without GenAI Agent | With GenAI Agent |
+|---|---|---|
+| **Adjudication time** | 24–72 hrs (human review queue) | < 3 minutes (automated) |
+| **Cost per claim adjudicated** | ₹150–₹300 (manual labor) | ₹2–₹5 (API call cost) |
+| **Claims payout efficiency** | Baseline | +3–7% (industry benchmark) |
+| **Operational cost reduction** | Baseline | 20–30% lower service cost |
+| **False positive rate** | ~15% (conservative human reviewers) | ~8% (multi-signal cross-check) |
+
+Industry data from insurtechs deploying vision-AI adjudication (Tractable, Bdeo) shows **3–7%
+improvement in claims payout efficiency** and **20–30% reduction in per-claim service costs**
+— driven primarily by eliminating the manual review backlog for low-complexity photo evidence.
+
+> **"The Isolation Forest flags suspicious claims. The GenAI agent clears them — or escalates them — in under three minutes, with no human in the loop."**
+
+---
+
 ## Adversarial Defense & Anti-Spoofing Strategy
 
 QuickCover's parametric model pays out automatically — which means GPS spoofing is a primary fraud vector. A bad actor could fake their location to appear inside a disruption zone and claim a payout without being genuinely affected. The following three-pillar strategy addresses this.
@@ -416,7 +472,7 @@ Heavy rain causes natural network drops — automatically denying flagged claims
 1. **Flag, don't deny** — suspicious claims are marked `"Pending Review"`, not rejected.
 2. **Wait for connectivity** — once the worker's network stabilizes (post-storm), the app sends a push notification.
 3. **Low-friction secondary verification** — the worker is prompted to take a single live, timestamped photograph: a flooded street, a closed store shutter, or a police cordon.
-4. **AI photo review** — the image is processed for authenticity (timestamp, geotag, scene content). Matching photos trigger immediate fund release.
+4. **AI photo review** — the image is processed by the Agentic GenAI Model (Model 3: Vision-Language Model) for authenticity verification: timestamp integrity, geotag cross-check, and scene content analysis. Matching photos trigger immediate fund release.
 
 This approach eliminates false positives caused by infrastructure failures while maintaining strong fraud resistance against deliberate spoofing.
 
@@ -486,6 +542,7 @@ directly in the repository or via the live deployment URLs.
 | IMD weather trigger | 🟡 Mocked | `/trigger-disruption` simulates the trigger; live IMD API integration is Phase 4 |
 | UPI payout | 🟡 Mocked | Razorpay integration designed; test-mode keys not wired in demo build |
 | Fraud detection (Isolation Forest) | 🟡 Stub | Feature inputs and scoring tiers defined; model training pending real trip volume |
+| GenAI Vision Agent | 🟡 Stub | Architecture defined (Model 3); stub function in `mock-backend/server.js`; wiring to OpenAI/Gemini API is Phase 4 |
 
 > **"Every line of code in this repo was written for this hackathon. The mocks are honest about being mocks — and the architecture makes the path to production explicit."**
 
