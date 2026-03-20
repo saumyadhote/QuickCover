@@ -202,6 +202,8 @@ Expected actual payout per driver/week (probabilistic):
 Pool surplus at target loss ratio: ₹41–₹216/driver/week → actuarially sound.
 ```
 
+**Furthermore, by eliminating upfront premium costs entirely, this zero-barrier model actively drives financial inclusion and builds resilience for vulnerable gig economy demographics, specifically women and Persons with Disabilities (PwDs).**
+
 ### Why Per-Trip Is Strictly Superior for This Cohort
 
 Gig workers have irregular income. A Monday–Friday salaried worker can budget a fixed weekly
@@ -447,7 +449,7 @@ improvement in claims payout efficiency** and **20–30% reduction in per-claim 
 
 QuickCover's parametric model pays out automatically — which means GPS spoofing is a primary fraud vector. A bad actor could fake their location to appear inside a disruption zone and claim a payout without being genuinely affected. The following three-pillar strategy addresses this.
 
-### Pillar 1 — AI/ML Architecture: Behavioral Anomaly Detection
+### 1. The Differentiation (Behavioral Anomaly Detection)
 
 The system moves beyond checking raw GPS coordinates. The AI flags **impossible physics** in the data:
 
@@ -455,7 +457,7 @@ The system moves beyond checking raw GPS coordinates. The AI flags **impossible 
 - **Clustering anomalies** — during a real storm, hundreds of workers will have GPS coordinates that *drift naturally* due to movement and signal noise. A spoofing attack produces unnaturally identical or static coordinates across many accounts from the same zone.
 - **Context-aware movement analysis** — the AI analyzes whether movement patterns are consistent with navigating flooded roads (slower speeds, detours, stops) versus a static device with a spoofed location.
 
-### Pillar 2 — Data: Beyond Basic GPS Coordinates
+### 2. The Data (Beyond Basic GPS Coordinates)
 
 GPS alone is insufficient. The system cross-verifies using three secondary signals:
 
@@ -465,7 +467,7 @@ GPS alone is insufficient. The system cross-verifies using three secondary signa
 | **Network Triangulation & IP Data** | Match GPS coordinates against cell tower IDs and Wi-Fi IP geolocation | GPS placed in Zone A while device connects via cell tower in Zone C |
 | **Telematics & Device Sensors** | Accelerometer + gyroscope confirm physical movement: bumps, turns, stops consistent with route navigation | Stationary device with animated GPS path |
 
-### Pillar 3 — UX Balance: Quarantine & Deferred Payout
+### 3. The UX Balance (Quarantine & Deferred Payout)
 
 Heavy rain causes natural network drops — automatically denying flagged claims would harm honest workers. Instead, QuickCover uses a **Quarantine & Deferred Payout** workflow:
 
@@ -520,15 +522,15 @@ npm run dev
 
 ## 📅 Development Timeline
 
-QuickCover was built in three phases over eight weeks, prioritising a working end-to-end demo
+QuickCover was built in three phases over six weeks, prioritising a working end-to-end demo
 over feature breadth. Each phase has a defined set of deliverables that a judge can verify
 directly in the repository or via the live deployment URLs.
 
 | Phase | Weeks | Focus | Named Deliverables |
 |---|---|---|---|
-| **Phase 1 — Foundation** | Weeks 1–3 | Core data model, auth, and trip lifecycle | PostgreSQL schema (state + trips tables); JWT auth with signup/login endpoints; `/accept-trip`, `/complete-trip`, `/status` REST API; React Native app with Home + Claims + Coverage + Profile tabs; MockDataContext syncing state to live backend |
-| **Phase 2 — Intelligence** | Weeks 4–6 | ML pricing engine, fraud stubs, parametric triggers | XGBoost pricing engine mock (`runForecast()` with 5 weather conditions + risk tiers); `/trigger-disruption` endpoint with 5s AI verification simulation; Isolation Forest feature table and 3-tier scoring logic; `detect_os_mock_location()`, `analyze_telematics_anomalies()`, `quarantine_claim()` stub functions; Admin dashboard (Vite) with claims pipeline + loss ratio analytics |
-| **Phase 3 — Polish & Deploy** | Weeks 7–8 | Cloud deployment, UX refinement, documentation | Render deployment (backend) with Supabase PostgreSQL pooler; Vercel deployment (admin dashboard); Home screen Today's Journey timeline + Recent Payout card; Claims tab manual filing form with disruption type picker + photo evidence section; Anti-spoofing strategy in README; Full financial model in FINANCIAL_MODEL.md; This README |
+| **Phase 1 (Seed) — Foundation** | Weeks 1–2 | Core data model, auth, and trip lifecycle | PostgreSQL schema (state + trips tables); JWT auth with signup/login endpoints; `/accept-trip`, `/complete-trip`, `/status` REST API; React Native app with Home + Claims + Coverage + Profile tabs; MockDataContext syncing state to live backend |
+| **Phase 2 (Scale) — Intelligence** | Weeks 3–4 | ML pricing engine, fraud stubs, parametric triggers | XGBoost pricing engine mock (`runForecast()` with 5 weather conditions + risk tiers); `/trigger-disruption` endpoint with 5s AI verification simulation; Isolation Forest feature table and 3-tier scoring logic; `detect_os_mock_location()`, `analyze_telematics_anomalies()`, `quarantine_claim()` stub functions; Admin dashboard (Vite) with claims pipeline + loss ratio analytics |
+| **Phase 3 (Soar) — Polish & Deploy** | Weeks 5–6 | Cloud deployment, UX refinement, documentation | Render deployment (backend) with Supabase PostgreSQL pooler; Vercel deployment (admin dashboard); Home screen Today's Journey timeline + Recent Payout card; Claims tab manual filing form with disruption type picker + photo evidence section; Anti-spoofing strategy in README; Full financial model in FINANCIAL_MODEL.md; This README |
 
 ### What Is Live vs. Mocked
 
@@ -539,10 +541,10 @@ directly in the repository or via the live deployment URLs.
 | Mobile app (all screens) | ✅ Runnable via Expo Go | Connects to live Render backend |
 | Admin dashboard | ✅ Live on Vercel | Reads from same Supabase DB |
 | ML pricing engine | 🟡 Mocked | Rule-based mock with 5 weather conditions; XGBoost training pipeline is designed, not yet wired to live IMD data |
-| IMD weather trigger | 🟡 Mocked | `/trigger-disruption` simulates the trigger; live IMD API integration is Phase 4 |
+| IMD weather trigger | 🟡 Mocked | `/trigger-disruption` simulates the trigger; live IMD API integration is Post-Hackathon Roadmap |
 | UPI payout | 🟡 Mocked | Razorpay integration designed; test-mode keys not wired in demo build |
 | Fraud detection (Isolation Forest) | 🟡 Stub | Feature inputs and scoring tiers defined; model training pending real trip volume |
-| GenAI Vision Agent | 🟡 Stub | Architecture defined (Model 3); stub function in `mock-backend/server.js`; wiring to OpenAI/Gemini API is Phase 4 |
+| GenAI Vision Agent | 🟡 Stub | Architecture defined (Model 3); stub function in `mock-backend/server.js`; wiring to OpenAI/Gemini API is Post-Hackathon Roadmap |
 
 > **"Every line of code in this repo was written for this hackathon. The mocks are honest about being mocks — and the architecture makes the path to production explicit."**
 
