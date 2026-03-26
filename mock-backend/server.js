@@ -3,8 +3,22 @@ const express = require('express');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const { dbGet, dbRun, initializeDatabase, closeDatabase } = require('./database');
+const {
+  calculate_live_dynamic_surcharge,
+  evaluate_all_zones,
+} = require('./live_parametric_triggers');
 
 const authRouter = require('./auth');
+
+// ---------------------------------------------------------------------------
+// Operational zones — the delivery areas QuickCover actively monitors.
+// Coordinates are city-level centroids; swap in precise zone polygons later.
+// ---------------------------------------------------------------------------
+const OPERATIONAL_ZONES = [
+  { id: 'ZONE_A', label: 'Bengaluru — Koramangala / HSR',  lat: 12.9352, lon: 77.6245 },
+  { id: 'ZONE_B', label: 'Mumbai — Bandra / Andheri',      lat: 19.0596, lon: 72.8295 },
+  { id: 'ZONE_C', label: 'Delhi — Gurugram / Cyber City',  lat: 28.4595, lon: 77.0266 },
+];
 
 const app = express();
 
@@ -50,14 +64,47 @@ app.get('/status', async (req, res) => {
 
 app.post('/accept-trip', async (req, res) => {
   try {
-    await dbRun(`
-      UPDATE state
-      SET "isTripActive" = TRUE,
-          "disruptionType" = NULL, "disruptionZone" = NULL, "disruptionSeverity" = NULL,
-          "disruptionMessage" = NULL, "disruptionTimestamp" = NULL,
-          "claimStatus" = 'none'
-      WHERE id = 1
-    `);
+    // Use zone coords from request body if provided; default to ZONE_A (Bengaluru)
+    const { lat, lon } = req.body || {};
+    const zone = OPERATIONAL_ZONES.find(z => z.lat === lat && z.lon === lon)
+               || OPERATIONAL_ZONES[0];
+
+    // Calculate live micro-surcharge from real weather + AQI APIs (falls back to mock if key missing)
+    let liveFee   = null;
+    let riskLevel = null;
+    if (process.env.WEATHER_API_KEY) {
+      try {
+        const pricing = await calculate_live_dynamic_surcharge(zone.lat, zone.lon);
+        liveFee   = pricing.surcharge;
+        riskLevel = pricing.riskLevel;
+        console.log(`[ACCEPT-TRIP] Live surcharge for ${zone.label}: ₹${liveFee} [${riskLevel}]`);
+      } catch (err) {
+        console.error('[ACCEPT-TRIP] Live pricing failed, using stored value:', err.message);
+      }
+    }
+
+    // Activate trip and (if we got a live fee) update the micro-fee in state
+    if (liveFee !== null) {
+      await dbRun(`
+        UPDATE state
+        SET "isTripActive" = TRUE,
+            "disruptionType" = NULL, "disruptionZone" = NULL, "disruptionSeverity" = NULL,
+            "disruptionMessage" = NULL, "disruptionTimestamp" = NULL,
+            "claimStatus" = 'none',
+            "currentMicroFee" = $1, "currentRiskLevel" = $2
+        WHERE id = 1
+      `, [liveFee, riskLevel]);
+    } else {
+      await dbRun(`
+        UPDATE state
+        SET "isTripActive" = TRUE,
+            "disruptionType" = NULL, "disruptionZone" = NULL, "disruptionSeverity" = NULL,
+            "disruptionMessage" = NULL, "disruptionTimestamp" = NULL,
+            "claimStatus" = 'none'
+        WHERE id = 1
+      `);
+    }
+
     const row = await dbGet('SELECT * FROM state WHERE id = 1');
     res.json({ message: 'Trip activated. Coverage is now active.', state: formatState(row) });
   } catch (error) {
@@ -263,38 +310,63 @@ async function process_claim_evidence_with_genai(image_url, claim_context) {
 
 // ------------------------------------------------------------------
 
-// --- ML Pricing Engine Mock ---
+// ---------------------------------------------------------------------------
+// ML Pricing Engine — live when WEATHER_API_KEY is set, mock fallback otherwise
+// ---------------------------------------------------------------------------
+
+/**
+ * Fallback mock forecast used when no API key is configured.
+ * Preserves the original behaviour so the demo still works without a key.
+ */
+const runMockForecast = async () => {
+  const conditions = ['Clear Skies', 'Light Rain', 'Heavy Traffic Jam', 'Monsoon Alert', 'High AQI (Smog)'];
+  const selectedCondition = conditions[Math.floor(Math.random() * conditions.length)];
+
+  let riskLevel = 'Low';
+  let baseFee   = 2.0;
+
+  if (selectedCondition === 'Clear Skies') {
+    riskLevel = 'Low';
+    baseFee = 1.5 + Math.random() * 0.5;
+  } else if (selectedCondition === 'Light Rain' || selectedCondition === 'Heavy Traffic Jam') {
+    riskLevel = 'Medium';
+    baseFee = 2.2 + Math.random() * 0.8;
+  } else {
+    riskLevel = 'High';
+    baseFee = 3.2 + Math.random() * 0.8;
+  }
+
+  return { surcharge: parseFloat(baseFee.toFixed(2)), riskLevel };
+};
+
+/**
+ * Master forecast runner.
+ * Uses live API data when WEATHER_API_KEY is present; falls back to mock otherwise.
+ * Always targets ZONE_A (Bengaluru) as the primary pricing signal for the global state.
+ */
 const runForecast = async () => {
   try {
-    const conditions = ['Clear Skies', 'Light Rain', 'Heavy Traffic Jam', 'Monsoon Alert', 'High AQI (Smog)'];
-    const selectedCondition = conditions[Math.floor(Math.random() * conditions.length)];
+    let surcharge, riskLevel;
 
-    let riskLevel = 'Low';
-    let baseFee = 2.0;
-
-    if (selectedCondition === 'Clear Skies') {
-      riskLevel = 'Low';
-      baseFee = 1.5 + Math.random() * 0.5;
-    } else if (selectedCondition === 'Light Rain' || selectedCondition === 'Heavy Traffic Jam') {
-      riskLevel = 'Medium';
-      baseFee = 2.2 + Math.random() * 0.8;
+    if (process.env.WEATHER_API_KEY) {
+      const primary = OPERATIONAL_ZONES[0];
+      const pricing = await calculate_live_dynamic_surcharge(primary.lat, primary.lon);
+      surcharge  = pricing.surcharge;
+      riskLevel  = pricing.riskLevel;
     } else {
-      riskLevel = 'High';
-      baseFee = 3.2 + Math.random() * 0.8;
+      ({ surcharge, riskLevel } = await runMockForecast());
     }
-
-    const newFee = parseFloat(baseFee.toFixed(2));
 
     await dbRun(`
       UPDATE state
       SET "currentMicroFee" = $1, "currentRiskLevel" = $2
       WHERE id = 1
-    `, [newFee, riskLevel]);
+    `, [surcharge, riskLevel]);
 
     const row = await dbGet('SELECT * FROM state WHERE id = 1');
     return formatState(row);
   } catch (error) {
-    console.error('Failed to run ML forecast', error);
+    console.error('[FORECAST] Failed to run forecast:', error.message);
     return null;
   }
 };
@@ -308,9 +380,84 @@ app.post('/refresh-forecast', async (req, res) => {
   }
 });
 
-// Auto-fluctuate pricing every 15 seconds
+// Auto-refresh pricing every 15 seconds
 setInterval(() => { runForecast(); }, 15000);
-// -----------------------------
+
+// ---------------------------------------------------------------------------
+// Task 4 — /cron/evaluate-live-triggers
+// Zero-touch claims management: poll live APIs for all active zones and
+// auto-insert a "Pending Review" claim for every active worker in a breached zone.
+// ---------------------------------------------------------------------------
+
+app.post('/cron/evaluate-live-triggers', async (req, res) => {
+  if (!process.env.WEATHER_API_KEY) {
+    return res.status(503).json({ error: 'WEATHER_API_KEY not configured — live triggers unavailable' });
+  }
+
+  try {
+    const breachedZones = await evaluate_all_zones(OPERATIONAL_ZONES);
+
+    if (breachedZones.length === 0) {
+      console.log('[CRON] No parametric thresholds breached across all zones.');
+      return res.json({ message: 'No thresholds breached.', claims_created: 0, zones_checked: OPERATIONAL_ZONES.length });
+    }
+
+    let claims_created = 0;
+
+    for (const breach of breachedZones) {
+      console.log(`[CRON] Threshold breached — Zone: ${breach.zone_id}, Type: ${breach.type}, Severity: ${breach.severity}`);
+
+      // Query the trips table for active workers in this zone.
+      // A trip with status = 'active' (or we check the global isTripActive flag for the MVP)
+      // In the current single-driver MVP the state table is the source of truth.
+      const state = await dbGet('SELECT * FROM state WHERE id = 1');
+
+      if (state.isTripActive && state.claimStatus === 'none') {
+        // Auto-insert a Pending Review claim into trips table
+        await dbRun(
+          `INSERT INTO trips (status, earnings, "protectedAmount", timestamp) VALUES ($1, $2, $3, $4)`,
+          ['pending_review', 0, 0, new Date().toISOString()]
+        );
+
+        // Update global state to reflect the parametric disruption
+        await dbRun(`
+          UPDATE state
+          SET "disruptionType"      = $1,
+              "disruptionZone"      = $2,
+              "disruptionSeverity"  = $3,
+              "disruptionMessage"   = $4,
+              "disruptionTimestamp" = $5,
+              "claimStatus"         = 'processing'
+          WHERE id = 1
+        `, [
+          breach.type,
+          breach.zone_id,
+          breach.severity,
+          breach.message,
+          new Date().toISOString(),
+        ]);
+
+        claims_created++;
+        console.log(`[CRON] Auto-claim created (Pending Review) for zone ${breach.zone_id} — ${breach.message}`);
+      } else {
+        console.log(`[CRON] Zone ${breach.zone_id} breached but no active unprotected trip found — skipping auto-claim.`);
+      }
+    }
+
+    const finalState = await dbGet('SELECT * FROM state WHERE id = 1');
+    res.json({
+      message: `Cron run complete. ${claims_created} claim(s) auto-created.`,
+      breached_zones: breachedZones,
+      claims_created,
+      zones_checked: OPERATIONAL_ZONES.length,
+      state: formatState(finalState),
+    });
+
+  } catch (error) {
+    console.error('[CRON] evaluate-live-triggers error:', error.message);
+    res.status(500).json({ error: 'Cron evaluation failed', detail: error.message });
+  }
+});
 
 const PORT = process.env.PORT || 4000;
 
