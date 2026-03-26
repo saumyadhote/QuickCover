@@ -59,8 +59,10 @@ export function MockDataProvider({ children }: { children: React.ReactNode }) {
   const [eligibility, setEligibility] = useState<Eligibility>(FALLBACK_ELIGIBILITY);
   // Track whether we've already warned so we don't spam the console
   const warnedRef = useRef(false);
+  const tokenRef = useRef(token);
+  useEffect(() => { tokenRef.current = token; }, [token]);
 
-  const authHeaders = () => token ? { Authorization: `Bearer ${token}` } : {};
+  const authHeaders = () => tokenRef.current ? { Authorization: `Bearer ${tokenRef.current}` } : {};
 
   useEffect(() => {
     let cancelled = false;
@@ -133,7 +135,8 @@ export function MockDataProvider({ children }: { children: React.ReactNode }) {
       } catch { /* silent */ }
     };
 
-    fastPoll(); // fire immediately — don't wait 2s for first tick
+    // Don't fire immediately — the backend needs ~4s to write 'processing' to DB.
+    // Firing instantly would fetch stale 'none' state and wipe the optimistic update.
     const interval = setInterval(fastPoll, 2000);
     return () => {
       cancelled = true;
