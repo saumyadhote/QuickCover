@@ -34,7 +34,7 @@ type MockDataContextType = {
   eligibility: Eligibility;
   acceptTrip: () => Promise<void>;
   completeTrip: () => Promise<void>;
-  submitClaim: (type: string, message: string) => Promise<void>;
+  submitClaim: (type: string, message: string, hoursWorked: number) => Promise<void>;
 };
 
 const FALLBACK_STATE: AppState = {
@@ -123,7 +123,7 @@ export function MockDataProvider({ children }: { children: React.ReactNode }) {
     const fastPoll = async () => {
       if (cancelled) return;
       try {
-        const res = await axios.get(`${API_URL}/status`, { timeout: 4000 });
+        const res = await axios.get(`${API_URL}/status`, { timeout: 4000, headers: authHeaders() });
         if (!cancelled) setState(res.data);
       } catch { /* silent */ }
     };
@@ -152,7 +152,7 @@ export function MockDataProvider({ children }: { children: React.ReactNode }) {
   };
 
   // ---- submitClaim -------------------------------------------------------
-  const submitClaim = async (type: string, message: string) => {
+  const submitClaim = async (type: string, message: string, hoursWorked: number) => {
     if (!backendOnline) {
       // Offline: optimistically move to processing state
       setState(prev => prev ? { ...prev, claimStatus: 'processing' } : prev);
@@ -164,6 +164,7 @@ export function MockDataProvider({ children }: { children: React.ReactNode }) {
         zone: 'ZONE_A',
         severity: 'HIGH',
         message,
+        hours_worked: hoursWorked,
       }, { headers: authHeaders() });
       setState(res.data.state);
     } catch {

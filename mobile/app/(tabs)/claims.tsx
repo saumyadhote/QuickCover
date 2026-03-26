@@ -17,12 +17,14 @@ const DISRUPTION_TYPES = [
   { id: 'OTHER', label: 'Other Disruption', icon: '⚠️' },
 ];
 
-function ClaimForm({ onClose, onSubmit }: { onClose: () => void; onSubmit: (type: string, desc: string) => void }) {
+function ClaimForm({ onClose, onSubmit }: { onClose: () => void; onSubmit: (type: string, desc: string, hours: number) => void }) {
   const [selectedType, setSelectedType] = useState(DISRUPTION_TYPES[0]);
   const [showTypePicker, setShowTypePicker] = useState(false);
   const [description, setDescription] = useState('');
+  const [hoursWorked, setHoursWorked] = useState('2');
   const [photoAdded, setPhotoAdded] = useState(false);
 
+  const parsedHours = Math.min(8, Math.max(1, parseFloat(hoursWorked) || 1));
   const canSubmit = description.trim().length > 10;
 
   return (
@@ -91,6 +93,17 @@ function ClaimForm({ onClose, onSubmit }: { onClose: () => void; onSubmit: (type
               style={{ backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 12, paddingHorizontal: 14, paddingTop: 12, paddingBottom: 12, fontSize: 13, color: '#0f172a', minHeight: 80, textAlignVertical: 'top', marginBottom: 16 }}
             />
 
+            {/* Hours worked */}
+            <Text style={{ fontSize: 11, fontWeight: '600', color: '#475569', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>Hours lost (1–8)</Text>
+            <TextInput
+              keyboardType="numeric"
+              placeholder="e.g. 2"
+              placeholderTextColor="#94a3b8"
+              value={hoursWorked}
+              onChangeText={setHoursWorked}
+              style={{ backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 13, color: '#0f172a', marginBottom: 16 }}
+            />
+
             {/* Photo evidence */}
             <Text style={{ fontSize: 11, fontWeight: '600', color: '#475569', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>
               Evidence <Text style={{ color: '#94a3b8', fontWeight: '400', textTransform: 'none', fontSize: 11 }}>(optional)</Text>
@@ -122,7 +135,7 @@ function ClaimForm({ onClose, onSubmit }: { onClose: () => void; onSubmit: (type
 
             {/* Submit */}
             <TouchableOpacity
-              onPress={() => canSubmit && onSubmit(selectedType.id, description)}
+              onPress={() => canSubmit && onSubmit(selectedType.id, description, parsedHours)}
               disabled={!canSubmit}
               style={{ backgroundColor: canSubmit ? '#2563eb' : '#cbd5e1', borderRadius: 14, paddingVertical: 14, alignItems: 'center', marginBottom: 4 }}
             >
@@ -145,9 +158,9 @@ export default function ClaimsScreen() {
   const isPayoutProcessing = state?.claimStatus === 'approved' || state?.claimStatus === 'paid';
   const isPayoutCompleted = state?.claimStatus === 'paid';
 
-  const handleSubmit = async (type: string, desc: string) => {
+  const handleSubmit = async (type: string, desc: string, hours: number) => {
     setFormOpen(false);
-    await submitClaim(type, desc);
+    await submitClaim(type, desc, hours);
   };
 
   return (
