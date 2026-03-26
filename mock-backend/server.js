@@ -603,8 +603,8 @@ const PORT = process.env.PORT || 4000;
 // Start server only after DB is ready
 async function seedDemoAccount() {
   try {
-    const existing = await dbGet('SELECT id FROM users WHERE email = $1', ['demo@quickcover.in']);
-    if (!existing) {
+    let user = await dbGet('SELECT id FROM users WHERE email = $1', ['demo@quickcover.in']);
+    if (!user) {
       const hash = await bcrypt.hash('demo1234', 12);
       await dbRun(
         `INSERT INTO users (name, email, "passwordHash", phone, "driverId", platform, "createdAt")
@@ -612,6 +612,29 @@ async function seedDemoAccount() {
         ['Demo Driver', 'demo@quickcover.in', hash, '+91 9999999999', 'DEMO-2024-00001', 'blinkit', new Date().toISOString()]
       );
       console.log('✅ Demo account seeded: demo@quickcover.in / demo1234');
+      user = await dbGet('SELECT id FROM users WHERE email = $1', ['demo@quickcover.in']);
+    }
+
+    // Ensure demo user always has 25 recent trips for eligibility — re-seed on every startup
+    // so timestamps stay within the 7-day window regardless of when Render last deployed.
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    const recentRow = await dbGet(
+      `SELECT COUNT(*) AS cnt FROM trips WHERE "userId" = $1 AND timestamp >= $2 AND (status = 'completed' OR status = 'disrupted')`,
+      [user.id, sevenDaysAgo]
+    );
+    const recentCount = parseInt(recentRow?.cnt ?? recentRow?.count ?? 0, 10);
+    const needed = 25 - recentCount;
+    if (needed > 0) {
+      for (let i = 0; i < needed; i++) {
+        // Spread trips across the last 6 days so they look organic
+        const hoursAgo = Math.floor((i / needed) * 6 * 24);
+        const ts = new Date(Date.now() - hoursAgo * 60 * 60 * 1000).toISOString();
+        await dbRun(
+          `INSERT INTO trips (status, earnings, "protectedAmount", timestamp, "userId") VALUES ($1, $2, $3, $4, $5)`,
+          ['completed', 450, 0, ts, user.id]
+        );
+      }
+      console.log(`✅ Demo account: seeded ${needed} recent trips (total ≥ 25 in last 7 days)`);
     }
   } catch (err) {
     console.error('Demo seed error (non-fatal):', err.message);

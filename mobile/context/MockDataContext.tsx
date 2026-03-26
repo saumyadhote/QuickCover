@@ -174,8 +174,11 @@ export function MockDataProvider({ children }: { children: React.ReactNode }) {
         hours_worked: hoursWorked,
       }, { headers: authHeaders() });
       setState(res.data.state);
-    } catch {
-      // Keep processing state on error — fast-poll will sync actual state
+    } catch (err: any) {
+      // Backend rejected the claim (e.g. ineligible) — revert optimistic state
+      const serverMsg = err?.response?.data?.error;
+      console.warn('[submitClaim] rejected:', serverMsg);
+      setState(prev => prev ? { ...prev, claimStatus: 'none' } : prev);
     }
   };
 
