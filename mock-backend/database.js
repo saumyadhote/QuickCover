@@ -98,13 +98,13 @@ async function initializeDatabase() {
           earnings REAL,
           "protectedAmount" REAL,
           timestamp TEXT,
-          "hoursWorked" REAL DEFAULT NULL
+          "hoursWorked" REAL DEFAULT NULL,
+          "userId" INTEGER DEFAULT NULL
         )
       `);
-      // Migration: add hoursWorked to existing tables that predate this column
-      await client.query(`
-        ALTER TABLE trips ADD COLUMN IF NOT EXISTS "hoursWorked" REAL DEFAULT NULL
-      `);
+      // Migrations: add columns to existing tables that predate them
+      await client.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS "hoursWorked" REAL DEFAULT NULL`);
+      await client.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS "userId" INTEGER DEFAULT NULL`);
     } finally {
       client.release();
     }
@@ -141,10 +141,12 @@ async function initializeDatabase() {
       earnings REAL,
       protectedAmount REAL,
       timestamp TEXT,
-      hoursWorked REAL DEFAULT NULL
+      hoursWorked REAL DEFAULT NULL,
+      userId INTEGER DEFAULT NULL
     )`);
-    // Migration: add hoursWorked to existing SQLite tables that predate this column
-    try { sqliteDb.exec(`ALTER TABLE trips ADD COLUMN hoursWorked REAL DEFAULT NULL`); } catch (_) { /* column already exists */ }
+    // Migrations: add columns to existing SQLite tables that predate them
+    try { sqliteDb.exec(`ALTER TABLE trips ADD COLUMN hoursWorked REAL DEFAULT NULL`); } catch (_) { /* already exists */ }
+    try { sqliteDb.exec(`ALTER TABLE trips ADD COLUMN userId INTEGER DEFAULT NULL`); } catch (_) { /* already exists */ }
   }
 
   console.log(`Database initialised (${usePostgres ? 'PostgreSQL' : 'SQLite local dev'})`);

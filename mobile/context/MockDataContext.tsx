@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 import { API_URL } from '../utils/apiUrl';
+import { useAuth } from './AuthContext';
 
 type Disruption = {
   type: string;
@@ -51,12 +52,15 @@ const MockDataContext = createContext<MockDataContextType | null>(null);
 const FALLBACK_ELIGIBILITY: Eligibility = { eligible: false, tripCount: 0, required: 25 };
 
 export function MockDataProvider({ children }: { children: React.ReactNode }) {
+  const { token } = useAuth();
   const [state, setState] = useState<AppState>(FALLBACK_STATE);
   const [loading, setLoading] = useState(false);
   const [backendOnline, setBackendOnline] = useState(false);
   const [eligibility, setEligibility] = useState<Eligibility>(FALLBACK_ELIGIBILITY);
   // Track whether we've already warned so we don't spam the console
   const warnedRef = useRef(false);
+
+  const authHeaders = () => token ? { Authorization: `Bearer ${token}` } : {};
 
   useEffect(() => {
     let cancelled = false;
@@ -66,9 +70,10 @@ export function MockDataProvider({ children }: { children: React.ReactNode }) {
     const fetchStatus = async (attempt = 1) => {
       try {
         console.log(`[QuickCover] Connecting to ${API_URL}...`);
+        const headers = authHeaders();
         const [statusRes, eligRes] = await Promise.all([
-          axios.get(`${API_URL}/status`, { timeout: 4000 }),
-          axios.get(`${API_URL}/eligibility`, { timeout: 4000 }).catch(() => null),
+          axios.get(`${API_URL}/status`, { timeout: 4000, headers }),
+          axios.get(`${API_URL}/eligibility`, { timeout: 4000, headers }).catch(() => null),
         ]);
         if (!cancelled) {
           setState(statusRes.data);
@@ -139,7 +144,7 @@ export function MockDataProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     try {
-      const res = await axios.post(`${API_URL}/accept-trip`);
+      const res = await axios.post(`${API_URL}/accept-trip`, {}, { headers: authHeaders() });
       setState(res.data.state);
     } catch {
       setState(prev => prev ? { ...prev, isTripActive: true } : prev);
@@ -159,7 +164,7 @@ export function MockDataProvider({ children }: { children: React.ReactNode }) {
         zone: 'ZONE_A',
         severity: 'HIGH',
         message,
-      });
+      }, { headers: authHeaders() });
       setState(res.data.state);
     } catch {
       setState(prev => prev ? { ...prev, claimStatus: 'processing' } : prev);
@@ -182,10 +187,11 @@ export function MockDataProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     try {
-      const res = await axios.post(`${API_URL}/complete-trip`);
+      const headers = authHeaders();
+      const res = await axios.post(`${API_URL}/complete-trip`, {}, { headers });
       setState(res.data.state);
       // Refresh eligibility — trip count just increased
-      const eligRes = await axios.get(`${API_URL}/eligibility`, { timeout: 4000 });
+      const eligRes = await axios.get(`${API_URL}/eligibility`, { timeout: 4000, headers });
       setEligibility(eligRes.data);
     } catch {
       setState(prev =>

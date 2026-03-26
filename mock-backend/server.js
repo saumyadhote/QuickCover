@@ -63,6 +63,25 @@ app.get('/status', async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// Auth helper — extracts userId from Bearer token without requiring it.
+// Returns null if no token or token is invalid (unauthenticated requests
+// fall back to global counts for backwards compatibility).
+// ---------------------------------------------------------------------------
+const jwt = require('jsonwebtoken');
+const JWT_SECRET = process.env.JWT_SECRET || 'quickcover-dev-secret-change-in-prod';
+
+function getUserIdFromRequest(req) {
+  try {
+    const header = req.headers.authorization || '';
+    if (!header.startsWith('Bearer ')) return null;
+    const payload = jwt.verify(header.slice(7), JWT_SECRET);
+    return payload.userId ?? null;
+  } catch {
+    return null;
+  }
+}
+
+// ---------------------------------------------------------------------------
 // GET /eligibility
 // Returns whether the driver has enough recent trips to be covered.
 // Used by the mobile app to gate the "Insurance Standby" button before
@@ -72,13 +91,22 @@ const MINIMUM_WEEKLY_TRIPS = 25;
 
 app.get('/eligibility', async (req, res) => {
   try {
+    const userId = getUserIdFromRequest(req);
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-    const row = await dbGet(
-      `SELECT COUNT(*) AS cnt FROM trips
-       WHERE (status = 'completed' OR status = 'disrupted')
-         AND timestamp >= $1`,
-      [sevenDaysAgo]
-    );
+    // If authenticated, count only this user's trips. Otherwise count all (demo/unauthenticated).
+    const row = userId
+      ? await dbGet(
+          `SELECT COUNT(*) AS cnt FROM trips
+           WHERE (status = 'completed' OR status = 'disrupted')
+             AND timestamp >= $1 AND "userId" = $2`,
+          [sevenDaysAgo, userId]
+        )
+      : await dbGet(
+          `SELECT COUNT(*) AS cnt FROM trips
+           WHERE (status = 'completed' OR status = 'disrupted')
+             AND timestamp >= $1`,
+          [sevenDaysAgo]
+        );
     const tripCount = parseInt(row?.cnt ?? row?.count ?? 0, 10);
     const eligible = tripCount >= MINIMUM_WEEKLY_TRIPS;
     res.json({ eligible, tripCount, required: MINIMUM_WEEKLY_TRIPS });
@@ -140,9 +168,10 @@ app.post('/accept-trip', async (req, res) => {
 
 app.post('/complete-trip', async (req, res) => {
   try {
+    const userId = getUserIdFromRequest(req);
     await dbRun(
-      'INSERT INTO trips (status, earnings, "protectedAmount", timestamp) VALUES ($1, $2, $3, $4)',
-      ['completed', Math.floor(Math.random() * 50) + 20, 0, new Date().toISOString()]
+      `INSERT INTO trips (status, earnings, "protectedAmount", timestamp, "userId") VALUES ($1, $2, $3, $4, $5)`,
+      ['completed', Math.floor(Math.random() * 50) + 20, 0, new Date().toISOString(), userId]
     );
 
     await dbRun(`
@@ -165,6 +194,7 @@ app.post('/trigger-disruption', async (req, res) => {
   const { type, zone, severity, message, hours_worked } = req.body;
 
   try {
+    const userId = getUserIdFromRequest(req);
     const currentState = await dbGet('SELECT * FROM state WHERE id = 1');
 
     // Block duplicate in-flight claims
@@ -173,17 +203,23 @@ app.post('/trigger-disruption', async (req, res) => {
     }
 
     // -----------------------------------------------------------------------
-    // Eligibility Check: driver must have ≥ 7 qualifying trips in the last 7 days.
-    // This prevents inactive drivers from claiming insurance benefits.
-    // "Qualifying" = completed or disrupted trips (not pending_review stubs).
+    // Eligibility Check: driver must have ≥ 25 qualifying trips in the last 7 days,
+    // scoped to their own userId so drivers can't piggyback on each other's activity.
     // -----------------------------------------------------------------------
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-    const recentTripsRow = await dbGet(
-      `SELECT COUNT(*) AS cnt FROM trips
-       WHERE (status = 'completed' OR status = 'disrupted')
-         AND timestamp >= $1`,
-      [sevenDaysAgo]
-    );
+    const recentTripsRow = userId
+      ? await dbGet(
+          `SELECT COUNT(*) AS cnt FROM trips
+           WHERE (status = 'completed' OR status = 'disrupted')
+             AND timestamp >= $1 AND "userId" = $2`,
+          [sevenDaysAgo, userId]
+        )
+      : await dbGet(
+          `SELECT COUNT(*) AS cnt FROM trips
+           WHERE (status = 'completed' OR status = 'disrupted')
+             AND timestamp >= $1`,
+          [sevenDaysAgo]
+        );
     const recentTripCount = parseInt(recentTripsRow?.cnt ?? recentTripsRow?.count ?? 0, 10);
 
     if (recentTripCount < MINIMUM_WEEKLY_TRIPS) {
@@ -279,8 +315,8 @@ app.post('/trigger-disruption', async (req, res) => {
       `, [payoutAmount]);
 
       await dbRun(
-        `INSERT INTO trips (status, earnings, "protectedAmount", timestamp, "hoursWorked") VALUES ($1, $2, $3, $4, $5)`,
-        ['disrupted', 10, payoutAmount, new Date().toISOString(), claimedHours]
+        `INSERT INTO trips (status, earnings, "protectedAmount", timestamp, "hoursWorked", "userId") VALUES ($1, $2, $3, $4, $5, $6)`,
+        ['disrupted', 10, payoutAmount, new Date().toISOString(), claimedHours, userId]
       );
 
       await dbRun('UPDATE state SET "isTripActive" = FALSE WHERE id = 1');
