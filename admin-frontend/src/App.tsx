@@ -953,6 +953,7 @@ export default function App() {
   const [state, setState] = useState<AppState>(FALLBACK);
   const [loading, setLoading] = useState(true);
   const [backendOnline, setBackendOnline] = useState(false);
+  const consecutiveFailures = useRef(0);
   const [feeHistory, setFeeHistory] = useState<FeePoint[]>([]);
   const [opsEvents, setOpsEvents] = useState<OpsEvent[]>([]);
   const clock = useISTClock();
@@ -978,9 +979,10 @@ export default function App() {
     let cancelled = false;
     const poll = async () => {
       try {
-        const res = await axios.get(`${API_URL}/status`, { timeout: 4000 });
+        const res = await axios.get(`${API_URL}/status`, { timeout: 10000 });
         const next: AppState = res.data;
         if (!cancelled) {
+          consecutiveFailures.current = 0;
           setBackendOnline(true);
           setLoading(false);
 
@@ -1023,7 +1025,13 @@ export default function App() {
           setState(next);
         }
       } catch {
-        if (!cancelled) { setBackendOnline(false); setLoading(false); }
+        if (!cancelled) {
+          consecutiveFailures.current += 1;
+          // Only flip offline after 2 consecutive failures — avoids false offline
+          // on Render cold-start where the first request times out
+          if (consecutiveFailures.current >= 2) setBackendOnline(false);
+          setLoading(false);
+        }
       }
     };
     poll();
