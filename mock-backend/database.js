@@ -97,8 +97,13 @@ async function initializeDatabase() {
           status TEXT,
           earnings REAL,
           "protectedAmount" REAL,
-          timestamp TEXT
+          timestamp TEXT,
+          "hoursWorked" REAL DEFAULT NULL
         )
+      `);
+      // Migration: add hoursWorked to existing tables that predate this column
+      await client.query(`
+        ALTER TABLE trips ADD COLUMN IF NOT EXISTS "hoursWorked" REAL DEFAULT NULL
       `);
     } finally {
       client.release();
@@ -135,8 +140,11 @@ async function initializeDatabase() {
       status TEXT,
       earnings REAL,
       protectedAmount REAL,
-      timestamp TEXT
+      timestamp TEXT,
+      hoursWorked REAL DEFAULT NULL
     )`);
+    // Migration: add hoursWorked to existing SQLite tables that predate this column
+    try { sqliteDb.exec(`ALTER TABLE trips ADD COLUMN hoursWorked REAL DEFAULT NULL`); } catch (_) { /* column already exists */ }
   }
 
   console.log(`Database initialised (${usePostgres ? 'PostgreSQL' : 'SQLite local dev'})`);

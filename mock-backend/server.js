@@ -136,24 +136,92 @@ app.post('/complete-trip', async (req, res) => {
 });
 
 app.post('/trigger-disruption', async (req, res) => {
-  const { type, zone, severity, message } = req.body;
+  const { type, zone, severity, message, hours_worked } = req.body;
 
   try {
     const currentState = await dbGet('SELECT * FROM state WHERE id = 1');
 
-    // Allow manual claim filing even if trip has just ended — drivers report disruptions
-    // after the fact (e.g. flooding forced them off the road mid-trip). Only block if
-    // a claim is already in-flight to prevent duplicate submissions.
+    // Block duplicate in-flight claims
     if (currentState.claimStatus === 'processing' || currentState.claimStatus === 'approved') {
       return res.status(400).json({ error: 'A claim is already under review. Please wait for it to resolve.' });
     }
 
+    // -----------------------------------------------------------------------
+    // Eligibility Check: driver must have ≥ 7 qualifying trips in the last 7 days.
+    // This prevents inactive drivers from claiming insurance benefits.
+    // "Qualifying" = completed or disrupted trips (not pending_review stubs).
+    // -----------------------------------------------------------------------
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    const recentTripsRow = await dbGet(
+      `SELECT COUNT(*) AS cnt FROM trips
+       WHERE (status = 'completed' OR status = 'disrupted')
+         AND timestamp >= $1`,
+      [sevenDaysAgo]
+    );
+    const recentTripCount = parseInt(recentTripsRow?.cnt ?? recentTripsRow?.count ?? 0, 10);
+
+    const MINIMUM_WEEKLY_TRIPS = 7;
+    if (recentTripCount < MINIMUM_WEEKLY_TRIPS) {
+      return res.status(403).json({
+        error: `Insufficient recent activity — ${recentTripCount} qualifying trip(s) found in the last 7 days. Minimum required: ${MINIMUM_WEEKLY_TRIPS}.`,
+        trips_last_7_days: recentTripCount,
+        required: MINIMUM_WEEKLY_TRIPS,
+      });
+    }
+
+    // -----------------------------------------------------------------------
+    // Hourly Reimbursement Calculation
+    // Driver submits hours_worked (1–8). Payout = hours × ₹80/hr.
+    // ₹80/hr is derived from the ₹450 full-shift benchmark ÷ 5.5hr avg shift.
+    //
+    // Weather cross-check: if the disruption type is WEATHER, we verify the
+    // live API actually confirms adverse conditions in the primary zone.
+    // For non-weather disruptions (OUTAGE, CURFEW) we skip the weather check.
+    // -----------------------------------------------------------------------
+    const HOURLY_RATE = 80;    // ₹/hr
+    const MAX_HOURS   = 8;
+    const MIN_HOURS   = 1;
+
+    const claimedHours = Math.min(MAX_HOURS, Math.max(MIN_HOURS, parseFloat(hours_worked) || 1));
+    let payoutAmount = Math.round(claimedHours * HOURLY_RATE);
+
+    // Weather cross-check — only for WEATHER disruptions when API key is present
+    let weatherVerified = false;
+    let weatherNote = 'Weather check skipped (non-weather disruption or no API key).';
+    const disruptionType = type || 'WEATHER';
+
+    if (disruptionType === 'WEATHER' && process.env.WEATHER_API_KEY) {
+      try {
+        const { check_live_weather } = require('./live_parametric_triggers');
+        const primary = OPERATIONAL_ZONES[0];
+        const liveWeather = await check_live_weather(primary.lat, primary.lon);
+
+        if (liveWeather.triggered) {
+          // Confirmed disruption — pay full claimed hours
+          weatherVerified = true;
+          weatherNote = `Live API confirmed: ${liveWeather.message}. Full payout of ₹${payoutAmount} authorised.`;
+          console.log(`[CLAIM] Weather verified — ${liveWeather.message}. Payout: ₹${payoutAmount} (${claimedHours}h × ₹${HOURLY_RATE})`);
+        } else {
+          // API returned no disruption — halve the payout (partial credibility)
+          const originalPayout = payoutAmount;
+          payoutAmount = Math.round(payoutAmount * 0.5);
+          weatherVerified = false;
+          weatherNote = `Live API shows no active weather disruption (rain: ${liveWeather.raw.rainfall_mm_hr}mm/hr, temp: ${liveWeather.raw.temp_celsius}°C). Payout reduced to ₹${payoutAmount} (50% of ₹${originalPayout}) — claim queued for manual review.`;
+          console.log(`[CLAIM] Weather NOT verified — API shows clear conditions. Reduced payout: ₹${payoutAmount}`);
+        }
+      } catch (apiErr) {
+        // API call failed — don't penalise driver; proceed with full payout
+        weatherNote = `Weather API check failed (${apiErr.message}) — proceeding with full payout.`;
+        console.error('[CLAIM] Weather check API error (non-fatal):', apiErr.message);
+      }
+    }
+
     const disruption = {
-      type: type || 'WEATHER',
+      type: disruptionType,
       zone: zone || 'ZONE_A',
       severity: severity || 'HIGH',
       message: message || 'Severe Waterlogging Detected in Delivery Zone',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
 
     await dbRun(`
@@ -164,11 +232,21 @@ app.post('/trigger-disruption', async (req, res) => {
     `, [disruption.type, disruption.zone, disruption.severity, disruption.message, disruption.timestamp]);
 
     const processingRow = await dbGet('SELECT * FROM state WHERE id = 1');
-    res.json({ message: 'Disruption triggered successfully.', state: formatState(processingRow) });
+    res.json({
+      message: 'Disruption triggered successfully.',
+      state: formatState(processingRow),
+      payout_preview: {
+        hours_claimed: claimedHours,
+        hourly_rate: HOURLY_RATE,
+        payout_amount: payoutAmount,
+        trips_last_7_days: recentTripCount,
+        weather_verified: weatherVerified,
+        weather_note: weatherNote,
+      },
+    });
 
     // AI cross-verification: processing → approved in 4s, approved → paid in 3s (7s total)
     setTimeout(async () => {
-      const payoutAmount = 450;
       await dbRun(`
         UPDATE state
         SET "claimStatus" = 'approved', "weeklyProtected" = "weeklyProtected" + $1
@@ -176,16 +254,15 @@ app.post('/trigger-disruption', async (req, res) => {
       `, [payoutAmount]);
 
       await dbRun(
-        'INSERT INTO trips (status, earnings, "protectedAmount", timestamp) VALUES ($1, $2, $3, $4)',
-        ['disrupted', 10, payoutAmount, new Date().toISOString()]
+        `INSERT INTO trips (status, earnings, "protectedAmount", timestamp, "hoursWorked") VALUES ($1, $2, $3, $4, $5)`,
+        ['disrupted', 10, payoutAmount, new Date().toISOString(), claimedHours]
       );
 
       await dbRun('UPDATE state SET "isTripActive" = FALSE WHERE id = 1');
 
       setTimeout(async () => {
         await dbRun(`
-          UPDATE state
-          SET "claimStatus" = 'paid'
+          UPDATE state SET "claimStatus" = 'paid'
           WHERE id = 1 AND "claimStatus" = 'approved'
         `);
       }, 3000);
@@ -193,6 +270,7 @@ app.post('/trigger-disruption', async (req, res) => {
     }, 4000);
 
   } catch (error) {
+    console.error('[TRIGGER-DISRUPTION] error:', error);
     res.status(500).json({ error: 'Database error' });
   }
 });
@@ -413,10 +491,10 @@ app.post('/cron/evaluate-live-triggers', async (req, res) => {
       const state = await dbGet('SELECT * FROM state WHERE id = 1');
 
       if (state.isTripActive && state.claimStatus === 'none') {
-        // Auto-insert a Pending Review claim into trips table
+        // Auto-insert a Pending Review claim into trips table (hoursWorked null — not yet logged)
         await dbRun(
-          `INSERT INTO trips (status, earnings, "protectedAmount", timestamp) VALUES ($1, $2, $3, $4)`,
-          ['pending_review', 0, 0, new Date().toISOString()]
+          `INSERT INTO trips (status, earnings, "protectedAmount", timestamp, "hoursWorked") VALUES ($1, $2, $3, $4, $5)`,
+          ['pending_review', 0, 0, new Date().toISOString(), null]
         );
 
         // Update global state to reflect the parametric disruption
