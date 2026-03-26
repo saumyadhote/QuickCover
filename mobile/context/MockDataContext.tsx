@@ -68,14 +68,18 @@ export function MockDataProvider({ children }: { children: React.ReactNode }) {
         console.log(`[QuickCover] Connecting to ${API_URL}...`);
         const [statusRes, eligRes] = await Promise.all([
           axios.get(`${API_URL}/status`, { timeout: 4000 }),
-          axios.get(`${API_URL}/eligibility`, { timeout: 4000 }),
+          axios.get(`${API_URL}/eligibility`, { timeout: 4000 }).catch(() => null),
         ]);
         if (!cancelled) {
           setState(statusRes.data);
-          setEligibility(eligRes.data);
+          if (eligRes) {
+            setEligibility(eligRes.data);
+            console.log(`✅ [QuickCover] Connected! Eligible: ${eligRes.data.eligible} (${eligRes.data.tripCount}/${eligRes.data.required} trips)`);
+          } else {
+            console.log(`✅ [QuickCover] Connected! (eligibility endpoint not yet available)`);
+          }
           setBackendOnline(true);
           warnedRef.current = false;
-          console.log(`✅ [QuickCover] Connected! Eligible: ${eligRes.data.eligible} (${eligRes.data.tripCount}/${eligRes.data.required} trips)`);
         }
       } catch (err: any) {
         if (!cancelled) {
