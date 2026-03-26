@@ -62,6 +62,32 @@ app.get('/status', async (req, res) => {
   }
 });
 
+// ---------------------------------------------------------------------------
+// GET /eligibility
+// Returns whether the driver has enough recent trips to be covered.
+// Used by the mobile app to gate the "Insurance Standby" button before
+// the driver even tries to start a trip.
+// ---------------------------------------------------------------------------
+const MINIMUM_WEEKLY_TRIPS = 25;
+
+app.get('/eligibility', async (req, res) => {
+  try {
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    const row = await dbGet(
+      `SELECT COUNT(*) AS cnt FROM trips
+       WHERE (status = 'completed' OR status = 'disrupted')
+         AND timestamp >= $1`,
+      [sevenDaysAgo]
+    );
+    const tripCount = parseInt(row?.cnt ?? row?.count ?? 0, 10);
+    const eligible = tripCount >= MINIMUM_WEEKLY_TRIPS;
+    res.json({ eligible, tripCount, required: MINIMUM_WEEKLY_TRIPS });
+  } catch (error) {
+    console.error('[ELIGIBILITY] error:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
 app.post('/accept-trip', async (req, res) => {
   try {
     // Use zone coords from request body if provided; default to ZONE_A (Bengaluru)
@@ -160,7 +186,6 @@ app.post('/trigger-disruption', async (req, res) => {
     );
     const recentTripCount = parseInt(recentTripsRow?.cnt ?? recentTripsRow?.count ?? 0, 10);
 
-    const MINIMUM_WEEKLY_TRIPS = 7;
     if (recentTripCount < MINIMUM_WEEKLY_TRIPS) {
       return res.status(403).json({
         error: `Insufficient recent activity — ${recentTripCount} qualifying trip(s) found in the last 7 days. Minimum required: ${MINIMUM_WEEKLY_TRIPS}.`,

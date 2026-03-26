@@ -20,10 +20,17 @@ type AppState = {
   currentRiskLevel: 'Low' | 'Medium' | 'High';
 };
 
+type Eligibility = {
+  eligible: boolean;
+  tripCount: number;
+  required: number;
+};
+
 type MockDataContextType = {
   state: AppState;
   loading: boolean;
   backendOnline: boolean;
+  eligibility: Eligibility;
   acceptTrip: () => Promise<void>;
   completeTrip: () => Promise<void>;
   submitClaim: (type: string, message: string) => Promise<void>;
@@ -41,10 +48,13 @@ const FALLBACK_STATE: AppState = {
 
 const MockDataContext = createContext<MockDataContextType | null>(null);
 
+const FALLBACK_ELIGIBILITY: Eligibility = { eligible: false, tripCount: 0, required: 25 };
+
 export function MockDataProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AppState>(FALLBACK_STATE);
   const [loading, setLoading] = useState(false);
   const [backendOnline, setBackendOnline] = useState(false);
+  const [eligibility, setEligibility] = useState<Eligibility>(FALLBACK_ELIGIBILITY);
   // Track whether we've already warned so we don't spam the console
   const warnedRef = useRef(false);
 
@@ -56,12 +66,16 @@ export function MockDataProvider({ children }: { children: React.ReactNode }) {
     const fetchStatus = async (attempt = 1) => {
       try {
         console.log(`[QuickCover] Connecting to ${API_URL}...`);
-        const res = await axios.get(`${API_URL}/status`, { timeout: 4000 });
+        const [statusRes, eligRes] = await Promise.all([
+          axios.get(`${API_URL}/status`, { timeout: 4000 }),
+          axios.get(`${API_URL}/eligibility`, { timeout: 4000 }),
+        ]);
         if (!cancelled) {
-          setState(res.data);
+          setState(statusRes.data);
+          setEligibility(eligRes.data);
           setBackendOnline(true);
           warnedRef.current = false;
-          console.log(`✅ [QuickCover] Connected!`);
+          console.log(`✅ [QuickCover] Connected! Eligible: ${eligRes.data.eligible} (${eligRes.data.tripCount}/${eligRes.data.required} trips)`);
         }
       } catch (err: any) {
         if (!cancelled) {
@@ -166,6 +180,9 @@ export function MockDataProvider({ children }: { children: React.ReactNode }) {
     try {
       const res = await axios.post(`${API_URL}/complete-trip`);
       setState(res.data.state);
+      // Refresh eligibility — trip count just increased
+      const eligRes = await axios.get(`${API_URL}/eligibility`, { timeout: 4000 });
+      setEligibility(eligRes.data);
     } catch {
       setState(prev =>
         prev ? { ...prev, isTripActive: false } : prev
@@ -174,7 +191,7 @@ export function MockDataProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <MockDataContext.Provider value={{ state, loading, backendOnline, acceptTrip, completeTrip, submitClaim }}>
+    <MockDataContext.Provider value={{ state, loading, backendOnline, eligibility, acceptTrip, completeTrip, submitClaim }}>
       {children}
     </MockDataContext.Provider>
   );

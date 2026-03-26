@@ -3,7 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useMockData } from '../../context/MockDataContext';
 import { useAuth } from '../../context/AuthContext';
-import { ShieldCheck, ShieldAlert, AlertTriangle, CheckCircle, Bell, X, CloudRain, Clock, Zap, TrendingUp } from 'lucide-react-native';
+import { ShieldCheck, ShieldAlert, ShieldX, AlertTriangle, CheckCircle, Bell, X, CloudRain, Clock, Zap, TrendingUp } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 // ── Build notification list from live state ──────────────────────────────────
@@ -186,7 +186,7 @@ function TodaysJourney({ isTripActive }: { isTripActive: boolean }) {
 
 // ── Main Screen ──────────────────────────────────────────────────────────────
 export default function DashboardScreen() {
-  const { state, acceptTrip, completeTrip } = useMockData();
+  const { state, eligibility, acceptTrip, completeTrip } = useMockData();
   const { user } = useAuth();
   const router = useRouter();
   const [notifOpen, setNotifOpen] = useState(false);
@@ -220,6 +220,7 @@ export default function DashboardScreen() {
   const hasNotifs = notifications.length > 0;
 
   const toggleTrip = async () => {
+    if (!eligibility.eligible && !isTripActive) return; // blocked — not enough recent trips
     try {
       if (isTripActive) await completeTrip();
       else await acceptTrip();
@@ -279,34 +280,52 @@ export default function DashboardScreen() {
 
         <View style={{ paddingHorizontal: 20, paddingTop: 16, gap: 14 }}>
           {/* ── Insurance Status Banner ── */}
-          <TouchableOpacity activeOpacity={0.85} onPress={toggleTrip}>
-            <View style={{
-              backgroundColor: isTripActive ? '#16a34a' : '#64748b',
-              borderRadius: 16,
-              paddingVertical: 14,
-              paddingHorizontal: 16,
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
-                  {isTripActive
-                    ? <ShieldCheck color="#ffffff" size={20} />
-                    : <ShieldAlert color="#ffffff" size={20} />}
+          {(() => {
+            const isLocked = !eligibility.eligible && !isTripActive;
+            const bgColor = isTripActive ? '#16a34a' : isLocked ? '#991b1b' : '#64748b';
+            const dotColor = isTripActive ? '#bbf7d0' : isLocked ? '#fca5a5' : '#94a3b8';
+            const title = isTripActive ? 'Insurance Active' : isLocked ? 'Not Eligible' : 'Insurance Standby';
+            const subtitle = isTripActive
+              ? 'Trip Protected'
+              : isLocked
+              ? `${eligibility.tripCount}/${eligibility.required} trips this week — need ${eligibility.required - eligibility.tripCount} more`
+              : 'Tap to start a protected trip';
+            return (
+              <TouchableOpacity activeOpacity={isLocked ? 1 : 0.85} onPress={toggleTrip}>
+                <View style={{
+                  backgroundColor: bgColor,
+                  borderRadius: 16,
+                  paddingVertical: 14,
+                  paddingHorizontal: 16,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                    <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+                      {isTripActive
+                        ? <ShieldCheck color="#ffffff" size={20} />
+                        : isLocked
+                        ? <ShieldX color="#ffffff" size={20} />
+                        : <ShieldAlert color="#ffffff" size={20} />}
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: '#ffffff', fontWeight: '700', fontSize: 15 }}>{title}</Text>
+                      <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12 }} numberOfLines={2}>{subtitle}</Text>
+                    </View>
+                  </View>
+                  <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: dotColor, marginLeft: 8 }} />
                 </View>
-                <View>
-                  <Text style={{ color: '#ffffff', fontWeight: '700', fontSize: 15 }}>
-                    {isTripActive ? 'Insurance Active' : 'Insurance Standby'}
-                  </Text>
-                  <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12 }}>
-                    {isTripActive ? 'Trip Protected' : 'Tap to start a protected trip'}
-                  </Text>
-                </View>
-              </View>
-              <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: isTripActive ? '#bbf7d0' : '#94a3b8' }} />
-            </View>
-          </TouchableOpacity>
+                {isLocked && (
+                  <View style={{ marginTop: 6, backgroundColor: '#fee2e2', borderRadius: 10, paddingVertical: 8, paddingHorizontal: 12 }}>
+                    <Text style={{ fontSize: 11, color: '#b91c1c', fontWeight: '600', textAlign: 'center' }}>
+                      Complete {eligibility.required - eligibility.tripCount} more trip{eligibility.required - eligibility.tripCount !== 1 ? 's' : ''} this week to unlock insurance coverage.
+                    </Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            );
+          })()}
 
           {/* ── Live Consumer Surcharge Pill ── */}
           {(() => {
