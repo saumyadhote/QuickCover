@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
-  TextInput, KeyboardAvoidingView, Platform
+  TextInput, KeyboardAvoidingView, Platform, Modal
 } from 'react-native';
 import { useMockData } from '../../context/MockDataContext';
 import {
@@ -149,8 +149,9 @@ function ClaimForm({ onClose, onSubmit }: { onClose: () => void; onSubmit: (type
 }
 
 export default function ClaimsScreen() {
-  const { state, submitClaim } = useMockData();
+  const { state, submitClaim, eligibility } = useMockData();
   const [formOpen, setFormOpen] = useState(false);
+  const [ineligiblePopup, setIneligiblePopup] = useState(false);
 
   const isEmptyState = !state?.claimStatus || state?.claimStatus === 'none';
   const isClaimSubmitted = state?.claimStatus !== 'none';
@@ -189,7 +190,7 @@ export default function ClaimsScreen() {
                 If deliveries stopped due to heavy rain, extreme heat, a platform outage, or a curfew — report it here. Our AI verifies claims in seconds.
               </Text>
               <TouchableOpacity
-                onPress={() => setFormOpen(true)}
+                onPress={() => eligibility.eligible ? setFormOpen(true) : setIneligiblePopup(true)}
                 style={{ backgroundColor: '#ffffff', borderRadius: 12, paddingVertical: 13, alignItems: 'center' }}
               >
                 <Text style={{ color: '#1d4ed8', fontWeight: '700', fontSize: 15 }}>Start Claim →</Text>
@@ -279,6 +280,28 @@ export default function ClaimsScreen() {
 
       {/* Claim form — rendered inside the screen so it stays within the phone frame */}
       {formOpen && <ClaimForm onClose={() => setFormOpen(false)} onSubmit={handleSubmit} />}
+
+      {/* Ineligibility popup */}
+      <Modal visible={ineligiblePopup} transparent animationType="fade" onRequestClose={() => setIneligiblePopup(false)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', paddingHorizontal: 32 }}>
+          <View style={{ backgroundColor: '#ffffff', borderRadius: 20, padding: 28, width: '100%' }}>
+            <Text style={{ fontSize: 22, marginBottom: 10, textAlign: 'center' }}>🚫</Text>
+            <Text style={{ fontWeight: '700', fontSize: 17, color: '#0f172a', textAlign: 'center', marginBottom: 10 }}>
+              Not Eligible Yet
+            </Text>
+            <Text style={{ fontSize: 14, color: '#475569', textAlign: 'center', lineHeight: 22, marginBottom: 24 }}>
+              You need at least <Text style={{ fontWeight: '700', color: '#0f172a' }}>{eligibility.required} completed deliveries</Text> in the past 7 days to file a claim.{'\n\n'}
+              You currently have <Text style={{ fontWeight: '700', color: '#dc2626' }}>{eligibility.tripCount}</Text> — keep completing trips to unlock coverage!
+            </Text>
+            <TouchableOpacity
+              onPress={() => setIneligiblePopup(false)}
+              style={{ backgroundColor: '#1d4ed8', borderRadius: 12, paddingVertical: 13, alignItems: 'center' }}
+            >
+              <Text style={{ color: '#ffffff', fontWeight: '700', fontSize: 15 }}>Got it</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
