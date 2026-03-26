@@ -76,7 +76,12 @@ export function MockDataProvider({ children }: { children: React.ReactNode }) {
           axios.get(`${API_URL}/eligibility`, { timeout: 4000, headers }).catch(() => null),
         ]);
         if (!cancelled) {
-          setState(statusRes.data);
+          // Don't overwrite state with a stale poll while a claim is in-flight —
+          // fast-poll handles updates during processing/approved
+          setState(prev => {
+            const inFlight = prev.claimStatus === 'processing' || prev.claimStatus === 'approved';
+            return inFlight ? prev : statusRes.data;
+          });
           if (eligRes) {
             setEligibility(eligRes.data);
             console.log(`✅ [QuickCover] Connected! Eligible: ${eligRes.data.eligible} (${eligRes.data.tripCount}/${eligRes.data.required} trips)`);
@@ -153,11 +158,10 @@ export function MockDataProvider({ children }: { children: React.ReactNode }) {
 
   // ---- submitClaim -------------------------------------------------------
   const submitClaim = async (type: string, message: string, hoursWorked: number) => {
-    if (!backendOnline) {
-      // Offline: optimistically move to processing state
-      setState(prev => prev ? { ...prev, claimStatus: 'processing' } : prev);
-      return;
-    }
+    // Optimistically show timeline immediately — prevents flash back to empty state
+    // while the backend processes the claim (4s delay before DB updates)
+    setState(prev => prev ? { ...prev, claimStatus: 'processing' } : prev);
+    if (!backendOnline) return;
     try {
       const res = await axios.post(`${API_URL}/trigger-disruption`, {
         type,
@@ -168,7 +172,7 @@ export function MockDataProvider({ children }: { children: React.ReactNode }) {
       }, { headers: authHeaders() });
       setState(res.data.state);
     } catch {
-      setState(prev => prev ? { ...prev, claimStatus: 'processing' } : prev);
+      // Keep processing state on error — fast-poll will sync actual state
     }
   };
 
