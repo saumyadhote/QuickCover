@@ -21,6 +21,7 @@ function buildNotifications(state: {
   disruption: { type: string; zone: string; severity: string; message: string; timestamp: string } | null;
   claimStatus: string;
   weeklyProtected: number;
+  lastPayoutAmount: number;
 }): Notification[] {
   const notes: Notification[] = [];
 
@@ -29,7 +30,7 @@ function buildNotifications(state: {
       id: 'payout',
       icon: 'payout',
       title: 'Payout Credited',
-      body: `₹${state.weeklyProtected.toLocaleString()} has been sent to your wallet via Razorpay.`,
+      body: `₹${state.lastPayoutAmount.toLocaleString()} has been sent to your wallet via Razorpay.`,
       time: 'Today',
       color: '#16a34a',
     });
@@ -207,7 +208,7 @@ export default function DashboardScreen() {
     );
   }
 
-  const { isTripActive, disruption, claimStatus, weeklyEarnings, weeklyProtected, currentMicroFee, currentRiskLevel } = state;
+  const { isTripActive, disruption, claimStatus, weeklyEarnings, weeklyProtected, lastPayoutAmount, currentMicroFee, currentRiskLevel } = state;
   const firstName = user?.name?.split(' ')[0] ?? 'there';
   const initial = user?.name?.[0]?.toUpperCase() ?? '?';
   const today = new Date();
@@ -216,7 +217,7 @@ export default function DashboardScreen() {
     ? `${user.platform.charAt(0).toUpperCase() + user.platform.slice(1)} Wallet`
     : 'HDFC Bank ••••4521';
 
-  const notifications = buildNotifications({ isTripActive, disruption, claimStatus, weeklyProtected });
+  const notifications = buildNotifications({ isTripActive, disruption, claimStatus, weeklyProtected, lastPayoutAmount });
   const hasNotifs = notifications.length > 0;
 
   const toggleTrip = async () => {
@@ -408,7 +409,7 @@ export default function DashboardScreen() {
               <>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 11, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' }}>
                   <Text style={{ color: '#64748b', fontSize: 14 }}>Amount</Text>
-                  <Text style={{ color: '#0f172a', fontWeight: '700', fontSize: 22 }}>₹{weeklyProtected.toLocaleString()}</Text>
+                  <Text style={{ color: '#0f172a', fontWeight: '700', fontSize: 22 }}>₹{lastPayoutAmount.toLocaleString()}</Text>
                 </View>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 11, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' }}>
                   <Text style={{ color: '#64748b', fontSize: 14 }}>Trigger</Text>

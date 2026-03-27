@@ -146,6 +146,10 @@ dynamically surges the microcharge to ₹5.00 to adequately fund the risk pool.
 | Platform outage | Zone unavailable >90 mins | ₹200–350 |
 | Lockdown / curfew | Govt. notification | ₹500–700/day |
 
+### Catastrophe Risk Capital & Reinsurance Strategy
+
+Parametric triggers create "cluster risk" — a single severe cyclone or city-wide flood can trigger thousands of simultaneous claims in one zone, overwhelming a micro-pool sized for normal disruption frequency. To protect against this, QuickCover employs an **Aggregate Stop-Loss Reinsurance treaty**. Once claim volumes in a single zone exceed the 99.5% confidence interval (TailVaR) for expected disruptions, our reinsurance partner covers the tail risk, ensuring our micro-pool never goes bankrupt during a catastrophic climate event. This structure allows QuickCover to price premiums for the expected loss scenario while offloading Black Swan tail exposure to institutional reinsurers — the same architecture used by catastrophe bond markets globally.
+
 ### Unit Economics (10% Rollout)
 
 | Metric | Value |
@@ -571,5 +575,10 @@ directly in the repository or via the live deployment URLs.
 
 ---
 
-*QuickCover covers strictly verified loss of income from parametric disruption triggers.
-It does not cover health, vehicle damage, or life events.*
+**Strict Policy Exclusions (Systemic Risk Management)**
+
+To maintain the solvency of the micro-pool and ensure claims can always be paid, QuickCover strictly excludes the following from coverage:
+
+- **Health, life, and vehicle repair costs** — these require separate, dedicated actuarial pools and are outside the parametric income-protection scope.
+- **Loss of income resulting from declared War, Terrorism, or Nuclear/Biological hazards** — force-majeure events at this scale are uninsurable within a localized micro-pool construct.
+- **Global or National Pandemics** — systemic economic shutdowns (e.g., COVID-19-scale lockdowns) cannot be funded by a localized micro-pool, as claim frequency would simultaneously hit 100% across all zones with no compensating premium inflow.

@@ -105,6 +105,7 @@ async function initializeDatabase() {
       // Migrations: add columns to existing tables that predate them
       await client.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS "hoursWorked" REAL DEFAULT NULL`);
       await client.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS "userId" INTEGER DEFAULT NULL`);
+      await client.query(`ALTER TABLE state ADD COLUMN IF NOT EXISTS "lastPayoutAmount" REAL DEFAULT 0`);
     } finally {
       client.release();
     }
@@ -132,7 +133,8 @@ async function initializeDatabase() {
       weeklyEarnings REAL DEFAULT 3200,
       weeklyProtected REAL DEFAULT 0,
       currentMicroFee REAL DEFAULT 2.0,
-      currentRiskLevel TEXT DEFAULT 'Low'
+      currentRiskLevel TEXT DEFAULT 'Low',
+      lastPayoutAmount REAL DEFAULT 0
     )`);
     sqliteDb.prepare(`INSERT OR IGNORE INTO state (id) VALUES (1)`).run();
     sqliteDb.exec(`CREATE TABLE IF NOT EXISTS trips (
@@ -147,6 +149,7 @@ async function initializeDatabase() {
     // Migrations: add columns to existing SQLite tables that predate them
     try { sqliteDb.exec(`ALTER TABLE trips ADD COLUMN hoursWorked REAL DEFAULT NULL`); } catch (_) { /* already exists */ }
     try { sqliteDb.exec(`ALTER TABLE trips ADD COLUMN userId INTEGER DEFAULT NULL`); } catch (_) { /* already exists */ }
+    try { sqliteDb.exec(`ALTER TABLE state ADD COLUMN lastPayoutAmount REAL DEFAULT 0`); } catch (_) { /* already exists */ }
   }
 
   console.log(`Database initialised (${usePostgres ? 'PostgreSQL' : 'SQLite local dev'})`);

@@ -47,6 +47,7 @@ const formatState = (row) => ({
   claimStatus: row.claimStatus,
   weeklyEarnings: row.weeklyEarnings,
   weeklyProtected: row.weeklyProtected,
+  lastPayoutAmount: row.lastPayoutAmount || 0,
   currentMicroFee: row.currentMicroFee || 2.0,
   currentRiskLevel: row.currentRiskLevel || 'Low',
 });
@@ -310,7 +311,7 @@ app.post('/trigger-disruption', async (req, res) => {
     setTimeout(async () => {
       await dbRun(`
         UPDATE state
-        SET "claimStatus" = 'approved', "weeklyProtected" = "weeklyProtected" + $1
+        SET "claimStatus" = 'approved', "weeklyProtected" = "weeklyProtected" + $1, "lastPayoutAmount" = $1
         WHERE id = 1 AND "claimStatus" = 'processing'
       `, [payoutAmount]);
 
@@ -346,6 +347,7 @@ app.post('/reset', async (req, res) => {
           "claimStatus" = 'none',
           "weeklyEarnings" = 3200,
           "weeklyProtected" = 0,
+          "lastPayoutAmount" = 0,
           "currentMicroFee" = 2.0,
           "currentRiskLevel" = 'Low'
       WHERE id = 1

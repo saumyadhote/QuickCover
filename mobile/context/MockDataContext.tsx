@@ -17,6 +17,7 @@ type AppState = {
   claimStatus: 'none' | 'processing' | 'approved' | 'paid';
   weeklyEarnings: number;
   weeklyProtected: number;
+  lastPayoutAmount: number;
   currentMicroFee: number;
   currentRiskLevel: 'Low' | 'Medium' | 'High';
 };
@@ -43,6 +44,7 @@ const FALLBACK_STATE: AppState = {
   claimStatus: 'none',
   weeklyEarnings: 3200,
   weeklyProtected: 0,
+  lastPayoutAmount: 0,
   currentMicroFee: 2.0,
   currentRiskLevel: 'Low',
 };
