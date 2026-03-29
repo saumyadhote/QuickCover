@@ -53,7 +53,7 @@ export default function WelcomeScreen() {
             {
               fontSize: 32,
               fontFamily: 'PlayfairDisplay_700Bold',
-              color: '#ffffff',
+              color: '#0d0d1a',
               lineHeight: 42,
               letterSpacing: 0,
               marginBottom: 48,

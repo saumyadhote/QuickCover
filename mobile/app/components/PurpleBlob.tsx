@@ -3,7 +3,9 @@ import Svg, { Defs, RadialGradient as SvgRadialGradient, Stop, Ellipse } from 'r
 
 export function PurpleBlob() {
   const { width } = useWindowDimensions();
-  const height = 380;
+  // Use a fixed logical width for the viewBox so orbs stay centred regardless of device
+  const vw = 400;
+  const vh = 380;
 
   return (
     <View
@@ -12,11 +14,17 @@ export function PurpleBlob() {
         bottom: 0,
         left: 0,
         right: 0,
-        height,
+        height: vh,
         pointerEvents: 'none',
       }}
     >
-      <Svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
+      {/* preserveAspectRatio="none" + width/height 100% fills the container exactly */}
+      <Svg
+        width="100%"
+        height="100%"
+        viewBox={`0 0 ${vw} ${vh}`}
+        preserveAspectRatio="none"
+      >
         <Defs>
           {/* Large central orb */}
           <SvgRadialGradient id="orb1" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
@@ -36,21 +44,21 @@ export function PurpleBlob() {
           </SvgRadialGradient>
         </Defs>
 
-        {/* Large orb — centered horizontally, sits at bottom, top ~40% up */}
+        {/* Large orb — centred at 50% of vw, raised so top edge is ~40% up the blob */}
         <Ellipse
-          cx={width * 0.5}
-          cy={height * 0.78}
-          rx={width * 0.58}
-          ry={height * 0.60}
+          cx={vw * 0.5}
+          cy={vh * 0.78}
+          rx={vw * 0.60}
+          ry={vh * 0.62}
           fill="url(#orb1)"
         />
 
-        {/* Smaller orb — bottom-left, partially cropped */}
+        {/* Smaller orb — bottom-left corner, partially cropped */}
         <Ellipse
-          cx={width * 0.14}
-          cy={height * 0.98}
-          rx={width * 0.28}
-          ry={height * 0.30}
+          cx={vw * 0.14}
+          cy={vh * 0.98}
+          rx={vw * 0.26}
+          ry={vh * 0.28}
           fill="url(#orb2)"
         />
       </Svg>
