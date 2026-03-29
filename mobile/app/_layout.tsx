@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Slot, useRouter, useSegments } from 'expo-router';
 import { MockDataProvider } from '../context/MockDataContext';
 import { AuthProvider, useAuth } from '../context/AuthContext';
+import { useFonts, PlayfairDisplay_700Bold, PlayfairDisplay_400Regular } from '@expo-google-fonts/playfair-display';
 
 function AuthGuard() {
   const { user, loading } = useAuth();
@@ -16,13 +17,9 @@ function AuthGuard() {
     const onOnboarding = segments[0] === 'onboarding';
 
     if (!user && (inAuthGroup || onOnboarding)) {
-      // Not logged in but trying to access the app or onboarding — redirect to login
       router.replace('/login-form');
     } else if (user && onLoginOrSignup) {
-      // If signup just fired, it already navigated to /onboarding — don't override it.
-      // Only redirect to tabs when coming from login (not signup).
       if (segments[0] === 'signup') {
-        // signup.tsx handles its own navigation to /onboarding — let it.
         return;
       }
       router.replace('/(tabs)');
@@ -33,6 +30,14 @@ function AuthGuard() {
 }
 
 export default function RootLayout() {
+  const [fontsLoaded] = useFonts({
+    PlayfairDisplay_700Bold,
+    PlayfairDisplay_400Regular,
+  });
+
+  // Keep rendering — expo-router handles the splash screen hide automatically
+  // Fonts will be available by the time any screen renders
+
   return (
     <AuthProvider>
       <MockDataProvider>
