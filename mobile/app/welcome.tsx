@@ -14,12 +14,11 @@ import { PurpleBlob } from './components/PurpleBlob';
 export default function WelcomeScreen() {
   const router = useRouter();
 
-  // Staggered entrance animations
-  const textOpacity  = useSharedValue(0);
-  const textY        = useSharedValue(28);
-  const btn1Opacity  = useSharedValue(0);
-  const btn1Y        = useSharedValue(20);
-  const btn2Opacity  = useSharedValue(0);
+  const textOpacity = useSharedValue(0);
+  const textY       = useSharedValue(28);
+  const btn1Opacity = useSharedValue(0);
+  const btn1Y       = useSharedValue(20);
+  const btn2Opacity = useSharedValue(0);
 
   const textStyle = useAnimatedStyle(() => ({
     opacity: textOpacity.value,
@@ -35,11 +34,11 @@ export default function WelcomeScreen() {
 
   useEffect(() => {
     const ease = Easing.out(Easing.cubic);
-    textOpacity.value  = withDelay(80,  withTiming(1,   { duration: 600, easing: ease }));
-    textY.value        = withDelay(80,  withTiming(0,   { duration: 600, easing: ease }));
-    btn1Opacity.value  = withDelay(320, withTiming(1,   { duration: 500, easing: ease }));
-    btn1Y.value        = withDelay(320, withTiming(0,   { duration: 500, easing: ease }));
-    btn2Opacity.value  = withDelay(480, withTiming(1,   { duration: 400, easing: ease }));
+    textOpacity.value = withDelay(80,  withTiming(1, { duration: 600, easing: ease }));
+    textY.value       = withDelay(80,  withTiming(0, { duration: 600, easing: ease }));
+    btn1Opacity.value = withDelay(320, withTiming(1, { duration: 500, easing: ease }));
+    btn1Y.value       = withDelay(320, withTiming(0, { duration: 500, easing: ease }));
+    btn2Opacity.value = withDelay(480, withTiming(1, { duration: 400, easing: ease }));
   }, []);
 
   return (
@@ -48,6 +47,7 @@ export default function WelcomeScreen() {
 
       <View style={{ flex: 1, paddingHorizontal: 32, justifyContent: 'flex-end', paddingBottom: 130 }}>
 
+        {/* Tagline — PlayfairDisplay per Figma */}
         <Animated.Text
           style={[
             {
@@ -64,31 +64,43 @@ export default function WelcomeScreen() {
           Secure every delivery, the smart way.
         </Animated.Text>
 
-        {/* Get Started */}
+        {/* Get Started — Figma: #101828 bg, borderRadius 30, Montserrat 500 24px */}
         <Animated.View style={btn1Style}>
           <TouchableOpacity
             onPress={() => router.push('/signup')}
             activeOpacity={0.8}
             style={{
-              backgroundColor: '#1a1a2e',
-              borderRadius: 50,
+              backgroundColor: '#101828',
+              borderRadius: 30,
               paddingVertical: 18,
               alignItems: 'center',
-              borderWidth: 1,
-              borderColor: 'rgba(168,85,247,0.35)',
-              marginBottom: 18,
+              marginBottom: 16,
             }}
           >
-            <Text style={{ color: '#ffffff', fontFamily: 'PlayfairDisplay_700Bold', fontSize: 16 }}>
+            <Text style={{
+              color: '#FFFFFF',
+              fontFamily: 'Montserrat_500Medium',
+              fontSize: 24,
+              lineHeight: 29,
+            }}>
               Get Started
             </Text>
           </TouchableOpacity>
         </Animated.View>
 
-        {/* Log In */}
+        {/* Log In — Figma: color #4A5565, Montserrat 600 16px */}
         <Animated.View style={[btn2Style, { alignItems: 'center' }]}>
-          <TouchableOpacity onPress={() => router.push('/login-form')} activeOpacity={0.7} hitSlop={{ top: 12, bottom: 12, left: 40, right: 40 }}>
-            <Text style={{ color: 'rgba(255,255,255,0.6)', fontFamily: 'PlayfairDisplay_700Bold', fontSize: 15 }}>
+          <TouchableOpacity
+            onPress={() => router.push('/login-form')}
+            activeOpacity={0.7}
+            hitSlop={{ top: 12, bottom: 12, left: 40, right: 40 }}
+          >
+            <Text style={{
+              color: '#4A5565',
+              fontFamily: 'Montserrat_600SemiBold',
+              fontSize: 16,
+              lineHeight: 20,
+            }}>
               Log In
             </Text>
           </TouchableOpacity>

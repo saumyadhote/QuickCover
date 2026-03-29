@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { ShieldCheck, Mail, Lock, Eye, EyeOff } from 'lucide-react-native';
+import { Mail, Lock, Eye, EyeOff } from 'lucide-react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -10,17 +10,49 @@ import Animated, {
   withDelay,
   Easing,
 } from 'react-native-reanimated';
+import Svg, { Path, Rect, Circle, Defs, LinearGradient as SvgLinearGradient, Stop } from 'react-native-svg';
 import { useAuth } from '../context/AuthContext';
 import { PurpleBlob } from './components/PurpleBlob';
+
+// Main logo — concentric circles with shield, matching Figma spec (82×82)
+function MainLogo({ size = 82 }: { size?: number }) {
+  const s = size / 82;
+  return (
+    <Svg width={size} height={size} viewBox="0 0 82 82" fill="none">
+      {/* Ellipse 244 — outermost ring */}
+      <Circle cx="41" cy="41" r="40" stroke="rgba(123,63,224,0.5)" strokeWidth="1.2" fill="none" />
+      {/* Ellipse 245 */}
+      <Circle cx="41" cy="41" r="33.4" stroke="rgba(123,63,224,0.6)" strokeWidth="1.2" fill="none" />
+      {/* Ellipse 246 */}
+      <Circle cx="41" cy="41" r="26.8" stroke="rgba(123,63,224,0.75)" strokeWidth="1.2" fill="none" />
+      {/* Ellipse 247 — innermost ring */}
+      <Circle cx="41" cy="41" r="20.1" stroke="rgba(123,63,224,0.9)" strokeWidth="1.2" fill="none" />
+      {/* Shield body — #7B3FE0, Figma top:29% bottom:38.36% left:28.33% right:28.34% of 82px */}
+      <Path
+        d="M41 24 L57 31 L57 45 C57 55 41 61 41 61 C41 61 25 55 25 45 L25 31 Z"
+        fill="#7B3FE0"
+      />
+      {/* Checkmark — #F6F0FF, Figma top:51.09% bottom:24.87% left:38.89% right:30.53% */}
+      <Path
+        d="M33 42 L39 49 L52 34"
+        stroke="#F6F0FF"
+        strokeWidth="3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+    </Svg>
+  );
+}
 
 export default function LoginScreen() {
   const router = useRouter();
   const { login } = useAuth();
 
   const [deliveryId, setDeliveryId] = useState('');
-  const [password, setPassword] = useState('');
+  const [password, setPassword]     = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError]   = useState('');
   const [loading, setLoading] = useState(false);
 
   // Entrance animations
@@ -77,59 +109,54 @@ export default function LoginScreen() {
       <StatusBar style="light" backgroundColor="#0d0d1a" />
 
       <ScrollView
-        contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 28, paddingTop: 80, paddingBottom: 60 }}
+        contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 24, paddingTop: 80, paddingBottom: 60 }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Shield icon + heading */}
-        <Animated.View style={[{ alignItems: 'center', marginBottom: 32 }, iconStyle]}>
-          <ShieldCheck size={48} color="#a855f7" strokeWidth={1.6} style={{ marginBottom: 20 }} />
-          <Text
-            style={{
-              fontSize: 32,
-              fontFamily: 'PlayfairDisplay_700Bold',
-              color: '#ffffff',
-              textAlign: 'center',
-              lineHeight: 42,
-              letterSpacing: 0,
-            }}
-          >
-            Sign in to your{'\n'}Account
+        {/* Logo + Heading — Figma: column, centered, gap 16 */}
+        <Animated.View style={[{ alignItems: 'center', marginBottom: 32, gap: 16 }, iconStyle]}>
+          <MainLogo size={82} />
+          {/* Heading — Inter 700 32px lineHeight 130% letterSpacing -0.02em color #EEEEEE */}
+          <Text style={{
+            fontFamily: 'Inter_700Bold',
+            fontSize: 32,
+            lineHeight: 42,           // 130% of 32
+            letterSpacing: -0.64,     // -0.02em of 32px
+            color: '#EEEEEE',
+            textAlign: 'center',
+          }}>
+            Sign in to your Account
           </Text>
         </Animated.View>
 
-        {/* Form card */}
-        <Animated.View
-          style={[
-            {
-              backgroundColor: '#1a1a2e',
-              borderRadius: 20,
-              borderWidth: 1,
-              borderColor: 'rgba(168,85,247,0.15)',
-              padding: 20,
-              marginBottom: 12,
-            },
-            cardStyle,
-          ]}
-        >
+        {/* Input card — Figma: white bg, borderRadius 10, two stacked fields with divider */}
+        <Animated.View style={[{
+          backgroundColor: '#FFFFFF',
+          borderRadius: 10,
+          marginBottom: 12,
+          overflow: 'hidden',
+        }, cardStyle]}>
+
           {/* Delivery ID field */}
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              backgroundColor: '#12122a',
-              borderRadius: 12,
-              borderWidth: 1,
-              borderColor: 'rgba(168,85,247,0.25)',
-              paddingHorizontal: 14,
-              marginBottom: 14,
-            }}
-          >
-            <Mail size={17} color="rgba(168,85,247,0.6)" style={{ marginRight: 10 }} />
+          <View style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            paddingHorizontal: 14,
+            paddingVertical: 14,
+            gap: 12,
+          }}>
+            <Mail size={16} color="#0052B4" strokeWidth={1.3} />
             <TextInput
-              style={{ flex: 1, color: '#ffffff', fontSize: 15, paddingVertical: 14 }}
+              style={{
+                flex: 1,
+                fontFamily: 'Inter_500Medium',
+                fontSize: 14,
+                lineHeight: 20,
+                letterSpacing: -0.14,
+                color: '#6C7278',
+              }}
               placeholder="Delivery ID"
-              placeholderTextColor="rgba(255,255,255,0.28)"
+              placeholderTextColor="#6C7278"
               autoCapitalize="none"
               keyboardType="email-address"
               value={deliveryId}
@@ -137,76 +164,110 @@ export default function LoginScreen() {
             />
           </View>
 
+          {/* Divider */}
+          <View style={{ height: 1, backgroundColor: '#EDF1F3', marginHorizontal: 0 }} />
+
           {/* Password field */}
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              backgroundColor: '#12122a',
-              borderRadius: 12,
-              borderWidth: 1,
-              borderColor: 'rgba(168,85,247,0.25)',
-              paddingHorizontal: 14,
-            }}
-          >
-            <Lock size={17} color="rgba(168,85,247,0.6)" style={{ marginRight: 10 }} />
+          <View style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            paddingHorizontal: 14,
+            paddingVertical: 14,
+            gap: 12,
+          }}>
+            <Lock size={16} color="#ACB5BB" strokeWidth={1.3} />
             <TextInput
-              style={{ flex: 1, color: '#ffffff', fontSize: 15, paddingVertical: 14 }}
-              placeholder="••••••••"
-              placeholderTextColor="rgba(255,255,255,0.28)"
+              style={{
+                flex: 1,
+                fontFamily: 'Inter_500Medium',
+                fontSize: 14,
+                lineHeight: 20,
+                letterSpacing: -0.14,
+                color: '#1A1C1E',
+              }}
+              placeholder="Password"
+              placeholderTextColor="#ACB5BB"
               secureTextEntry={!showPassword}
               value={password}
               onChangeText={setPassword}
             />
             <TouchableOpacity onPress={() => setShowPassword(p => !p)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
               {showPassword
-                ? <EyeOff size={17} color="rgba(168,85,247,0.6)" />
-                : <Eye    size={17} color="rgba(168,85,247,0.6)" />
+                ? <EyeOff size={16} color="#ACB5BB" strokeWidth={1.3} />
+                : <Eye    size={16} color="#ACB5BB" strokeWidth={1.3} />
               }
             </TouchableOpacity>
           </View>
         </Animated.View>
 
         <Animated.View style={btnsStyle}>
-          {/* Forgot password */}
-          <TouchableOpacity style={{ alignSelf: 'flex-end', marginBottom: 6 }}>
-            <Text style={{ color: '#8b5cf6', fontSize: 13 }}>Forgot Your Password?</Text>
+          {/* Forgot password — Figma: Inter 500 12px, #EEEEEE, centered, underlined */}
+          <TouchableOpacity style={{ alignSelf: 'stretch', marginBottom: 24 }}>
+            <Text style={{
+              fontFamily: 'Inter_500Medium',
+              fontSize: 12,
+              lineHeight: 17,
+              letterSpacing: -0.12,
+              color: '#EEEEEE',
+              textAlign: 'center',
+              textDecorationLine: 'underline',
+            }}>
+              Forgot Your Password ?
+            </Text>
           </TouchableOpacity>
 
           {/* Error */}
           {error ? (
-            <Text style={{ color: '#f87171', fontSize: 13, textAlign: 'center', marginBottom: 10, marginTop: 6 }}>
+            <Text style={{ color: '#f87171', fontSize: 13, textAlign: 'center', marginBottom: 12 }}>
               {error}
             </Text>
           ) : null}
 
-          {/* Log In button */}
+          {/* Log In button — Figma: #101828 bg, blue border #375DFB, borderRadius 10, Montserrat 500 16px */}
           <TouchableOpacity
             onPress={handleLogin}
             disabled={loading}
-            activeOpacity={0.8}
+            activeOpacity={0.85}
             style={{
-              backgroundColor: '#1a1a2e',
-              borderRadius: 50,
-              paddingVertical: 17,
+              backgroundColor: '#101828',
+              borderRadius: 10,
+              paddingVertical: 13,
+              paddingHorizontal: 24,
               alignItems: 'center',
               borderWidth: 1,
-              borderColor: 'rgba(168,85,247,0.35)',
-              marginTop: 18,
+              borderColor: '#375DFB',
+              // Shadow matching Figma box-shadow
+              shadowColor: '#253EA7',
+              shadowOffset: { width: 0, height: 1 },
+              shadowOpacity: 0.48,
+              shadowRadius: 2,
+              elevation: 3,
               marginBottom: 24,
             }}
           >
             {loading
-              ? <ActivityIndicator color="#a855f7" size="small" />
-              : <Text style={{ color: '#ffffff', fontFamily: 'PlayfairDisplay_700Bold', fontSize: 16 }}>Log In</Text>
+              ? <ActivityIndicator color="#ffffff" size="small" />
+              : <Text style={{
+                  fontFamily: 'Montserrat_500Medium',
+                  fontSize: 16,
+                  lineHeight: 22,
+                  letterSpacing: -0.16,
+                  color: '#FFFFFF',
+                }}>
+                  Log In
+                </Text>
             }
           </TouchableOpacity>
 
           {/* Sign up link */}
           <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}>
-            <Text style={{ color: 'rgba(255,255,255,0.35)', fontSize: 14 }}>Don't have an account? </Text>
+            <Text style={{ color: 'rgba(255,255,255,0.35)', fontFamily: 'Inter_500Medium', fontSize: 14 }}>
+              Don't have an account?{' '}
+            </Text>
             <TouchableOpacity onPress={() => router.push('/signup')}>
-              <Text style={{ color: '#a855f7', fontFamily: 'PlayfairDisplay_700Bold', fontSize: 14 }}>Sign Up</Text>
+              <Text style={{ color: '#a855f7', fontFamily: 'Montserrat_600SemiBold', fontSize: 14 }}>
+                Sign Up
+              </Text>
             </TouchableOpacity>
           </View>
         </Animated.View>

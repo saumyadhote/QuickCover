@@ -3,6 +3,8 @@ import { Slot, useRouter, useSegments } from 'expo-router';
 import { MockDataProvider } from '../context/MockDataContext';
 import { AuthProvider, useAuth } from '../context/AuthContext';
 import { useFonts, PlayfairDisplay_700Bold, PlayfairDisplay_400Regular } from '@expo-google-fonts/playfair-display';
+import { Montserrat_500Medium, Montserrat_600SemiBold, Montserrat_700Bold } from '@expo-google-fonts/montserrat';
+import { Inter_500Medium, Inter_700Bold } from '@expo-google-fonts/inter';
 
 function AuthGuard() {
   const { user, loading } = useAuth();
@@ -13,7 +15,6 @@ function AuthGuard() {
 
     const inAuthGroup = segments[0] === '(tabs)';
     const onLoginOrSignup = segments[0] === 'login' || segments[0] === 'login-form' || segments[0] === 'signup' || segments[0] === 'welcome' || segments[0] === undefined || segments.length === 0;
-    // onboarding is post-signup — accessible only when authenticated, not redirected away
     const onOnboarding = segments[0] === 'onboarding';
 
     if (!user && (inAuthGroup || onOnboarding)) {
@@ -30,13 +31,15 @@ function AuthGuard() {
 }
 
 export default function RootLayout() {
-  const [fontsLoaded] = useFonts({
+  useFonts({
     PlayfairDisplay_700Bold,
     PlayfairDisplay_400Regular,
+    Montserrat_500Medium,
+    Montserrat_600SemiBold,
+    Montserrat_700Bold,
+    Inter_500Medium,
+    Inter_700Bold,
   });
-
-  // Keep rendering — expo-router handles the splash screen hide automatically
-  // Fonts will be available by the time any screen renders
 
   return (
     <AuthProvider>
