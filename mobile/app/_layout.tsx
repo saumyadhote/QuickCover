@@ -11,7 +11,7 @@ function AuthGuard() {
     if (loading) return;
 
     const inAuthGroup = segments[0] === '(tabs)';
-    const onLoginOrSignup = segments[0] === 'login' || segments[0] === 'login-form' || segments[0] === 'signup' || segments[0] === undefined || segments.length === 0;
+    const onLoginOrSignup = segments[0] === 'login' || segments[0] === 'login-form' || segments[0] === 'signup' || segments[0] === 'welcome' || segments[0] === undefined || segments.length === 0;
     // onboarding is post-signup — accessible only when authenticated, not redirected away
     const onOnboarding = segments[0] === 'onboarding';
 

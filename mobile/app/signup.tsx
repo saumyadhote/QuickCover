@@ -186,7 +186,7 @@ export default function SignupScreen() {
         {/* Login link */}
         <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}>
           <Text style={{ color: '#64748b', fontSize: 14 }}>Already have an account? </Text>
-          <TouchableOpacity onPress={() => router.push('/login')}>
+          <TouchableOpacity onPress={() => router.push('/login-form')}>
             <Text style={{ color: '#60a5fa', fontWeight: '700', fontSize: 14 }}>Log In</Text>
           </TouchableOpacity>
         </View>
