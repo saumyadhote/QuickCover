@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -45,15 +46,34 @@ export default function WelcomeScreen() {
     <View style={{ flex: 1, backgroundColor: '#0d0d1a' }}>
       <StatusBar style="light" backgroundColor="#0d0d1a" />
 
-      <View style={{ flex: 1, paddingHorizontal: 32, justifyContent: 'flex-end', paddingBottom: 130 }}>
+      {/* Dark gradient scrim behind the text so it reads over the orbs */}
+      <LinearGradient
+        colors={['rgba(13,13,26,0)', 'rgba(13,13,26,0.82)', 'rgba(13,13,26,0.98)']}
+        locations={[0, 0.45, 1]}
+        style={{
+          position: 'absolute',
+          bottom: 0, left: 0, right: 0,
+          height: 420,
+          zIndex: 1,
+          pointerEvents: 'none',
+        }}
+      />
 
-        {/* Tagline — PlayfairDisplay per Figma */}
+      {/* Content sits above scrim */}
+      <View style={{
+        flex: 1,
+        paddingHorizontal: 32,
+        justifyContent: 'flex-end',
+        paddingBottom: 130,
+        zIndex: 2,
+      }}>
+
         <Animated.Text
           style={[
             {
               fontSize: 32,
               fontFamily: 'PlayfairDisplay_700Bold',
-              color: '#0d0d1a',
+              color: '#ffffff',
               lineHeight: 42,
               letterSpacing: 0,
               marginBottom: 48,
@@ -64,7 +84,7 @@ export default function WelcomeScreen() {
           Secure every delivery, the smart way.
         </Animated.Text>
 
-        {/* Get Started — Figma: #101828 bg, borderRadius 30, Montserrat 500 24px */}
+        {/* Get Started */}
         <Animated.View style={btn1Style}>
           <TouchableOpacity
             onPress={() => router.push('/signup')}
@@ -88,7 +108,7 @@ export default function WelcomeScreen() {
           </TouchableOpacity>
         </Animated.View>
 
-        {/* Log In — Figma: color #4A5565, Montserrat 600 16px */}
+        {/* Log In */}
         <Animated.View style={[btn2Style, { alignItems: 'center' }]}>
           <TouchableOpacity
             onPress={() => router.push('/login-form')}
@@ -96,7 +116,7 @@ export default function WelcomeScreen() {
             hitSlop={{ top: 12, bottom: 12, left: 40, right: 40 }}
           >
             <Text style={{
-              color: '#4A5565',
+              color: '#ffffff',
               fontFamily: 'Montserrat_600SemiBold',
               fontSize: 16,
               lineHeight: 20,
