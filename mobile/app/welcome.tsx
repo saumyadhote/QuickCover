@@ -52,10 +52,9 @@ export default function WelcomeScreen() {
           style={[
             {
               fontSize: 32,
-              fontWeight: '700',
               fontFamily: 'PlayfairDisplay_700Bold',
               color: '#ffffff',
-              lineHeight: 32,          // 100% as per Figma
+              lineHeight: 42,
               letterSpacing: 0,
               marginBottom: 48,
             },
@@ -80,7 +79,7 @@ export default function WelcomeScreen() {
               marginBottom: 18,
             }}
           >
-            <Text style={{ color: '#ffffff', fontWeight: '700', fontSize: 16, letterSpacing: 0.2 }}>
+            <Text style={{ color: '#ffffff', fontFamily: 'PlayfairDisplay_700Bold', fontSize: 16 }}>
               Get Started
             </Text>
           </TouchableOpacity>
@@ -89,7 +88,7 @@ export default function WelcomeScreen() {
         {/* Log In */}
         <Animated.View style={[btn2Style, { alignItems: 'center' }]}>
           <TouchableOpacity onPress={() => router.push('/login-form')} activeOpacity={0.7} hitSlop={{ top: 12, bottom: 12, left: 40, right: 40 }}>
-            <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 15, letterSpacing: 0.1 }}>
+            <Text style={{ color: 'rgba(255,255,255,0.6)', fontFamily: 'PlayfairDisplay_700Bold', fontSize: 15 }}>
               Log In
             </Text>
           </TouchableOpacity>

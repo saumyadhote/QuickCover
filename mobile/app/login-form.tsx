@@ -87,11 +87,10 @@ export default function LoginScreen() {
           <Text
             style={{
               fontSize: 32,
-              fontWeight: '700',
               fontFamily: 'PlayfairDisplay_700Bold',
               color: '#ffffff',
               textAlign: 'center',
-              lineHeight: 38,
+              lineHeight: 42,
               letterSpacing: 0,
             }}
           >
@@ -199,7 +198,7 @@ export default function LoginScreen() {
           >
             {loading
               ? <ActivityIndicator color="#a855f7" size="small" />
-              : <Text style={{ color: '#ffffff', fontWeight: '700', fontSize: 16, letterSpacing: 0.2 }}>Log In</Text>
+              : <Text style={{ color: '#ffffff', fontFamily: 'PlayfairDisplay_700Bold', fontSize: 16 }}>Log In</Text>
             }
           </TouchableOpacity>
 
@@ -207,7 +206,7 @@ export default function LoginScreen() {
           <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}>
             <Text style={{ color: 'rgba(255,255,255,0.35)', fontSize: 14 }}>Don't have an account? </Text>
             <TouchableOpacity onPress={() => router.push('/signup')}>
-              <Text style={{ color: '#a855f7', fontWeight: '700', fontSize: 14 }}>Sign Up</Text>
+              <Text style={{ color: '#a855f7', fontFamily: 'PlayfairDisplay_700Bold', fontSize: 14 }}>Sign Up</Text>
             </TouchableOpacity>
           </View>
         </Animated.View>
