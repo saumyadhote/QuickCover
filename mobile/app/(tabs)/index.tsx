@@ -3,181 +3,139 @@ import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useMockData } from '../../context/MockDataContext';
 import { useAuth } from '../../context/AuthContext';
-import { ShieldCheck, ShieldAlert, ShieldX, AlertTriangle, CheckCircle, Bell, X, CloudRain, Clock, Zap, TrendingUp, LogOut, User, Smartphone } from 'lucide-react-native';
+import {
+  Bell, ShieldCheck, ShieldX, ShieldAlert, MapPin, CheckCircle2,
+  Clock, AlertTriangle, ChevronRight, Zap, LogOut, User, Smartphone, TrendingUp, X,
+} from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
-// ── Build notification list from live state ──────────────────────────────────
-type Notification = {
-  id: string;
-  icon: 'shield' | 'rain' | 'payout' | 'clock' | 'alert';
-  title: string;
-  body: string;
-  time: string;
-  color: string;
-};
+// ── Mock trip history (visual only) ─────────────────────────────────────────
+const MOCK_TRIPS = [
+  { id: '#1231', time: '09:15 AM', from: 'Dwarka', to: 'Saket', earnings: 85, status: 'Completed' },
+  { id: '#1232', time: '10:40 AM', from: 'Saket', to: 'Lajpat Nagar', earnings: 110, status: 'Completed' },
+  { id: '#1233', time: '11:55 AM', from: 'Lajpat Nagar', to: 'Greater Kailash', earnings: 50, status: 'Completed' },
+];
 
-function buildNotifications(state: {
-  isTripActive: boolean;
-  disruption: { type: string; zone: string; severity: string; message: string; timestamp: string } | null;
-  claimStatus: string;
-  weeklyProtected: number;
-  lastPayoutAmount: number;
-}): Notification[] {
-  const notes: Notification[] = [];
-
-  if (state.claimStatus === 'paid' && state.weeklyProtected > 0) {
-    notes.push({
-      id: 'payout',
-      icon: 'payout',
-      title: 'Payout Credited',
-      body: `₹${state.lastPayoutAmount.toLocaleString()} has been sent to your wallet via Razorpay.`,
-      time: 'Today',
-      color: '#16a34a',
-    });
-  }
-
-  if (state.claimStatus === 'approved') {
-    notes.push({
-      id: 'approved',
-      icon: 'shield',
-      title: 'Claim Approved',
-      body: 'Your disruption claim has been verified and approved.',
-      time: 'Just now',
-      color: '#7c3aed',
-    });
-  }
-
-  if (state.claimStatus === 'processing') {
-    notes.push({
-      id: 'processing',
-      icon: 'clock',
-      title: 'Claim Under Review',
-      body: 'Your report has been received. AI verification is running — typically completes in seconds.',
-      time: 'Just now',
-      color: '#d97706',
-    });
-  }
-
-  if (state.disruption && state.claimStatus === 'none') {
-    notes.push({
-      id: 'disruption',
-      icon: 'rain',
-      title: `Disruption detected — file a claim`,
-      body: `${state.disruption.message}. Go to Claims to report and get compensated.`,
-      time: new Date(state.disruption.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
-      color: '#dc2626',
-    });
-  }
-
-  if (state.isTripActive) {
-    notes.push({
-      id: 'trip',
-      icon: 'shield',
-      title: 'Trip Active — Coverage On',
-      body: 'If deliveries stop due to a disruption, go to Claims to report it.',
-      time: 'Active now',
-      color: '#2563eb',
-    });
-  }
-
-  return notes;
-}
-
-function NotifIcon({ type, color }: { type: Notification['icon']; color: string }) {
-  const size = 18;
-  if (type === 'rain') return <CloudRain color={color} size={size} />;
-  if (type === 'payout') return <CheckCircle color={color} size={size} />;
-  if (type === 'clock') return <Clock color={color} size={size} />;
-  if (type === 'alert') return <AlertTriangle color={color} size={size} />;
-  return <ShieldCheck color={color} size={size} />;
-}
-
-// ── Today's Journey Timeline ──────────────────────────────────────────────────
-function TodaysJourney({ isTripActive }: { isTripActive: boolean }) {
+// ── Active Trip Route Card ───────────────────────────────────────────────────
+function ActiveTripCard({ claimStatus, weeklyProtected }: { claimStatus: string; weeklyProtected: number }) {
   const now = new Date();
-  const shiftTime = new Date(now.getTime() - 45 * 60 * 1000);
-  const shiftTimeStr = shiftTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
-
-  const steps = [
-    {
-      label: 'Shift Started',
-      sub: shiftTimeStr,
-      subColor: '#7c3aed',
-      state: 'done', // done | active | pending
-    },
-    {
-      label: 'On Delivery',
-      sub: isTripActive ? 'Active' : 'Awaiting next trip',
-      subColor: isTripActive ? '#7c3aed' : '#94a3b8',
-      state: isTripActive ? 'active' : 'pending',
-    },
-    {
-      label: 'Shift End',
-      sub: 'Pending',
-      subColor: '#f59e0b',
-      state: 'pending',
-    },
-  ];
+  const tripEarnings = 185;
+  const showPayout = claimStatus === 'paid' && weeklyProtected > 0;
 
   return (
-    <View style={{
-      backgroundColor: '#ffffff',
-      borderRadius: 20,
-      padding: 20,
-      borderWidth: 1,
-      borderColor: '#e2e8f0',
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.06,
-      shadowRadius: 6,
-      elevation: 2,
-    }}>
-      {/* Card header */}
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-        <Text style={{ fontWeight: '700', fontSize: 17, color: '#0f172a' }}>Today's Journey</Text>
-        <View style={{ backgroundColor: isTripActive ? '#dcfce7' : '#fef9c3', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 }}>
-          <Text style={{ color: isTripActive ? '#166534' : '#92400e', fontWeight: '700', fontSize: 12 }}>
-            {isTripActive ? 'In Progress' : 'Ready'}
+    <View style={{ marginHorizontal: 16, marginTop: -24, backgroundColor: '#1e1b2e', borderRadius: 20, padding: 18, shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 20, elevation: 12 }}>
+      {/* Trip status row */}
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#4ade80', marginRight: 6 }} />
+          <Text style={{ fontSize: 11, fontWeight: '700', color: '#4ade80', letterSpacing: 1, textTransform: 'uppercase' }}>Active Trip</Text>
+        </View>
+        <Text style={{ fontSize: 12, color: '#94a3b8', fontWeight: '600' }}>#1234</Text>
+      </View>
+
+      {/* Route */}
+      <View style={{ flexDirection: 'row', alignItems: 'stretch', marginBottom: 16 }}>
+        <View style={{ width: 24, alignItems: 'center', marginRight: 10 }}>
+          <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#a78bfa', marginTop: 3 }} />
+          <View style={{ width: 2, flex: 1, backgroundColor: '#374151', marginVertical: 4 }} />
+          <MapPin color="#f87171" size={14} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 16, fontWeight: '700', color: '#ffffff', marginBottom: 12 }}>Sector 18, Noida</Text>
+          <Text style={{ fontSize: 16, fontWeight: '700', color: '#ffffff' }}>Connaught Place, Delhi</Text>
+        </View>
+      </View>
+
+      {/* Earnings row */}
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+        <View>
+          <Text style={{ fontSize: 11, color: '#64748b', fontWeight: '500', marginBottom: 2 }}>Earnings</Text>
+          <Text style={{ fontSize: 22, fontWeight: '800', color: '#ffffff' }}>₹{tripEarnings}</Text>
+        </View>
+        <View style={{ backgroundColor: 'rgba(74,222,128,0.15)', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5, borderWidth: 1, borderColor: 'rgba(74,222,128,0.3)' }}>
+          <Text style={{ color: '#4ade80', fontSize: 12, fontWeight: '700' }}>Active</Text>
+        </View>
+      </View>
+
+      {/* Payout pill */}
+      {showPayout && (
+        <View style={{ marginTop: 12, backgroundColor: 'rgba(74,222,128,0.1)', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 9, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(74,222,128,0.25)' }}>
+          <CheckCircle2 color="#4ade80" size={15} />
+          <Text style={{ color: '#4ade80', fontSize: 13, fontWeight: '700', marginLeft: 8 }}>
+            ₹{weeklyProtected} Auto-credited • Rain
+          </Text>
+        </View>
+      )}
+    </View>
+  );
+}
+
+// ── Standby / Locked Trip Banner ─────────────────────────────────────────────
+function StandbyBanner({
+  isLocked, eligibility, onPress,
+}: {
+  isLocked: boolean;
+  eligibility: { eligible: boolean; tripCount: number; required: number };
+  onPress: () => void;
+}) {
+  return (
+    <View style={{ marginHorizontal: 16, marginTop: -24, backgroundColor: '#1e1b2e', borderRadius: 20, padding: 18, shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 20, elevation: 12 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+        <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: isLocked ? 'rgba(248,113,113,0.15)' : 'rgba(148,163,184,0.15)', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+          {isLocked ? <ShieldX color="#f87171" size={18} /> : <ShieldAlert color="#94a3b8" size={18} />}
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: '#ffffff', fontWeight: '700', fontSize: 15 }}>
+            {isLocked ? 'Coverage Locked' : 'Insurance Standby'}
+          </Text>
+          <Text style={{ color: '#64748b', fontSize: 12, marginTop: 2 }} numberOfLines={1}>
+            {isLocked
+              ? `${eligibility.tripCount}/${eligibility.required} trips — need ${eligibility.required - eligibility.tripCount} more`
+              : 'Tap below to start a protected trip'}
           </Text>
         </View>
       </View>
 
-      {/* Timeline */}
-      {steps.map((step, idx) => (
-        <View key={idx} style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-          {/* Left column: icon + connector */}
-          <View style={{ width: 36, alignItems: 'center' }}>
-            {step.state === 'done' ? (
-              <LinearGradient
-                colors={['#7c3aed', '#6d28d9']}
-                style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }}
-              >
-                <ShieldCheck color="#ffffff" size={18} />
-              </LinearGradient>
-            ) : step.state === 'active' ? (
-              <LinearGradient
-                colors={['#7c3aed', '#6d28d9']}
-                style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }}
-              >
-                <Zap color="#ffffff" size={18} />
-              </LinearGradient>
-            ) : (
-              <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#f1f5f9', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#e2e8f0' }}>
-                <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#cbd5e1' }} />
-              </View>
-            )}
-            {/* Connector line */}
-            {idx < steps.length - 1 && (
-              <View style={{ width: 2, height: 24, backgroundColor: idx === 0 ? '#7c3aed' : '#e2e8f0', marginVertical: 2 }} />
-            )}
-          </View>
+      {isLocked ? (
+        <View style={{ backgroundColor: 'rgba(248,113,113,0.1)', borderRadius: 10, paddingVertical: 8, paddingHorizontal: 12, borderWidth: 1, borderColor: 'rgba(248,113,113,0.2)' }}>
+          <Text style={{ fontSize: 12, color: '#f87171', fontWeight: '600', textAlign: 'center' }}>
+            Complete {eligibility.required - eligibility.tripCount} more trip{eligibility.required - eligibility.tripCount !== 1 ? 's' : ''} this week to unlock
+          </Text>
+        </View>
+      ) : (
+        <TouchableOpacity activeOpacity={0.85} onPress={onPress} style={{ backgroundColor: '#7c3aed', borderRadius: 12, paddingVertical: 11, alignItems: 'center' }}>
+          <Text style={{ color: '#ffffff', fontWeight: '700', fontSize: 14 }}>Start Protected Trip</Text>
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+}
 
-          {/* Right column: text */}
-          <View style={{ flex: 1, paddingLeft: 12, paddingBottom: idx < steps.length - 1 ? 0 : 0, minHeight: idx < steps.length - 1 ? 62 : 36 }}>
-            <Text style={{ fontWeight: '700', fontSize: 14, color: step.state === 'pending' ? '#94a3b8' : '#0f172a' }}>
-              {step.label}
+// ── Today's Trips List ───────────────────────────────────────────────────────
+function TodaysTrips() {
+  return (
+    <View style={{ backgroundColor: '#ffffff', borderRadius: 20, padding: 18, marginHorizontal: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+        <Text style={{ fontWeight: '700', fontSize: 16, color: '#0f172a' }}>Today's Trips</Text>
+        <Text style={{ fontSize: 13, color: '#7c3aed', fontWeight: '600' }}>{MOCK_TRIPS.length} trips</Text>
+      </View>
+
+      {MOCK_TRIPS.map((trip, i) => (
+        <View key={trip.id} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 11, borderTopWidth: i > 0 ? 1 : 0, borderTopColor: '#f1f5f9' }}>
+          <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: '#f5f3ff', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+            <MapPin color="#7c3aed" size={16} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 13, fontWeight: '700', color: '#0f172a' }}>{trip.id}</Text>
+            <Text style={{ fontSize: 11, color: '#64748b', marginTop: 1 }}>
+              {trip.from} → {trip.to}
             </Text>
-            <Text style={{ fontSize: 12, color: step.subColor, marginTop: 2 }}>{step.sub}</Text>
+          </View>
+          <View style={{ alignItems: 'flex-end' }}>
+            <View style={{ backgroundColor: '#dcfce7', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3, marginBottom: 3 }}>
+              <Text style={{ fontSize: 11, fontWeight: '700', color: '#16a34a' }}>Completed</Text>
+            </View>
+            <Text style={{ fontSize: 12, fontWeight: '700', color: '#16a34a' }}>₹{trip.earnings}</Text>
           </View>
         </View>
       ))}
@@ -195,16 +153,15 @@ export default function DashboardScreen() {
 
   if (!state) {
     return (
-      <View style={{ flex: 1, backgroundColor: '#ffffff', paddingTop: 64, paddingHorizontal: 24 }}>
+      <View style={{ flex: 1, backgroundColor: '#0f0a1e', paddingTop: 64, paddingHorizontal: 24 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 24 }}>
-          <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: '#e2e8f0', marginRight: 12 }} />
+          <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: '#1e1b2e', marginRight: 12 }} />
           <View>
-            <View style={{ width: 96, height: 14, backgroundColor: '#e2e8f0', borderRadius: 4, marginBottom: 6 }} />
-            <View style={{ width: 140, height: 20, backgroundColor: '#e2e8f0', borderRadius: 4 }} />
+            <View style={{ width: 96, height: 14, backgroundColor: '#1e1b2e', borderRadius: 4, marginBottom: 6 }} />
+            <View style={{ width: 140, height: 20, backgroundColor: '#1e1b2e', borderRadius: 4 }} />
           </View>
         </View>
-        <View style={{ width: '100%', height: 56, backgroundColor: '#f1f5f9', borderRadius: 16, marginBottom: 16 }} />
-        <View style={{ width: '100%', height: 200, backgroundColor: '#f1f5f9', borderRadius: 20, marginBottom: 16 }} />
+        <View style={{ width: '100%', height: 160, backgroundColor: '#1e1b2e', borderRadius: 20, marginBottom: 16 }} />
       </View>
     );
   }
@@ -213,16 +170,12 @@ export default function DashboardScreen() {
   const firstName = user?.name?.split(' ')[0] ?? 'there';
   const initial = user?.name?.[0]?.toUpperCase() ?? '?';
   const today = new Date();
-  const dateStr = today.toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' });
-  const destinationLabel = user?.platform
-    ? `${user.platform.charAt(0).toUpperCase() + user.platform.slice(1)} Wallet`
-    : 'HDFC Bank ••••4521';
-
-  const notifications = buildNotifications({ isTripActive, disruption, claimStatus, weeklyProtected, lastPayoutAmount });
-  const hasNotifs = notifications.length > 0;
+  const hour = today.getHours();
+  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  const isLocked = !eligibility.eligible && !isTripActive;
 
   const toggleTrip = async () => {
-    if (!eligibility.eligible && !isTripActive) return; // blocked — not enough recent trips
+    if (!eligibility.eligible && !isTripActive) return;
     try {
       if (isTripActive) await completeTrip();
       else await acceptTrip();
@@ -231,233 +184,145 @@ export default function DashboardScreen() {
     }
   };
 
-  // Determine hour for greeting
-  const hour = today.getHours();
-  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  // Build a notification count
+  const notifCount = [
+    claimStatus === 'paid' && weeklyProtected > 0,
+    claimStatus === 'approved',
+    claimStatus === 'processing',
+    disruption && claimStatus === 'none',
+  ].filter(Boolean).length;
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#f8fafc' }}>
+    <View style={{ flex: 1, backgroundColor: '#f5f3ff' }}>
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{ paddingBottom: 100 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* ── Header ── */}
-        <View style={{ paddingTop: 56, paddingHorizontal: 20, paddingBottom: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#ffffff' }}>
-          <TouchableOpacity
-            activeOpacity={0.75}
-            onPress={() => setProfileOpen(true)}
-            style={{ flexDirection: 'row', alignItems: 'center' }}
-          >
-            <LinearGradient
-              colors={['#14b8a6', '#0d9488']}
-              style={{ width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', marginRight: 12 }}
-            >
-              <Text style={{ color: '#ffffff', fontWeight: '700', fontSize: 18 }}>{initial}</Text>
-            </LinearGradient>
-            <View>
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Text style={{ fontSize: 18, fontWeight: '700', color: '#0f172a' }}>Hi {firstName} </Text>
-                <Text style={{ fontSize: 18 }}>👋</Text>
+        {/* ── Gradient Header ── */}
+        <LinearGradient
+          colors={['#2d1b69', '#1e1050', '#0f0a1e']}
+          style={{ paddingTop: 56, paddingBottom: 52, paddingHorizontal: 20 }}
+        >
+          {/* Top row */}
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+            <TouchableOpacity activeOpacity={0.75} onPress={() => setProfileOpen(true)} style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <LinearGradient
+                colors={['#7c3aed', '#6d28d9']}
+                style={{ width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', marginRight: 11 }}
+              >
+                <Text style={{ color: '#ffffff', fontWeight: '800', fontSize: 16 }}>{initial}</Text>
+              </LinearGradient>
+              <View>
+                <Text style={{ fontSize: 18, fontWeight: '800', color: '#ffffff' }}>Hi {firstName}</Text>
+                <Text style={{ fontSize: 12, color: '#a78bfa', marginTop: 1 }}>{greeting}</Text>
               </View>
-              <Text style={{ fontSize: 13, color: '#94a3b8' }}>{greeting}</Text>
-            </View>
-          </TouchableOpacity>
+            </TouchableOpacity>
 
-          <TouchableOpacity activeOpacity={0.75} onPress={() => setNotifOpen(true)}>
-            <View style={{ position: 'relative' }}>
-              {hasNotifs && (
-                <View style={{
-                  position: 'absolute', top: -2, right: -2, width: 10, height: 10,
-                  backgroundColor: '#ef4444', borderRadius: 5, zIndex: 10,
-                  borderWidth: 1.5, borderColor: '#ffffff',
-                }} />
-              )}
-              <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#f8fafc', alignItems: 'center', justifyContent: 'center' }}>
-                <Bell color="#334155" size={20} />
+            <TouchableOpacity activeOpacity={0.75} onPress={() => setNotifOpen(true)}>
+              <View style={{ position: 'relative' }}>
+                {notifCount > 0 && (
+                  <View style={{ position: 'absolute', top: -2, right: -2, width: 10, height: 10, backgroundColor: '#ef4444', borderRadius: 5, zIndex: 10, borderWidth: 1.5, borderColor: '#1e1050' }} />
+                )}
+                <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center' }}>
+                  <Bell color="#e2e8f0" size={20} />
+                </View>
+              </View>
+            </TouchableOpacity>
+          </View>
+
+          {/* Risk / surcharge pill */}
+          {(() => {
+            const riskColor = currentRiskLevel === 'Low' ? '#4ade80' : currentRiskLevel === 'High' ? '#f87171' : '#fbbf24';
+            return (
+              <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 7, alignSelf: 'flex-start' }}>
+                <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: riskColor, marginRight: 7 }} />
+                <Text style={{ fontSize: 12, color: '#c4b5fd', fontWeight: '600' }}>
+                  Consumer surcharge: <Text style={{ color: '#ffffff', fontWeight: '800' }}>₹{currentMicroFee.toFixed(2)}/order</Text>
+                </Text>
+                <View style={{ marginLeft: 8, backgroundColor: riskColor, borderRadius: 5, paddingHorizontal: 6, paddingVertical: 2 }}>
+                  <Text style={{ color: '#0f0a1e', fontSize: 10, fontWeight: '800' }}>{currentRiskLevel.toUpperCase()}</Text>
+                </View>
+              </View>
+            );
+          })()}
+        </LinearGradient>
+
+        {/* ── Trip Card (overlaps gradient) ── */}
+        {isTripActive ? (
+          <ActiveTripCard claimStatus={claimStatus} weeklyProtected={weeklyProtected} />
+        ) : (
+          <StandbyBanner isLocked={isLocked} eligibility={eligibility} onPress={toggleTrip} />
+        )}
+
+        {/* ── Disruption Alert ── */}
+        {disruption && claimStatus === 'none' && (
+          <TouchableOpacity activeOpacity={0.9} onPress={() => router.push('/(tabs)/claims')} style={{ marginHorizontal: 16, marginTop: 12 }}>
+            <View style={{ backgroundColor: '#fef2f2', borderRadius: 16, padding: 14, borderWidth: 1, borderColor: '#fecaca', flexDirection: 'row', alignItems: 'center' }}>
+              <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#fee2e2', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+                <AlertTriangle color="#dc2626" size={17} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: '#7f1d1d', fontWeight: '700', fontSize: 13 }}>Disruption in your zone</Text>
+                <Text style={{ color: '#b91c1c', fontSize: 12, marginTop: 1 }} numberOfLines={2}>{disruption.message}</Text>
+              </View>
+              <View style={{ backgroundColor: '#dc2626', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 }}>
+                <Text style={{ color: '#ffffff', fontWeight: '700', fontSize: 12 }}>Claim →</Text>
               </View>
             </View>
           </TouchableOpacity>
+        )}
+
+        {/* ── Claim in progress ── */}
+        {claimStatus !== 'none' && claimStatus !== 'paid' && (
+          <TouchableOpacity activeOpacity={0.9} onPress={() => router.push('/(tabs)/claims')} style={{ marginHorizontal: 16, marginTop: 12 }}>
+            <View style={{ backgroundColor: '#eff6ff', borderRadius: 16, padding: 14, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#bfdbfe' }}>
+              <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#dbeafe', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+                <Clock color="#2563eb" size={17} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: '#1e40af', fontWeight: '700', fontSize: 13 }}>
+                  {claimStatus === 'processing' ? 'AI reviewing your claim…' : 'Claim approved — payout processing'}
+                </Text>
+                <Text style={{ color: '#3b82f6', fontSize: 12, marginTop: 1 }}>Tap to track progress</Text>
+              </View>
+              <ChevronRight color="#3b82f6" size={18} />
+            </View>
+          </TouchableOpacity>
+        )}
+
+        {/* ── Active trip end button ── */}
+        {isTripActive && (
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={toggleTrip}
+            style={{ marginHorizontal: 16, marginTop: 12, backgroundColor: '#1e1b2e', borderRadius: 14, paddingVertical: 13, alignItems: 'center', borderWidth: 1, borderColor: '#374151' }}
+          >
+            <Text style={{ color: '#f87171', fontWeight: '700', fontSize: 14 }}>End Trip</Text>
+          </TouchableOpacity>
+        )}
+
+        {/* ── Today's Trips ── */}
+        <View style={{ marginTop: 20 }}>
+          <TodaysTrips />
         </View>
 
-        <View style={{ paddingHorizontal: 20, paddingTop: 16, gap: 14 }}>
-          {/* ── Insurance Status Banner ── */}
-          {(() => {
-            const isLocked = !eligibility.eligible && !isTripActive;
-            const bgColor = isTripActive ? '#16a34a' : isLocked ? '#991b1b' : '#64748b';
-            const dotColor = isTripActive ? '#bbf7d0' : isLocked ? '#fca5a5' : '#94a3b8';
-            const title = isTripActive ? 'Insurance Active' : isLocked ? 'Not Eligible' : 'Insurance Standby';
-            const subtitle = isTripActive
-              ? 'Trip Protected'
-              : isLocked
-              ? `${eligibility.tripCount}/${eligibility.required} trips this week — need ${eligibility.required - eligibility.tripCount} more`
-              : 'Tap to start a protected trip';
-            return (
-              <TouchableOpacity activeOpacity={isLocked ? 1 : 0.85} onPress={toggleTrip}>
-                <View style={{
-                  backgroundColor: bgColor,
-                  borderRadius: 16,
-                  paddingVertical: 14,
-                  paddingHorizontal: 16,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                    <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
-                      {isTripActive
-                        ? <ShieldCheck color="#ffffff" size={20} />
-                        : isLocked
-                        ? <ShieldX color="#ffffff" size={20} />
-                        : <ShieldAlert color="#ffffff" size={20} />}
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ color: '#ffffff', fontWeight: '700', fontSize: 15 }}>{title}</Text>
-                      <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12 }} numberOfLines={2}>{subtitle}</Text>
-                    </View>
-                  </View>
-                  <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: dotColor, marginLeft: 8 }} />
-                </View>
-                {isLocked && (
-                  <View style={{ marginTop: 6, backgroundColor: '#fee2e2', borderRadius: 10, paddingVertical: 8, paddingHorizontal: 12 }}>
-                    <Text style={{ fontSize: 11, color: '#b91c1c', fontWeight: '600', textAlign: 'center' }}>
-                      Complete {eligibility.required - eligibility.tripCount} more trip{eligibility.required - eligibility.tripCount !== 1 ? 's' : ''} this week to unlock insurance coverage.
-                    </Text>
-                  </View>
-                )}
-              </TouchableOpacity>
-            );
-          })()}
-
-          {/* ── Live Consumer Surcharge Pill ── */}
-          {(() => {
-            const riskColor = currentRiskLevel === 'Low' ? '#16a34a' : currentRiskLevel === 'High' ? '#dc2626' : '#d97706';
-            const riskBg    = currentRiskLevel === 'Low' ? '#f0fdf4' : currentRiskLevel === 'High' ? '#fef2f2' : '#fffbeb';
-            const riskBorder= currentRiskLevel === 'Low' ? '#bbf7d0' : currentRiskLevel === 'High' ? '#fecaca' : '#fde68a';
-            return (
-              <View style={{ backgroundColor: riskBg, borderRadius: 14, paddingVertical: 10, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 1, borderColor: riskBorder }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <TrendingUp color={riskColor} size={15} />
-                  <Text style={{ marginLeft: 7, fontSize: 13, color: riskColor, fontWeight: '600' }}>Consumer surcharge today</Text>
-                </View>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <Text style={{ fontSize: 15, fontWeight: '700', color: '#0f172a' }}>₹{currentMicroFee.toFixed(2)}/order</Text>
-                  <View style={{ backgroundColor: riskColor, borderRadius: 8, paddingHorizontal: 7, paddingVertical: 3 }}>
-                    <Text style={{ color: '#ffffff', fontSize: 11, fontWeight: '700' }}>{currentRiskLevel.toUpperCase()}</Text>
-                  </View>
-                </View>
-              </View>
-            );
-          })()}
-
-          {/* ── Disruption Alert → File a Claim CTA ── */}
-          {disruption && claimStatus === 'none' && (
-            <TouchableOpacity activeOpacity={0.9} onPress={() => router.push('/(tabs)/claims')}>
-              <View style={{ backgroundColor: '#fef2f2', borderRadius: 14, padding: 14, borderWidth: 1, borderColor: '#fecaca' }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
-                  <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: '#fee2e2', alignItems: 'center', justifyContent: 'center', marginRight: 10 }}>
-                    <AlertTriangle color="#dc2626" size={17} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ color: '#7f1d1d', fontWeight: '700', fontSize: 13 }}>Disruption in your zone</Text>
-                    <Text style={{ color: '#b91c1c', fontSize: 12, marginTop: 1 }}>{disruption.message}</Text>
-                  </View>
-                </View>
-                <View style={{ backgroundColor: '#dc2626', borderRadius: 10, paddingVertical: 10, alignItems: 'center' }}>
-                  <Text style={{ color: '#ffffff', fontWeight: '700', fontSize: 13 }}>File a Claim →</Text>
-                </View>
-              </View>
-            </TouchableOpacity>
-          )}
-
-          {/* ── Claim in progress indicator ── */}
-          {claimStatus !== 'none' && claimStatus !== 'paid' && (
-            <TouchableOpacity activeOpacity={0.9} onPress={() => router.push('/(tabs)/claims')}>
-              <View style={{ backgroundColor: '#eff6ff', borderRadius: 14, padding: 14, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#bfdbfe' }}>
-                <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: '#dbeafe', alignItems: 'center', justifyContent: 'center', marginRight: 10 }}>
-                  <Clock color="#2563eb" size={17} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ color: '#1e40af', fontWeight: '700', fontSize: 13 }}>
-                    {claimStatus === 'processing' ? 'AI reviewing your claim…' : 'Claim approved — payout processing'}
-                  </Text>
-                  <Text style={{ color: '#3b82f6', fontSize: 12, marginTop: 1 }}>Tap to track progress</Text>
-                </View>
-                <Text style={{ fontSize: 16, color: '#3b82f6' }}>→</Text>
-              </View>
-            </TouchableOpacity>
-          )}
-
-          {/* ── Today's Journey ── */}
-          <TodaysJourney isTripActive={isTripActive} />
-
-          {/* ── Last Payout Card ── */}
-          <View style={{ backgroundColor: '#ffffff', borderRadius: 20, padding: 20, borderWidth: 1, borderColor: '#e2e8f0', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2 }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <Text style={{ fontWeight: '700', fontSize: 17, color: '#0f172a' }}>Last Payout</Text>
-              {claimStatus === 'paid' && weeklyProtected > 0 ? (
-                <View style={{ backgroundColor: '#dcfce7', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 }}>
-                  <Text style={{ color: '#166534', fontWeight: '700', fontSize: 12 }}>Completed</Text>
-                </View>
-              ) : (
-                <View style={{ backgroundColor: '#f1f5f9', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 }}>
-                  <Text style={{ color: '#64748b', fontWeight: '600', fontSize: 12 }}>No claim yet</Text>
-                </View>
-              )}
+        {/* ── Weekly Summary ── */}
+        <View style={{ marginHorizontal: 16, marginTop: 14, backgroundColor: '#ffffff', borderRadius: 20, padding: 18, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}>
+          <Text style={{ fontWeight: '700', fontSize: 16, color: '#0f172a', marginBottom: 14 }}>Weekly Summary</Text>
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            <View style={{ flex: 1, backgroundColor: '#f5f3ff', borderRadius: 14, padding: 14, alignItems: 'center' }}>
+              <Text style={{ fontSize: 18, fontWeight: '800', color: '#7c3aed' }}>₹{weeklyEarnings.toLocaleString()}</Text>
+              <Text style={{ fontSize: 11, color: '#7c3aed', marginTop: 3, fontWeight: '600' }}>Earned</Text>
             </View>
-
-            {claimStatus === 'paid' && weeklyProtected > 0 ? (
-              <>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 11, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' }}>
-                  <Text style={{ color: '#64748b', fontSize: 14 }}>Amount</Text>
-                  <Text style={{ color: '#0f172a', fontWeight: '700', fontSize: 22 }}>₹{lastPayoutAmount.toLocaleString()}</Text>
-                </View>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 11, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' }}>
-                  <Text style={{ color: '#64748b', fontSize: 14 }}>Trigger</Text>
-                  <Text style={{ color: '#0f172a', fontWeight: '600', fontSize: 14 }}>Heavy Rain / Disruption</Text>
-                </View>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 11, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' }}>
-                  <Text style={{ color: '#64748b', fontSize: 14 }}>Destination</Text>
-                  <Text style={{ color: '#0f172a', fontWeight: '600', fontSize: 14 }}>{destinationLabel}</Text>
-                </View>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 11, marginBottom: 12 }}>
-                  <Text style={{ color: '#64748b', fontSize: 14 }}>Date</Text>
-                  <Text style={{ color: '#0f172a', fontWeight: '600', fontSize: 14 }}>{dateStr}</Text>
-                </View>
-                <View style={{ backgroundColor: '#f0fdf4', borderRadius: 12, padding: 14, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#bbf7d0' }}>
-                  <CheckCircle color="#16a34a" size={20} />
-                  <View style={{ marginLeft: 10 }}>
-                    <Text style={{ color: '#14532d', fontWeight: '700', fontSize: 13 }}>Payment Successful</Text>
-                    <Text style={{ color: '#166534', fontSize: 12, marginTop: 2 }}>Processed via Razorpay</Text>
-                  </View>
-                </View>
-              </>
-            ) : (
-              <>
-                {/* Payout schedule from the financial model */}
-                <Text style={{ color: '#64748b', fontSize: 13, marginBottom: 14 }}>
-                  Payouts are triggered automatically when disruption thresholds are met:
-                </Text>
-                {[
-                  { icon: '🌧️', trigger: 'Heavy rain (IMD >15mm/hr)', amount: '₹300–500/shift' },
-                  { icon: '🌡️', trigger: 'Extreme heat (>43°C, 2+ hrs)', amount: '₹250–400/shift' },
-                  { icon: '📵', trigger: 'Platform outage (>90 min)', amount: '₹200–350' },
-                  { icon: '🚧', trigger: 'Curfew / lockdown', amount: '₹500–700/day' },
-                ].map((row, i, arr) => (
-                  <View key={i} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: i < arr.length - 1 ? 1 : 0, borderBottomColor: '#f1f5f9' }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                      <Text style={{ fontSize: 16, marginRight: 10 }}>{row.icon}</Text>
-                      <Text style={{ color: '#334155', fontSize: 13, flex: 1 }}>{row.trigger}</Text>
-                    </View>
-                    <Text style={{ color: '#16a34a', fontWeight: '700', fontSize: 13 }}>{row.amount}</Text>
-                  </View>
-                ))}
-                <View style={{ backgroundColor: '#f8fafc', borderRadius: 12, padding: 12, marginTop: 14, flexDirection: 'row', alignItems: 'center' }}>
-                  <ShieldCheck color="#64748b" size={15} />
-                  <Text style={{ color: '#64748b', fontSize: 12, marginLeft: 8 }}>File a claim on the Claims tab after a disruption</Text>
-                </View>
-              </>
-            )}
+            <View style={{ flex: 1, backgroundColor: '#f0fdf4', borderRadius: 14, padding: 14, alignItems: 'center' }}>
+              <Text style={{ fontSize: 18, fontWeight: '800', color: '#16a34a' }}>₹{weeklyProtected.toLocaleString()}</Text>
+              <Text style={{ fontSize: 11, color: '#16a34a', marginTop: 3, fontWeight: '600' }}>Protected</Text>
+            </View>
+            <View style={{ flex: 1, backgroundColor: '#f8fafc', borderRadius: 14, padding: 14, alignItems: 'center' }}>
+              <Text style={{ fontSize: 18, fontWeight: '800', color: '#0f172a' }}>{eligibility.tripCount}</Text>
+              <Text style={{ fontSize: 11, color: '#64748b', marginTop: 3, fontWeight: '600' }}>Trips</Text>
+            </View>
           </View>
         </View>
       </ScrollView>
@@ -465,35 +330,16 @@ export default function DashboardScreen() {
       {/* ── Profile Popover ── */}
       {profileOpen && (
         <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 100 }}>
-          {/* Backdrop */}
-          <TouchableOpacity
-            activeOpacity={1}
-            onPress={() => setProfileOpen(false)}
-            style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.35)' }}
-          />
-
-          {/* Card — anchored top-left, under the header */}
-          <View style={{
-            position: 'absolute', top: 108, left: 16, right: 80,
-            backgroundColor: '#ffffff', borderRadius: 18,
-            shadowColor: '#000', shadowOffset: { width: 0, height: 8 },
-            shadowOpacity: 0.14, shadowRadius: 24, elevation: 12,
-            overflow: 'hidden',
-          }}>
-            {/* Header row */}
+          <TouchableOpacity activeOpacity={1} onPress={() => setProfileOpen(false)} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)' }} />
+          <View style={{ position: 'absolute', top: 108, left: 16, right: 80, backgroundColor: '#ffffff', borderRadius: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.18, shadowRadius: 24, elevation: 12, overflow: 'hidden' }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' }}>
               <Text style={{ fontWeight: '700', fontSize: 15, color: '#0f172a' }}>My Account</Text>
               <TouchableOpacity onPress={() => setProfileOpen(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                 <X color="#94a3b8" size={18} />
               </TouchableOpacity>
             </View>
-
-            {/* Avatar + name + email */}
             <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#f8fafc' }}>
-              <LinearGradient
-                colors={['#14b8a6', '#0d9488']}
-                style={{ width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', marginRight: 12 }}
-              >
+              <LinearGradient colors={['#7c3aed', '#6d28d9']} style={{ width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
                 <Text style={{ color: '#ffffff', fontWeight: '700', fontSize: 17 }}>{initial}</Text>
               </LinearGradient>
               <View style={{ flex: 1 }}>
@@ -501,71 +347,23 @@ export default function DashboardScreen() {
                 <Text style={{ fontSize: 12, color: '#64748b', marginTop: 1 }} numberOfLines={1}>{user?.email ?? '—'}</Text>
               </View>
             </View>
-
-            {/* Info rows */}
             <View style={{ paddingHorizontal: 16, paddingVertical: 12, gap: 10 }}>
-              {/* Driver ID */}
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: '#f1f5f9', alignItems: 'center', justifyContent: 'center', marginRight: 10 }}>
-                  <User color="#64748b" size={13} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 11, color: '#94a3b8', fontWeight: '500' }}>Driver ID</Text>
-                  <Text style={{ fontSize: 13, color: '#0f172a', fontWeight: '600' }} numberOfLines={1}>{user?.driverId ?? '—'}</Text>
-                </View>
-              </View>
-
-              {/* Platform */}
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: '#f1f5f9', alignItems: 'center', justifyContent: 'center', marginRight: 10 }}>
-                  <Smartphone color="#64748b" size={13} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 11, color: '#94a3b8', fontWeight: '500' }}>Platform</Text>
-                  <Text style={{ fontSize: 13, color: '#0f172a', fontWeight: '600' }}>
-                    {user?.platform ? user.platform.charAt(0).toUpperCase() + user.platform.slice(1) : '—'}
-                  </Text>
-                </View>
-              </View>
-
-              {/* Eligibility */}
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: eligibility.eligible ? '#f0fdf4' : '#fef2f2', alignItems: 'center', justifyContent: 'center', marginRight: 10 }}>
-                  <ShieldCheck color={eligibility.eligible ? '#16a34a' : '#dc2626'} size={13} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 11, color: '#94a3b8', fontWeight: '500' }}>Coverage Eligibility</Text>
-                  <Text style={{ fontSize: 13, fontWeight: '600', color: eligibility.eligible ? '#16a34a' : '#dc2626' }}>
-                    {eligibility.eligible
-                      ? `Eligible · ${eligibility.tripCount} trips this week`
-                      : `${eligibility.tripCount}/${eligibility.required} trips — ${eligibility.required - eligibility.tripCount} more needed`}
-                  </Text>
-                </View>
-              </View>
-
-              {/* Weekly earnings */}
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: '#f0fdf4', alignItems: 'center', justifyContent: 'center', marginRight: 10 }}>
-                  <TrendingUp color="#16a34a" size={13} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 11, color: '#94a3b8', fontWeight: '500' }}>Weekly Earnings</Text>
-                  <Text style={{ fontSize: 13, color: '#0f172a', fontWeight: '600' }}>₹{state.weeklyEarnings.toLocaleString()}</Text>
-                </View>
-                {state.weeklyProtected > 0 && (
-                  <View style={{ backgroundColor: '#dcfce7', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 }}>
-                    <Text style={{ fontSize: 11, color: '#166534', fontWeight: '700' }}>+₹{state.weeklyProtected.toLocaleString()} protected</Text>
+              {[
+                { icon: <User color="#64748b" size={13} />, label: 'Driver ID', value: user?.driverId ?? '—' },
+                { icon: <Smartphone color="#64748b" size={13} />, label: 'Platform', value: user?.platform ? user.platform.charAt(0).toUpperCase() + user.platform.slice(1) : '—' },
+                { icon: <ShieldCheck color={eligibility.eligible ? '#16a34a' : '#dc2626'} size={13} />, label: 'Coverage', value: eligibility.eligible ? `Eligible · ${eligibility.tripCount} trips` : `${eligibility.tripCount}/${eligibility.required} trips`, valueBg: eligibility.eligible ? '#f0fdf4' : '#fef2f2', valueColor: eligibility.eligible ? '#16a34a' : '#dc2626' },
+                { icon: <TrendingUp color="#16a34a" size={13} />, label: 'Weekly Earnings', value: `₹${state.weeklyEarnings.toLocaleString()}` },
+              ].map((row, i) => (
+                <View key={i} style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: '#f1f5f9', alignItems: 'center', justifyContent: 'center', marginRight: 10 }}>{row.icon}</View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 11, color: '#94a3b8', fontWeight: '500' }}>{row.label}</Text>
+                    <Text style={{ fontSize: 13, color: (row as any).valueColor ?? '#0f172a', fontWeight: '600' }} numberOfLines={1}>{row.value}</Text>
                   </View>
-                )}
-              </View>
+                </View>
+              ))}
             </View>
-
-            {/* Logout button */}
-            <TouchableOpacity
-              activeOpacity={0.85}
-              onPress={async () => { setProfileOpen(false); await logout(); }}
-              style={{ marginHorizontal: 16, marginBottom: 16, borderRadius: 12, backgroundColor: '#fef2f2', paddingVertical: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#fecaca' }}
-            >
+            <TouchableOpacity activeOpacity={0.85} onPress={async () => { setProfileOpen(false); await logout(); }} style={{ marginHorizontal: 16, marginBottom: 16, borderRadius: 12, backgroundColor: '#fef2f2', paddingVertical: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#fecaca' }}>
               <LogOut color="#dc2626" size={16} />
               <Text style={{ color: '#dc2626', fontWeight: '700', fontSize: 14, marginLeft: 8 }}>Log Out</Text>
             </TouchableOpacity>
@@ -573,41 +371,53 @@ export default function DashboardScreen() {
         </View>
       )}
 
-      {/* ── Notification Overlay (inside screen so it stays in phone frame) ── */}
+      {/* ── Notification Overlay ── */}
       {notifOpen && (
         <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 100 }}>
-          <TouchableOpacity activeOpacity={1} onPress={() => setNotifOpen(false)} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.35)' }} />
-          <View style={{ position: 'absolute', top: 100, right: 16, left: 16, backgroundColor: '#ffffff', borderRadius: 18, overflow: 'hidden' }}>
+          <TouchableOpacity activeOpacity={1} onPress={() => setNotifOpen(false)} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.4)' }} />
+          <View style={{ position: 'absolute', top: 100, left: 16, right: 16, backgroundColor: '#ffffff', borderRadius: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.14, shadowRadius: 24, elevation: 12, overflow: 'hidden' }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' }}>
               <Text style={{ fontWeight: '700', fontSize: 15, color: '#0f172a' }}>Notifications</Text>
               <TouchableOpacity onPress={() => setNotifOpen(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                 <X color="#94a3b8" size={18} />
               </TouchableOpacity>
             </View>
-
-            {!hasNotifs ? (
-              <View style={{ paddingVertical: 36, alignItems: 'center' }}>
-                <Bell color="#cbd5e1" size={32} />
-                <Text style={{ color: '#94a3b8', fontSize: 14, marginTop: 12, fontWeight: '500' }}>No notifications</Text>
-                <Text style={{ color: '#cbd5e1', fontSize: 12, marginTop: 4 }}>You're all caught up.</Text>
+            {notifCount === 0 ? (
+              <View style={{ paddingVertical: 32, alignItems: 'center' }}>
+                <Bell color="#cbd5e1" size={28} />
+                <Text style={{ color: '#94a3b8', fontSize: 14, marginTop: 10, fontWeight: '500' }}>No new notifications</Text>
               </View>
             ) : (
-              <ScrollView style={{ maxHeight: 360 }} showsVerticalScrollIndicator={false}>
-                {notifications.map((n, idx) => (
-                  <View key={n.id} style={{ flexDirection: 'row', alignItems: 'flex-start', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: idx < notifications.length - 1 ? 1 : 0, borderBottomColor: '#f8fafc' }}>
-                    <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: `${n.color}18`, alignItems: 'center', justifyContent: 'center', marginRight: 12, marginTop: 1 }}>
-                      <NotifIcon type={n.icon} color={n.color} />
+              <View style={{ paddingVertical: 8 }}>
+                {claimStatus === 'paid' && weeklyProtected > 0 && (
+                  <View style={{ flexDirection: 'row', alignItems: 'flex-start', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' }}>
+                    <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: '#dcfce7', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+                      <CheckCircle2 color="#16a34a" size={17} />
                     </View>
                     <View style={{ flex: 1 }}>
-                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
-                        <Text style={{ fontWeight: '700', fontSize: 13, color: '#0f172a', flex: 1, marginRight: 8 }}>{n.title}</Text>
-                        <Text style={{ fontSize: 11, color: '#94a3b8' }}>{n.time}</Text>
-                      </View>
-                      <Text style={{ fontSize: 12, color: '#64748b', lineHeight: 17 }}>{n.body}</Text>
+                      <Text style={{ fontWeight: '700', fontSize: 14, color: '#0f172a' }}>Payout Credited</Text>
+                      <Text style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>₹{lastPayoutAmount.toLocaleString()} sent to your wallet</Text>
+                      <Text style={{ fontSize: 11, color: '#94a3b8', marginTop: 3 }}>Today</Text>
                     </View>
                   </View>
-                ))}
-              </ScrollView>
+                )}
+                {(claimStatus === 'processing' || claimStatus === 'approved') && (
+                  <View style={{ flexDirection: 'row', alignItems: 'flex-start', paddingHorizontal: 16, paddingVertical: 12 }}>
+                    <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: '#dbeafe', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+                      <Clock color="#2563eb" size={17} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontWeight: '700', fontSize: 14, color: '#0f172a' }}>
+                        {claimStatus === 'processing' ? 'Claim Under Review' : 'Claim Approved'}
+                      </Text>
+                      <Text style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
+                        {claimStatus === 'processing' ? 'AI verification in progress' : 'Payment being sent now'}
+                      </Text>
+                      <Text style={{ fontSize: 11, color: '#94a3b8', marginTop: 3 }}>Just now</Text>
+                    </View>
+                  </View>
+                )}
+              </View>
             )}
           </View>
         </View>
