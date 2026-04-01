@@ -11,12 +11,12 @@ import {
 } from 'lucide-react-native';
 
 const DISRUPTION_TYPES = [
-  { id: 'WEATHER', label: 'Heavy Rain', icon: '🌧️', maxPayout: '₹300' },
-  { id: 'TRAFFIC', label: 'Road Block', icon: '🚧', maxPayout: '₹200' },
-  { id: 'FLOOD', label: 'Flooding', icon: '🌊', maxPayout: '₹500' },
-  { id: 'OUTAGE', label: 'Shop Closed', icon: '🏪', maxPayout: '₹150' },
-  { id: 'HEAT', label: 'Extreme Heat', icon: '🌡️', maxPayout: '₹400' },
-  { id: 'CURFEW', label: 'Curfew', icon: '🚔', maxPayout: '₹700' },
+  { id: 'WEATHER', label: 'Heavy Rain', icon: '🌧️', maxPayout: '₹300', autoMessage: 'Heavy rain stopped deliveries in my zone', defaultHours: 2 },
+  { id: 'TRAFFIC', label: 'Road Block', icon: '🚧', maxPayout: '₹200', autoMessage: 'Road block preventing deliveries in my area', defaultHours: 1 },
+  { id: 'FLOOD', label: 'Flooding', icon: '🌊', maxPayout: '₹500', autoMessage: 'Flooding in my zone made deliveries impossible', defaultHours: 3 },
+  { id: 'OUTAGE', label: 'Shop Closed', icon: '🏪', maxPayout: '₹150', autoMessage: 'Platform outage — pickup location unavailable for over 90 minutes', defaultHours: 1 },
+  { id: 'HEAT', label: 'Extreme Heat', icon: '🌡️', maxPayout: '₹400', autoMessage: 'Extreme heat above 43°C made outdoor deliveries unsafe', defaultHours: 2 },
+  { id: 'CURFEW', label: 'Curfew', icon: '🚔', maxPayout: '₹700', autoMessage: 'Government-declared curfew blocked all deliveries in my zone', defaultHours: 4 },
 ];
 
 // ── Mock recent claims ───────────────────────────────────────────────────────
@@ -151,6 +151,7 @@ export default function ClaimsScreen() {
   const { state, submitClaim, eligibility } = useMockData();
   const [formOpen, setFormOpen] = useState(false);
   const [ineligiblePopup, setIneligiblePopup] = useState(false);
+  const [submittingId, setSubmittingId] = useState<string | null>(null);
 
   const isEmptyState = !state?.claimStatus || state?.claimStatus === 'none';
   const isPayoutCompleted = state?.claimStatus === 'paid';
@@ -162,6 +163,20 @@ export default function ClaimsScreen() {
   const handleSubmit = async (type: string, desc: string, hours: number) => {
     setFormOpen(false);
     await submitClaim(type, desc, hours);
+  };
+
+  // Zero-touch: submit immediately from the chip, no form
+  const handleQuickClaim = async (type: typeof DISRUPTION_TYPES[number]) => {
+    if (!eligibility.eligible) {
+      setIneligiblePopup(true);
+      return;
+    }
+    setSubmittingId(type.id);
+    try {
+      await submitClaim(type.id, type.autoMessage, type.defaultHours);
+    } finally {
+      setSubmittingId(null);
+    }
   };
 
   const handleClaimPress = () => {
@@ -204,17 +219,33 @@ export default function ClaimsScreen() {
             <View style={{ marginTop: 20 }}>
               <Text style={{ fontSize: 11, color: '#94a3b8', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 12 }}>Quick Claim</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingRight: 4 }}>
-                {DISRUPTION_TYPES.map((t) => (
-                  <TouchableOpacity
-                    key={t.id}
-                    onPress={handleClaimPress}
-                    style={{ backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, alignItems: 'center', minWidth: 80, borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)' }}
-                  >
-                    <Text style={{ fontSize: 22, marginBottom: 5 }}>{t.icon}</Text>
-                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#e2e8f0', marginBottom: 2 }}>{t.label}</Text>
-                    <Text style={{ fontSize: 10, color: '#94a3b8' }}>Up to {t.maxPayout}</Text>
-                  </TouchableOpacity>
-                ))}
+                {DISRUPTION_TYPES.map((t) => {
+                  const isLoading = submittingId === t.id;
+                  return (
+                    <TouchableOpacity
+                      key={t.id}
+                      onPress={() => handleQuickClaim(t)}
+                      disabled={submittingId !== null}
+                      style={{
+                        backgroundColor: isLoading ? 'rgba(124,58,237,0.3)' : 'rgba(255,255,255,0.1)',
+                        borderRadius: 14,
+                        paddingHorizontal: 14,
+                        paddingVertical: 12,
+                        alignItems: 'center',
+                        minWidth: 80,
+                        borderWidth: 1,
+                        borderColor: isLoading ? 'rgba(124,58,237,0.6)' : 'rgba(255,255,255,0.12)',
+                        opacity: submittingId !== null && !isLoading ? 0.45 : 1,
+                      }}
+                    >
+                      <Text style={{ fontSize: 22, marginBottom: 5 }}>{isLoading ? '⏳' : t.icon}</Text>
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: isLoading ? '#c4b5fd' : '#e2e8f0', marginBottom: 2 }}>
+                        {isLoading ? 'Submitting…' : t.label}
+                      </Text>
+                      <Text style={{ fontSize: 10, color: '#94a3b8' }}>Up to {t.maxPayout}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </ScrollView>
             </View>
           )}
