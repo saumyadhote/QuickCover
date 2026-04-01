@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
-  TextInput, KeyboardAvoidingView, Platform, Modal
+  TextInput, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { useMockData } from '../../context/MockDataContext';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -280,9 +280,15 @@ export default function ClaimsScreen() {
 
       {formOpen && <ClaimForm onClose={() => setFormOpen(false)} onSubmit={handleSubmit} />}
 
-      <Modal visible={ineligiblePopup} transparent animationType="fade" onRequestClose={() => setIneligiblePopup(false)}>
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', paddingHorizontal: 32 }}>
-          <View style={{ backgroundColor: '#ffffff', borderRadius: 24, padding: 28, width: '100%' }}>
+      {/* Ineligibility overlay — in-screen so it stays within the phone frame */}
+      {ineligiblePopup && (
+        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 100 }}>
+          <TouchableOpacity
+            activeOpacity={1}
+            onPress={() => setIneligiblePopup(false)}
+            style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)' }}
+          />
+          <View style={{ position: 'absolute', left: 24, right: 24, top: '30%', backgroundColor: '#ffffff', borderRadius: 24, padding: 28 }}>
             <Text style={{ fontSize: 24, marginBottom: 10, textAlign: 'center' }}>🚫</Text>
             <Text style={{ fontWeight: '800', fontSize: 18, color: '#0f172a', textAlign: 'center', marginBottom: 10 }}>Not Eligible Yet</Text>
             <Text style={{ fontSize: 14, color: '#475569', textAlign: 'center', lineHeight: 22, marginBottom: 10 }}>
@@ -298,7 +304,7 @@ export default function ClaimsScreen() {
             </TouchableOpacity>
           </View>
         </View>
-      </Modal>
+      )}
     </View>
   );
 }
