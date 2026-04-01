@@ -255,6 +255,12 @@ async function calculate_live_dynamic_surcharge(zone_lat, zone_lon) {
   // Cap at ₹5.00 (hard ceiling from README)
   surcharge = Math.min(surcharge, 5.00);
 
+  // Add small environmental jitter so the fee evolves naturally between API poll
+  // intervals — real conditions (wind gusts, AQI micro-spikes) shift moment to moment.
+  // ±0.04 keeps it within the current risk band without distorting the signal.
+  const jitter = parseFloat(((Math.random() - 0.5) * 0.08).toFixed(2));
+  surcharge = parseFloat(Math.min(5.00, Math.max(1.50, surcharge + jitter)).toFixed(2));
+
   console.log(
     `[PRICING] riskScore=${riskScore} (rain=${rain_score.toFixed(2)}, heat=${heat_score.toFixed(2)}, aqi=${aqi_score.toFixed(2)})` +
     ` → ₹${surcharge} [${riskLevel}]`

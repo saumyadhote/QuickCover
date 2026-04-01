@@ -5,7 +5,7 @@ import { useMockData } from '../../context/MockDataContext';
 import { useAuth } from '../../context/AuthContext';
 import {
   Bell, ShieldCheck, ShieldX, ShieldAlert, MapPin, CheckCircle2,
-  Clock, AlertTriangle, ChevronRight, LogOut, User, Smartphone, TrendingUp, X,
+  Clock, AlertTriangle, ChevronRight, LogOut, User, Smartphone, TrendingUp, X, Banknote,
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -289,6 +289,63 @@ export default function DashboardScreen() {
           <ActiveTripCard claimStatus={claimStatus} weeklyProtected={weeklyProtected} weeklyEarnings={weeklyEarnings} lastPayoutAmount={lastPayoutAmount} />
         ) : (
           <StandbyBanner isLocked={isLocked} eligibility={eligibility} onPress={toggleTrip} />
+        )}
+
+        {/* ── Payout Credited Card ── */}
+        {claimStatus === 'paid' && lastPayoutAmount > 0 && (
+          <View style={{ marginHorizontal: 16, marginTop: 12 }}>
+            <LinearGradient
+              colors={['#052e16', '#14532d', '#15803d']}
+              start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+              style={{ borderRadius: 20, padding: 20, overflow: 'hidden' }}
+            >
+              {/* Top row */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(74,222,128,0.2)', alignItems: 'center', justifyContent: 'center', marginRight: 10 }}>
+                    <Banknote color="#4ade80" size={19} />
+                  </View>
+                  <View>
+                    <Text style={{ color: '#4ade80', fontWeight: '800', fontSize: 13, letterSpacing: 0.5 }}>PAYOUT CREDITED</Text>
+                    <Text style={{ color: 'rgba(134,239,172,0.7)', fontSize: 11, marginTop: 1 }}>Auto-settled via UPI</Text>
+                  </View>
+                </View>
+                <View style={{ backgroundColor: 'rgba(74,222,128,0.2)', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, borderWidth: 1, borderColor: 'rgba(74,222,128,0.3)' }}>
+                  <Text style={{ color: '#4ade80', fontSize: 10, fontWeight: '800' }}>PAID</Text>
+                </View>
+              </View>
+
+              {/* Amount */}
+              <View style={{ alignItems: 'center', marginBottom: 18 }}>
+                <Text style={{ color: 'rgba(134,239,172,0.6)', fontSize: 12, fontWeight: '600', marginBottom: 4 }}>Amount Received</Text>
+                <Text style={{ color: '#ffffff', fontSize: 44, fontWeight: '900', letterSpacing: -1 }}>₹{lastPayoutAmount.toLocaleString()}</Text>
+                <Text style={{ color: 'rgba(134,239,172,0.7)', fontSize: 12, marginTop: 4 }}>
+                  Protected earnings this week: ₹{weeklyProtected.toLocaleString()}
+                </Text>
+              </View>
+
+              {/* Details row */}
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.25)', borderRadius: 12, padding: 12, alignItems: 'center' }}>
+                  <Text style={{ color: 'rgba(134,239,172,0.6)', fontSize: 10, fontWeight: '600', marginBottom: 3 }}>TRIGGER</Text>
+                  <Text style={{ color: '#ffffff', fontSize: 12, fontWeight: '700', textAlign: 'center' }}>
+                    {disruption?.type === 'POLLUTION' ? 'Air Quality' : disruption?.type === 'OUTAGE' ? 'Platform Outage' : disruption?.type === 'CURFEW' ? 'Curfew' : 'Weather Disruption'}
+                  </Text>
+                </View>
+                <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.25)', borderRadius: 12, padding: 12, alignItems: 'center' }}>
+                  <Text style={{ color: 'rgba(134,239,172,0.6)', fontSize: 10, fontWeight: '600', marginBottom: 3 }}>RATE</Text>
+                  <Text style={{ color: '#ffffff', fontSize: 12, fontWeight: '700' }}>₹80/hr</Text>
+                </View>
+                <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.25)', borderRadius: 12, padding: 12, alignItems: 'center' }}>
+                  <Text style={{ color: 'rgba(134,239,172,0.6)', fontSize: 10, fontWeight: '600', marginBottom: 3 }}>STATUS</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <CheckCircle2 color="#4ade80" size={11} />
+                    <Text style={{ color: '#4ade80', fontSize: 12, fontWeight: '700', marginLeft: 4 }}>Done</Text>
+                  </View>
+                </View>
+              </View>
+            </LinearGradient>
+          </View>
         )}
 
         {/* ── Disruption Alert ── */}

@@ -19,6 +19,7 @@ type AppState = {
   claimStatus: 'none' | 'processing' | 'approved' | 'paid';
   weeklyEarnings: number;
   weeklyProtected: number;
+  lastPayoutAmount: number;
   currentMicroFee: number;
   currentRiskLevel: 'Low' | 'Medium' | 'High';
 };
@@ -40,6 +41,7 @@ const FALLBACK: AppState = {
   claimStatus: 'none',
   weeklyEarnings: 3200,
   weeklyProtected: 0,
+  lastPayoutAmount: 0,
   currentMicroFee: 2.0,
   currentRiskLevel: 'Low',
 };
@@ -449,7 +451,7 @@ function OverviewTab({
                 {state.claimStatus === 'approved' && <Banknote size={14} />}
                 {state.claimStatus === 'processing' && <LoaderCircle size={14} className="animate-spin" />}
                 {state.claimStatus === 'processing' && 'Claim Processing — AI cross-verification in progress…'}
-                {state.claimStatus === 'approved' && `Claim Approved — ₹450 payout authorised`}
+                {state.claimStatus === 'approved' && `Claim Approved — ₹${(state.lastPayoutAmount || state.weeklyProtected).toLocaleString('en-IN')} payout authorised`}
                 {state.claimStatus === 'paid' && `₹${state.weeklyProtected.toLocaleString('en-IN')} transferred via UPI`}
               </p>
             </div>
@@ -719,10 +721,17 @@ function PricingTab({
                 Collecting data — first reading in ~15s
               </div>
             )}
-            {/* Y-axis labels */}
-            <div className="absolute left-0 top-0 h-full flex flex-col justify-between text-[9px] font-mono text-[#424754] pointer-events-none pr-2">
-              <span>₹5.00</span><span>₹3.50</span><span>₹2.00</span><span>₹1.50</span>
-            </div>
+            {/* Y-axis labels — auto-scaled to actual data range */}
+            {feeHistory.length >= 2 && (() => {
+              const fees = feeHistory.map(h => h.fee);
+              const lo = Math.min(...fees), hi = Math.max(...fees);
+              const mid = ((lo + hi) / 2).toFixed(2);
+              return (
+                <div className="absolute left-0 top-0 h-full flex flex-col justify-between text-[9px] font-mono text-[#424754] pointer-events-none pr-2">
+                  <span>₹{hi.toFixed(2)}</span><span>₹{mid}</span><span>₹{lo.toFixed(2)}</span>
+                </div>
+              );
+            })()}
           </div>
           <div className="flex justify-between mt-3 text-[10px] text-[#8c909f] font-mono border-t border-[#424754]/10 pt-3">
             {feeHistory.length >= 2
@@ -986,10 +995,12 @@ export default function App() {
           setBackendOnline(true);
           setLoading(false);
 
-          // Rolling fee history (max 40 points)
+          // Rolling fee history (max 40 points).
+          // Always record a new point if ≥5 s have elapsed since the last one —
+          // this keeps the chart advancing even when the fee hasn't changed.
           setFeeHistory(prev => {
             const last = prev[prev.length - 1];
-            if (!last || last.fee !== next.currentMicroFee) {
+            if (!last || Date.now() - last.ts >= 5000) {
               return [...prev, { fee: next.currentMicroFee, ts: Date.now() }].slice(-40);
             }
             return prev;
@@ -1011,7 +1022,8 @@ export default function App() {
             if (next.claimStatus === 'processing') {
               pushEvent(makeEvent('#ffb95f', `Parametric disruption trigger received — claim auto-filed. AI cross-verification started.`, 'CLAIM', '#ffb95f'));
             } else if (next.claimStatus === 'approved') {
-              pushEvent(makeEvent('#adc6ff', `Isolation Forest fraud score: 0.21 / 1.00 — claim approved. Payout of ₹450 authorised.`, 'AI', '#adc6ff'));
+              const payAmt = next.lastPayoutAmount > 0 ? next.lastPayoutAmount : next.weeklyProtected;
+              pushEvent(makeEvent('#adc6ff', `Isolation Forest fraud score: 0.21 / 1.00 — claim approved. Payout of ₹${payAmt.toLocaleString('en-IN')} authorised.`, 'AI', '#adc6ff'));
             } else if (next.claimStatus === 'paid') {
               pushEvent(makeEvent('#4edea3', `₹${next.weeklyProtected.toLocaleString('en-IN')} UPI transfer complete. Claim lifecycle closed.`, 'PAID', '#4edea3'));
             }
@@ -1040,8 +1052,10 @@ export default function App() {
   }, [pushEvent]);
 
   const triggerDisruption = useCallback(async (type: string, severity: string, message: string) => {
-    try { await axios.post(`${API_URL}/trigger-disruption`, { type, zone: 'NCR Region', severity, message }); }
-    catch (e) { console.error(e); }
+    try {
+      // hours_worked: 4 → ₹320 payout (4 × ₹80/hr); zone defaults to ZONE_A server-side
+      await axios.post(`${API_URL}/trigger-disruption`, { type, zone: 'ZONE_A', severity, message, hours_worked: 4 });
+    } catch (e) { console.error(e); }
   }, []);
 
   const refreshForecast = useCallback(async () => {
