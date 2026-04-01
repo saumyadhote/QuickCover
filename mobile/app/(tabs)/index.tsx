@@ -3,7 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useMockData } from '../../context/MockDataContext';
 import { useAuth } from '../../context/AuthContext';
-import { ShieldCheck, ShieldAlert, ShieldX, AlertTriangle, CheckCircle, Bell, X, CloudRain, Clock, Zap, TrendingUp } from 'lucide-react-native';
+import { ShieldCheck, ShieldAlert, ShieldX, AlertTriangle, CheckCircle, Bell, X, CloudRain, Clock, Zap, TrendingUp, LogOut, User, Smartphone } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 // ── Build notification list from live state ──────────────────────────────────
@@ -188,9 +188,10 @@ function TodaysJourney({ isTripActive }: { isTripActive: boolean }) {
 // ── Main Screen ──────────────────────────────────────────────────────────────
 export default function DashboardScreen() {
   const { state, eligibility, acceptTrip, completeTrip } = useMockData();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const router = useRouter();
   const [notifOpen, setNotifOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
 
   if (!state) {
     return (
@@ -245,7 +246,7 @@ export default function DashboardScreen() {
         <View style={{ paddingTop: 56, paddingHorizontal: 20, paddingBottom: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#ffffff' }}>
           <TouchableOpacity
             activeOpacity={0.75}
-            onPress={() => router.push('/(tabs)/profile')}
+            onPress={() => setProfileOpen(true)}
             style={{ flexDirection: 'row', alignItems: 'center' }}
           >
             <LinearGradient
@@ -460,6 +461,117 @@ export default function DashboardScreen() {
           </View>
         </View>
       </ScrollView>
+
+      {/* ── Profile Popover ── */}
+      {profileOpen && (
+        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 100 }}>
+          {/* Backdrop */}
+          <TouchableOpacity
+            activeOpacity={1}
+            onPress={() => setProfileOpen(false)}
+            style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.35)' }}
+          />
+
+          {/* Card — anchored top-left, under the header */}
+          <View style={{
+            position: 'absolute', top: 108, left: 16, right: 80,
+            backgroundColor: '#ffffff', borderRadius: 18,
+            shadowColor: '#000', shadowOffset: { width: 0, height: 8 },
+            shadowOpacity: 0.14, shadowRadius: 24, elevation: 12,
+            overflow: 'hidden',
+          }}>
+            {/* Header row */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' }}>
+              <Text style={{ fontWeight: '700', fontSize: 15, color: '#0f172a' }}>My Account</Text>
+              <TouchableOpacity onPress={() => setProfileOpen(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <X color="#94a3b8" size={18} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Avatar + name + email */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#f8fafc' }}>
+              <LinearGradient
+                colors={['#14b8a6', '#0d9488']}
+                style={{ width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', marginRight: 12 }}
+              >
+                <Text style={{ color: '#ffffff', fontWeight: '700', fontSize: 17 }}>{initial}</Text>
+              </LinearGradient>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontWeight: '700', fontSize: 15, color: '#0f172a' }} numberOfLines={1}>{user?.name ?? '—'}</Text>
+                <Text style={{ fontSize: 12, color: '#64748b', marginTop: 1 }} numberOfLines={1}>{user?.email ?? '—'}</Text>
+              </View>
+            </View>
+
+            {/* Info rows */}
+            <View style={{ paddingHorizontal: 16, paddingVertical: 12, gap: 10 }}>
+              {/* Driver ID */}
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: '#f1f5f9', alignItems: 'center', justifyContent: 'center', marginRight: 10 }}>
+                  <User color="#64748b" size={13} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 11, color: '#94a3b8', fontWeight: '500' }}>Driver ID</Text>
+                  <Text style={{ fontSize: 13, color: '#0f172a', fontWeight: '600' }} numberOfLines={1}>{user?.driverId ?? '—'}</Text>
+                </View>
+              </View>
+
+              {/* Platform */}
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: '#f1f5f9', alignItems: 'center', justifyContent: 'center', marginRight: 10 }}>
+                  <Smartphone color="#64748b" size={13} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 11, color: '#94a3b8', fontWeight: '500' }}>Platform</Text>
+                  <Text style={{ fontSize: 13, color: '#0f172a', fontWeight: '600' }}>
+                    {user?.platform ? user.platform.charAt(0).toUpperCase() + user.platform.slice(1) : '—'}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Eligibility */}
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: eligibility.eligible ? '#f0fdf4' : '#fef2f2', alignItems: 'center', justifyContent: 'center', marginRight: 10 }}>
+                  <ShieldCheck color={eligibility.eligible ? '#16a34a' : '#dc2626'} size={13} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 11, color: '#94a3b8', fontWeight: '500' }}>Coverage Eligibility</Text>
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: eligibility.eligible ? '#16a34a' : '#dc2626' }}>
+                    {eligibility.eligible
+                      ? `Eligible · ${eligibility.tripCount} trips this week`
+                      : `${eligibility.tripCount}/${eligibility.required} trips — ${eligibility.required - eligibility.tripCount} more needed`}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Weekly earnings */}
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: '#f0fdf4', alignItems: 'center', justifyContent: 'center', marginRight: 10 }}>
+                  <TrendingUp color="#16a34a" size={13} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 11, color: '#94a3b8', fontWeight: '500' }}>Weekly Earnings</Text>
+                  <Text style={{ fontSize: 13, color: '#0f172a', fontWeight: '600' }}>₹{state.weeklyEarnings.toLocaleString()}</Text>
+                </View>
+                {state.weeklyProtected > 0 && (
+                  <View style={{ backgroundColor: '#dcfce7', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 }}>
+                    <Text style={{ fontSize: 11, color: '#166534', fontWeight: '700' }}>+₹{state.weeklyProtected.toLocaleString()} protected</Text>
+                  </View>
+                )}
+              </View>
+            </View>
+
+            {/* Logout button */}
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={async () => { setProfileOpen(false); await logout(); }}
+              style={{ marginHorizontal: 16, marginBottom: 16, borderRadius: 12, backgroundColor: '#fef2f2', paddingVertical: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#fecaca' }}
+            >
+              <LogOut color="#dc2626" size={16} />
+              <Text style={{ color: '#dc2626', fontWeight: '700', fontSize: 14, marginLeft: 8 }}>Log Out</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
 
       {/* ── Notification Overlay (inside screen so it stays in phone frame) ── */}
       {notifOpen && (
