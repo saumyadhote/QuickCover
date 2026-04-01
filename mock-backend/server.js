@@ -2,7 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
-const { dbGet, dbRun, initializeDatabase, closeDatabase } = require('./database');
+const { dbGet, dbAll, dbRun, initializeDatabase, closeDatabase } = require('./database');
 const {
   calculate_live_dynamic_surcharge,
   evaluate_all_zones,
@@ -124,6 +124,9 @@ app.post('/accept-trip', async (req, res) => {
     const zone = OPERATIONAL_ZONES.find(z => z.lat === lat && z.lon === lon)
                || OPERATIONAL_ZONES[0];
 
+    // Optional auth — userId is stored on the policy session for traceability
+    const userId = getUserIdFromRequest(req);
+
     // Calculate live micro-surcharge from real weather + AQI APIs (falls back to mock if key missing)
     let liveFee   = null;
     let riskLevel = null;
@@ -161,8 +164,25 @@ app.post('/accept-trip', async (req, res) => {
     }
 
     const row = await dbGet('SELECT * FROM state WHERE id = 1');
+
+    // -----------------------------------------------------------------------
+    // Req 2 — Insurance Policy Session
+    // Create a policy_sessions record that ties the calculated premium and
+    // risk level to this worker (userId) for the duration of this trip.
+    // This is the auditable "policy document" for each coverage window.
+    // -----------------------------------------------------------------------
+    const sessionFee   = liveFee   ?? row.currentMicroFee  ?? 2.0;
+    const sessionRisk  = riskLevel ?? row.currentRiskLevel ?? 'Low';
+    await dbRun(
+      `INSERT INTO policy_sessions ("userId", "startTime", "microFee", "riskLevel", "zoneId", status)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [userId, new Date().toISOString(), sessionFee, sessionRisk, zone.id, 'active']
+    );
+    console.log(`[POLICY] Session opened — userId: ${userId}, zone: ${zone.id}, fee: ₹${sessionFee} [${sessionRisk}]`);
+
     res.json({ message: 'Trip activated. Coverage is now active.', state: formatState(row) });
   } catch (error) {
+    console.error('[ACCEPT-TRIP] error:', error);
     res.status(500).json({ error: 'Database error' });
   }
 });
@@ -170,9 +190,11 @@ app.post('/accept-trip', async (req, res) => {
 app.post('/complete-trip', async (req, res) => {
   try {
     const userId = getUserIdFromRequest(req);
+    const now = new Date().toISOString();
+
     await dbRun(
       `INSERT INTO trips (status, earnings, "protectedAmount", timestamp, "userId") VALUES ($1, $2, $3, $4, $5)`,
-      ['completed', Math.floor(Math.random() * 50) + 20, 0, new Date().toISOString(), userId]
+      ['completed', Math.floor(Math.random() * 50) + 20, 0, now, userId]
     );
 
     await dbRun(`
@@ -183,6 +205,17 @@ app.post('/complete-trip', async (req, res) => {
           "claimStatus" = 'none'
       WHERE id = 1
     `);
+
+    // Close the most recent active policy session for this worker
+    await dbRun(
+      `UPDATE policy_sessions SET status = 'completed', "endTime" = $1
+       WHERE id = (
+         SELECT id FROM policy_sessions WHERE status = 'active'
+         ORDER BY "startTime" DESC LIMIT 1
+       )`,
+      [now]
+    );
+    console.log(`[POLICY] Session closed (completed) — userId: ${userId}`);
 
     const row = await dbGet('SELECT * FROM state WHERE id = 1');
     res.json({ message: 'Trip completed. Coverage ended.', state: formatState(row) });
@@ -292,6 +325,18 @@ app.post('/trigger-disruption', async (req, res) => {
           "disruptionMessage" = $4, "disruptionTimestamp" = $5, "claimStatus" = 'processing'
       WHERE id = 1
     `, [disruption.type, disruption.zone, disruption.severity, disruption.message, disruption.timestamp]);
+
+    // Close the active policy session — this trip is now a disruption claim
+    const claimTime = new Date().toISOString();
+    await dbRun(
+      `UPDATE policy_sessions SET status = 'disrupted', "endTime" = $1
+       WHERE id = (
+         SELECT id FROM policy_sessions WHERE status = 'active'
+         ORDER BY "startTime" DESC LIMIT 1
+       )`,
+      [claimTime]
+    );
+    console.log(`[POLICY] Session closed (disrupted) — userId: ${userId}, payout: ₹${payoutAmount}`);
 
     const processingRow = await dbGet('SELECT * FROM state WHERE id = 1');
     res.json({
@@ -525,6 +570,82 @@ app.post('/refresh-forecast', async (req, res) => {
 setInterval(() => { runForecast(); }, 15000);
 
 // ---------------------------------------------------------------------------
+// Req 4 (4th Trigger) — Platform Outage Admin Webhook
+//
+// Ops team hits POST /admin/zone-outage to log the start (or resolution) of a
+// platform closure event in a specific zone.  The cron job then treats any
+// outage that has been active for > 90 minutes as a parametric trigger,
+// matching the design spec: "zone closure > 90 minutes → auto-claim".
+// ---------------------------------------------------------------------------
+
+/**
+ * POST /admin/zone-outage
+ * Body: { zone_id, reason, action }
+ *   zone_id  — e.g. 'ZONE_A' | 'ZONE_B' | 'ZONE_C'
+ *   reason   — free-text description logged on the outage record
+ *   action   — 'start' (default) | 'resolve'
+ */
+app.post('/admin/zone-outage', async (req, res) => {
+  try {
+    const { zone_id, reason, action } = req.body || {};
+
+    if (!zone_id) {
+      return res.status(400).json({ error: 'zone_id is required' });
+    }
+
+    if (action === 'resolve') {
+      // Mark any active outage for this zone as resolved
+      await dbRun(
+        `UPDATE zone_outages SET status = 'resolved', "endTime" = $1
+         WHERE "zoneId" = $2 AND status = 'active'`,
+        [new Date().toISOString(), zone_id]
+      );
+      console.log(`[OUTAGE] Zone ${zone_id} outage resolved by admin.`);
+      return res.json({ message: `Zone ${zone_id} outage resolved.`, zone_id });
+    }
+
+    // Default: log a new outage start
+    await dbRun(
+      `INSERT INTO zone_outages ("zoneId", "startTime", reason, "reportedBy", status)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [zone_id, new Date().toISOString(), reason || 'Platform disruption', 'admin', 'active']
+    );
+    console.log(`[OUTAGE] Zone ${zone_id} outage started — "${reason}". Will auto-trigger claim after 90 min.`);
+    res.json({
+      message: `Zone ${zone_id} outage logged. Parametric trigger will fire if active for > 90 minutes.`,
+      zone_id,
+      reason: reason || 'Platform disruption',
+    });
+  } catch (error) {
+    console.error('[OUTAGE] error:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+/**
+ * GET /admin/zone-outages
+ * Returns all active platform outages with elapsed duration in minutes.
+ * Useful for the ops dashboard to see which zones are currently affected.
+ */
+app.get('/admin/zone-outages', async (req, res) => {
+  try {
+    const outages = await dbAll(
+      `SELECT * FROM zone_outages WHERE status = 'active' ORDER BY "startTime" DESC`
+    );
+    const now = Date.now();
+    const enriched = outages.map(o => ({
+      ...o,
+      elapsed_minutes: Math.floor((now - new Date(o.startTime).getTime()) / 60000),
+      will_trigger: Math.floor((now - new Date(o.startTime).getTime()) / 60000) >= 90,
+    }));
+    res.json({ active_outages: enriched, count: enriched.length });
+  } catch (error) {
+    console.error('[OUTAGE] list error:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
 // Task 4 — /cron/evaluate-live-triggers
 // Zero-touch claims management: poll live APIs for all active zones and
 // auto-insert a "Pending Review" claim for every active worker in a breached zone.
@@ -536,7 +657,31 @@ app.post('/cron/evaluate-live-triggers', async (req, res) => {
   }
 
   try {
+    // --- Weather + AQI triggers (3 live API triggers) ---
     const breachedZones = await evaluate_all_zones(OPERATIONAL_ZONES);
+
+    // --- Req 4: 4th Trigger — Platform Outage > 90 minutes ---
+    // Any zone_outage record that has been 'active' for over 90 minutes is treated
+    // as a parametric trigger, matching the "zone closure > 90 min" design spec.
+    const ninetyMinutesAgo = new Date(Date.now() - 90 * 60 * 1000).toISOString();
+    const longOutages = await dbAll(
+      `SELECT * FROM zone_outages WHERE status = 'active' AND "startTime" <= $1`,
+      [ninetyMinutesAgo]
+    );
+    for (const outage of longOutages) {
+      const elapsedMin = Math.floor((Date.now() - new Date(outage.startTime).getTime()) / 60000);
+      // Only add if this zone isn't already in the breached list from weather/AQI
+      const alreadyBreached = breachedZones.some(b => b.zone_id === outage.zoneId && b.type === 'OUTAGE');
+      if (!alreadyBreached) {
+        breachedZones.push({
+          zone_id:  outage.zoneId,
+          type:     'OUTAGE',
+          severity: 'HIGH',
+          message:  `Platform outage in ${outage.zoneId} has been active for ${elapsedMin} min — ${outage.reason || 'Zone closure'}`,
+        });
+        console.log(`[CRON] Outage trigger fired — Zone: ${outage.zoneId}, duration: ${elapsedMin} min`);
+      }
+    }
 
     if (breachedZones.length === 0) {
       console.log('[CRON] No parametric thresholds breached across all zones.');

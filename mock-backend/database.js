@@ -45,6 +45,15 @@ const dbGet = (sql, params = []) => {
   return Promise.resolve(sqliteDb.prepare(sqliteSql).get(params));
 };
 
+// dbAll  — returns all matching rows
+const dbAll = (sql, params = []) => {
+  if (usePostgres) {
+    return pool.query(sql, params).then(r => r.rows);
+  }
+  const sqliteSql = sql.replace(/\$\d+/g, '?').replace(/"(\w+)"/g, '$1');
+  return Promise.resolve(sqliteDb.prepare(sqliteSql).all(params));
+};
+
 // dbRun  — INSERT / UPDATE / DELETE
 const dbRun = (sql, params = []) => {
   if (usePostgres) {
@@ -102,6 +111,41 @@ async function initializeDatabase() {
           "userId" INTEGER DEFAULT NULL
         )
       `);
+      // ---------------------------------------------------------------------------
+      // Req 2 — Policy Sessions
+      // One row per trip/coverage window; ties the live micro-fee and risk level
+      // to a specific worker (userId) for the duration of their active trip.
+      // ---------------------------------------------------------------------------
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS policy_sessions (
+          id SERIAL PRIMARY KEY,
+          "userId" INTEGER,
+          "startTime" TEXT NOT NULL,
+          "endTime" TEXT,
+          "microFee" REAL NOT NULL,
+          "riskLevel" TEXT NOT NULL,
+          "zoneId" TEXT NOT NULL DEFAULT 'ZONE_A',
+          status TEXT NOT NULL DEFAULT 'active'
+        )
+      `);
+
+      // ---------------------------------------------------------------------------
+      // Req 4 (4th trigger) — Zone Outages
+      // Admin logs platform outages per zone; cron auto-triggers a claim
+      // when any outage remains active for > 90 minutes.
+      // ---------------------------------------------------------------------------
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS zone_outages (
+          id SERIAL PRIMARY KEY,
+          "zoneId" TEXT NOT NULL,
+          "startTime" TEXT NOT NULL,
+          "endTime" TEXT,
+          reason TEXT,
+          "reportedBy" TEXT DEFAULT 'admin',
+          status TEXT NOT NULL DEFAULT 'active'
+        )
+      `);
+
       // Migrations: add columns to existing tables that predate them
       await client.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS "hoursWorked" REAL DEFAULT NULL`);
       await client.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS "userId" INTEGER DEFAULT NULL`);
@@ -146,6 +190,34 @@ async function initializeDatabase() {
       hoursWorked REAL DEFAULT NULL,
       userId INTEGER DEFAULT NULL
     )`);
+
+    // ---------------------------------------------------------------------------
+    // Req 2 — Policy Sessions (SQLite)
+    // ---------------------------------------------------------------------------
+    sqliteDb.exec(`CREATE TABLE IF NOT EXISTS policy_sessions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      userId INTEGER,
+      startTime TEXT NOT NULL,
+      endTime TEXT,
+      microFee REAL NOT NULL,
+      riskLevel TEXT NOT NULL,
+      zoneId TEXT NOT NULL DEFAULT 'ZONE_A',
+      status TEXT NOT NULL DEFAULT 'active'
+    )`);
+
+    // ---------------------------------------------------------------------------
+    // Req 4 (4th trigger) — Zone Outages (SQLite)
+    // ---------------------------------------------------------------------------
+    sqliteDb.exec(`CREATE TABLE IF NOT EXISTS zone_outages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      zoneId TEXT NOT NULL,
+      startTime TEXT NOT NULL,
+      endTime TEXT,
+      reason TEXT,
+      reportedBy TEXT DEFAULT 'admin',
+      status TEXT NOT NULL DEFAULT 'active'
+    )`);
+
     // Migrations: add columns to existing SQLite tables that predate them
     try { sqliteDb.exec(`ALTER TABLE trips ADD COLUMN hoursWorked REAL DEFAULT NULL`); } catch (_) { /* already exists */ }
     try { sqliteDb.exec(`ALTER TABLE trips ADD COLUMN userId INTEGER DEFAULT NULL`); } catch (_) { /* already exists */ }
@@ -158,4 +230,4 @@ async function initializeDatabase() {
 // Graceful pool shutdown (PostgreSQL only)
 const closeDatabase = () => (pool ? pool.end() : Promise.resolve());
 
-module.exports = { dbGet, dbRun, initializeDatabase, closeDatabase };
+module.exports = { dbGet, dbAll, dbRun, initializeDatabase, closeDatabase };
