@@ -285,8 +285,10 @@ export default function ClaimsScreen() {
           <View style={{ backgroundColor: '#ffffff', borderRadius: 24, padding: 28, width: '100%' }}>
             <Text style={{ fontSize: 24, marginBottom: 10, textAlign: 'center' }}>🚫</Text>
             <Text style={{ fontWeight: '800', fontSize: 18, color: '#0f172a', textAlign: 'center', marginBottom: 10 }}>Not Eligible Yet</Text>
+            <Text style={{ fontSize: 14, color: '#475569', textAlign: 'center', lineHeight: 22, marginBottom: 10 }}>
+              You need at least <Text style={{ fontWeight: '700', color: '#0f172a' }}>{eligibility.required} completed deliveries</Text> in the past 7 days.
+            </Text>
             <Text style={{ fontSize: 14, color: '#475569', textAlign: 'center', lineHeight: 22, marginBottom: 24 }}>
-              You need at least <Text style={{ fontWeight: '700', color: '#0f172a' }}>{eligibility.required} completed deliveries</Text> in the past 7 days.{'\n\n'}
               Currently: <Text style={{ fontWeight: '700', color: '#dc2626' }}>{eligibility.tripCount}</Text> — keep going!
             </Text>
             <TouchableOpacity onPress={() => setIneligiblePopup(false)} style={{ borderRadius: 14, overflow: 'hidden' }}>

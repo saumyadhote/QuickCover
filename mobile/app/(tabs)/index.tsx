@@ -5,21 +5,12 @@ import { useMockData } from '../../context/MockDataContext';
 import { useAuth } from '../../context/AuthContext';
 import {
   Bell, ShieldCheck, ShieldX, ShieldAlert, MapPin, CheckCircle2,
-  Clock, AlertTriangle, ChevronRight, Zap, LogOut, User, Smartphone, TrendingUp, X,
+  Clock, AlertTriangle, ChevronRight, LogOut, User, Smartphone, TrendingUp, X,
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
-// ── Mock trip history (visual only) ─────────────────────────────────────────
-const MOCK_TRIPS = [
-  { id: '#1231', time: '09:15 AM', from: 'Dwarka', to: 'Saket', earnings: 85, status: 'Completed' },
-  { id: '#1232', time: '10:40 AM', from: 'Saket', to: 'Lajpat Nagar', earnings: 110, status: 'Completed' },
-  { id: '#1233', time: '11:55 AM', from: 'Lajpat Nagar', to: 'Greater Kailash', earnings: 50, status: 'Completed' },
-];
-
 // ── Active Trip Route Card ───────────────────────────────────────────────────
-function ActiveTripCard({ claimStatus, weeklyProtected }: { claimStatus: string; weeklyProtected: number }) {
-  const now = new Date();
-  const tripEarnings = 185;
+function ActiveTripCard({ claimStatus, weeklyProtected, weeklyEarnings, lastPayoutAmount }: { claimStatus: string; weeklyProtected: number; weeklyEarnings: number; lastPayoutAmount: number }) {
   const showPayout = claimStatus === 'paid' && weeklyProtected > 0;
 
   return (
@@ -30,10 +21,10 @@ function ActiveTripCard({ claimStatus, weeklyProtected }: { claimStatus: string;
           <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#4ade80', marginRight: 6 }} />
           <Text style={{ fontSize: 11, fontWeight: '700', color: '#4ade80', letterSpacing: 1, textTransform: 'uppercase' }}>Active Trip</Text>
         </View>
-        <Text style={{ fontSize: 12, color: '#94a3b8', fontWeight: '600' }}>#1234</Text>
+        <Text style={{ fontSize: 12, color: '#94a3b8', fontWeight: '600' }}>In progress</Text>
       </View>
 
-      {/* Route */}
+      {/* Route — generic since we don't have live GPS */}
       <View style={{ flexDirection: 'row', alignItems: 'stretch', marginBottom: 16 }}>
         <View style={{ width: 24, alignItems: 'center', marginRight: 10 }}>
           <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#a78bfa', marginTop: 3 }} />
@@ -41,28 +32,28 @@ function ActiveTripCard({ claimStatus, weeklyProtected }: { claimStatus: string;
           <MapPin color="#f87171" size={14} />
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 16, fontWeight: '700', color: '#ffffff', marginBottom: 12 }}>Sector 18, Noida</Text>
-          <Text style={{ fontSize: 16, fontWeight: '700', color: '#ffffff' }}>Connaught Place, Delhi</Text>
+          <Text style={{ fontSize: 15, fontWeight: '700', color: '#a78bfa', marginBottom: 10 }}>Pickup location</Text>
+          <Text style={{ fontSize: 15, fontWeight: '700', color: '#f87171' }}>Delivery in progress…</Text>
         </View>
       </View>
 
-      {/* Earnings row */}
+      {/* Earnings row — use real weeklyEarnings from backend */}
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
         <View>
-          <Text style={{ fontSize: 11, color: '#64748b', fontWeight: '500', marginBottom: 2 }}>Earnings</Text>
-          <Text style={{ fontSize: 22, fontWeight: '800', color: '#ffffff' }}>₹{tripEarnings}</Text>
+          <Text style={{ fontSize: 11, color: '#64748b', fontWeight: '500', marginBottom: 2 }}>This week's earnings</Text>
+          <Text style={{ fontSize: 22, fontWeight: '800', color: '#ffffff' }}>₹{weeklyEarnings.toLocaleString()}</Text>
         </View>
         <View style={{ backgroundColor: 'rgba(74,222,128,0.15)', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5, borderWidth: 1, borderColor: 'rgba(74,222,128,0.3)' }}>
           <Text style={{ color: '#4ade80', fontSize: 12, fontWeight: '700' }}>Active</Text>
         </View>
       </View>
 
-      {/* Payout pill */}
+      {/* Payout pill — show last actual payout amount */}
       {showPayout && (
         <View style={{ marginTop: 12, backgroundColor: 'rgba(74,222,128,0.1)', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 9, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(74,222,128,0.25)' }}>
           <CheckCircle2 color="#4ade80" size={15} />
           <Text style={{ color: '#4ade80', fontSize: 13, fontWeight: '700', marginLeft: 8 }}>
-            ₹{weeklyProtected} Auto-credited • Rain
+            ₹{lastPayoutAmount.toLocaleString()} Auto-credited
           </Text>
         </View>
       )}
@@ -112,33 +103,78 @@ function StandbyBanner({
 }
 
 // ── Today's Trips List ───────────────────────────────────────────────────────
-function TodaysTrips() {
+function TodaysTrips({ tripCount, isTripActive }: { tripCount: number; isTripActive: boolean }) {
+  // tripCount from eligibility = completed + disrupted in last 7 days (not just today),
+  // so we show it as a "recent trips" indicator with the real count.
+  const displayCount = isTripActive ? tripCount + 1 : tripCount;
+
+  if (tripCount === 0 && !isTripActive) {
+    return (
+      <View style={{ backgroundColor: '#ffffff', borderRadius: 20, padding: 18, marginHorizontal: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+          <Text style={{ fontWeight: '700', fontSize: 16, color: '#0f172a' }}>Recent Trips</Text>
+          <Text style={{ fontSize: 13, color: '#94a3b8', fontWeight: '600' }}>0 trips</Text>
+        </View>
+        <View style={{ alignItems: 'center', paddingVertical: 20 }}>
+          <MapPin color="#cbd5e1" size={28} />
+          <Text style={{ fontSize: 14, color: '#94a3b8', fontWeight: '500', marginTop: 10 }}>No trips yet this week</Text>
+          <Text style={{ fontSize: 12, color: '#cbd5e1', marginTop: 4 }}>Complete trips to build your eligibility</Text>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={{ backgroundColor: '#ffffff', borderRadius: 20, padding: 18, marginHorizontal: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-        <Text style={{ fontWeight: '700', fontSize: 16, color: '#0f172a' }}>Today's Trips</Text>
-        <Text style={{ fontSize: 13, color: '#7c3aed', fontWeight: '600' }}>{MOCK_TRIPS.length} trips</Text>
+        <Text style={{ fontWeight: '700', fontSize: 16, color: '#0f172a' }}>Recent Trips</Text>
+        <Text style={{ fontSize: 13, color: '#7c3aed', fontWeight: '600' }}>{displayCount} trip{displayCount !== 1 ? 's' : ''} this week</Text>
       </View>
 
-      {MOCK_TRIPS.map((trip, i) => (
-        <View key={trip.id} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 11, borderTopWidth: i > 0 ? 1 : 0, borderTopColor: '#f1f5f9' }}>
+      {/* Active trip row (if trip in progress) */}
+      {isTripActive && (
+        <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 11, borderTopWidth: 0 }}>
+          <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: '#dcfce7', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+            <MapPin color="#16a34a" size={16} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 13, fontWeight: '700', color: '#0f172a' }}>Current trip</Text>
+            <Text style={{ fontSize: 11, color: '#16a34a', marginTop: 1 }}>In progress…</Text>
+          </View>
+          <View style={{ backgroundColor: '#dcfce7', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 }}>
+            <Text style={{ fontSize: 11, fontWeight: '700', color: '#16a34a' }}>Active</Text>
+          </View>
+        </View>
+      )}
+
+      {/* Completed trips count row */}
+      {tripCount > 0 && (
+        <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 11, borderTopWidth: isTripActive ? 1 : 0, borderTopColor: '#f1f5f9' }}>
           <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: '#f5f3ff', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
             <MapPin color="#7c3aed" size={16} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 13, fontWeight: '700', color: '#0f172a' }}>{trip.id}</Text>
-            <Text style={{ fontSize: 11, color: '#64748b', marginTop: 1 }}>
-              {trip.from} → {trip.to}
-            </Text>
+            <Text style={{ fontSize: 13, fontWeight: '700', color: '#0f172a' }}>{tripCount} completed trip{tripCount !== 1 ? 's' : ''}</Text>
+            <Text style={{ fontSize: 11, color: '#64748b', marginTop: 1 }}>In the last 7 days</Text>
           </View>
-          <View style={{ alignItems: 'flex-end' }}>
-            <View style={{ backgroundColor: '#dcfce7', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3, marginBottom: 3 }}>
-              <Text style={{ fontSize: 11, fontWeight: '700', color: '#16a34a' }}>Completed</Text>
-            </View>
-            <Text style={{ fontSize: 12, fontWeight: '700', color: '#16a34a' }}>₹{trip.earnings}</Text>
+          <View style={{ backgroundColor: '#f5f3ff', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 }}>
+            <Text style={{ fontSize: 11, fontWeight: '700', color: '#7c3aed' }}>Verified</Text>
           </View>
         </View>
-      ))}
+      )}
+
+      {/* Eligibility progress bar */}
+      <View style={{ marginTop: 8, backgroundColor: '#f8fafc', borderRadius: 10, padding: 10 }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
+          <Text style={{ fontSize: 11, color: '#64748b', fontWeight: '600' }}>Eligibility progress</Text>
+          <Text style={{ fontSize: 11, color: tripCount >= 25 ? '#16a34a' : '#7c3aed', fontWeight: '700' }}>
+            {Math.min(tripCount, 25)}/25
+          </Text>
+        </View>
+        <View style={{ height: 6, backgroundColor: '#e2e8f0', borderRadius: 3, overflow: 'hidden' }}>
+          <View style={{ height: 6, width: `${Math.min(100, (tripCount / 25) * 100)}%`, backgroundColor: tripCount >= 25 ? '#16a34a' : '#7c3aed', borderRadius: 3 }} />
+        </View>
+      </View>
     </View>
   );
 }
@@ -250,7 +286,7 @@ export default function DashboardScreen() {
 
         {/* ── Trip Card (overlaps gradient) ── */}
         {isTripActive ? (
-          <ActiveTripCard claimStatus={claimStatus} weeklyProtected={weeklyProtected} />
+          <ActiveTripCard claimStatus={claimStatus} weeklyProtected={weeklyProtected} weeklyEarnings={weeklyEarnings} lastPayoutAmount={lastPayoutAmount} />
         ) : (
           <StandbyBanner isLocked={isLocked} eligibility={eligibility} onPress={toggleTrip} />
         )}
@@ -304,7 +340,7 @@ export default function DashboardScreen() {
 
         {/* ── Today's Trips ── */}
         <View style={{ marginTop: 20 }}>
-          <TodaysTrips />
+          <TodaysTrips tripCount={eligibility.tripCount} isTripActive={isTripActive} />
         </View>
 
         {/* ── Weekly Summary ── */}
@@ -315,9 +351,11 @@ export default function DashboardScreen() {
               <Text style={{ fontSize: 18, fontWeight: '800', color: '#7c3aed' }}>₹{weeklyEarnings.toLocaleString()}</Text>
               <Text style={{ fontSize: 11, color: '#7c3aed', marginTop: 3, fontWeight: '600' }}>Earned</Text>
             </View>
-            <View style={{ flex: 1, backgroundColor: '#f0fdf4', borderRadius: 14, padding: 14, alignItems: 'center' }}>
-              <Text style={{ fontSize: 18, fontWeight: '800', color: '#16a34a' }}>₹{weeklyProtected.toLocaleString()}</Text>
-              <Text style={{ fontSize: 11, color: '#16a34a', marginTop: 3, fontWeight: '600' }}>Protected</Text>
+            <View style={{ flex: 1, backgroundColor: weeklyProtected > 0 ? '#f0fdf4' : '#f8fafc', borderRadius: 14, padding: 14, alignItems: 'center' }}>
+              <Text style={{ fontSize: 18, fontWeight: '800', color: weeklyProtected > 0 ? '#16a34a' : '#94a3b8' }}>
+                {weeklyProtected > 0 ? `₹${weeklyProtected.toLocaleString()}` : '—'}
+              </Text>
+              <Text style={{ fontSize: 11, color: weeklyProtected > 0 ? '#16a34a' : '#94a3b8', marginTop: 3, fontWeight: '600' }}>Protected</Text>
             </View>
             <View style={{ flex: 1, backgroundColor: '#f8fafc', borderRadius: 14, padding: 14, alignItems: 'center' }}>
               <Text style={{ fontSize: 18, fontWeight: '800', color: '#0f172a' }}>{eligibility.tripCount}</Text>

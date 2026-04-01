@@ -33,7 +33,7 @@ export default function ProfileScreen() {
     ? user.platform.charAt(0).toUpperCase() + user.platform.slice(1) + ' Partner'
     : 'Partner';
 
-  const totalEarned = (state?.weeklyEarnings ?? 0) + (state?.weeklyProtected ?? 0);
+  const totalEarned = state?.weeklyEarnings ?? 0;
   const claimsFiled = 12;
   const approved = 11;
   const successRate = Math.round((approved / claimsFiled) * 100);
@@ -95,9 +95,11 @@ export default function ProfileScreen() {
               <Text style={{ fontSize: 11, color: '#7c3aed', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 6 }}>Total Earned</Text>
               <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6 }}>
                 <Text style={{ fontSize: 28, fontWeight: '800', color: '#0f172a' }}>₹{totalEarned.toLocaleString()}</Text>
-                <View style={{ backgroundColor: '#dcfce7', borderRadius: 6, paddingHorizontal: 7, paddingVertical: 3 }}>
-                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#16a34a' }}>+₹420 this month</Text>
-                </View>
+                {(state?.weeklyProtected ?? 0) > 0 && (
+                  <View style={{ backgroundColor: '#dcfce7', borderRadius: 6, paddingHorizontal: 7, paddingVertical: 3 }}>
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#16a34a' }}>+₹{(state?.weeklyProtected ?? 0).toLocaleString()} protected</Text>
+                  </View>
+                )}
               </View>
               {/* Mini bar chart placeholder */}
               <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 4, marginTop: 12, height: 28 }}>
