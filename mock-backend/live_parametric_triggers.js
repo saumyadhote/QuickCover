@@ -129,9 +129,12 @@ async function check_live_aqi(zone_lat, zone_lon) {
   const components = response.data?.list?.[0]?.components ?? {};
   const owm_aqi    = response.data?.list?.[0]?.main?.aqi ?? 1; // 1=Good … 5=Very Poor
   const pm25       = components.pm2_5 ?? 0;
+  const pm10       = components.pm10 ?? 0;
 
-  // Linear interpolation to approximate CPCB AQI from PM2.5 concentration
-  const estimated_cpcb_aqi = pm25_to_cpcb_aqi(pm25);
+  // Indian CPCB AQI takes the maximum sub-index among measured pollutants.
+  const aqi_pm25 = pm25_to_cpcb_aqi(pm25);
+  const aqi_pm10 = pm10_to_cpcb_aqi(pm10);
+  const estimated_cpcb_aqi = Math.max(aqi_pm25, aqi_pm10);
 
   console.log(`[AQI] OWM AQI: ${owm_aqi}, PM2.5: ${pm25}μg/m³, Est. CPCB AQI: ${estimated_cpcb_aqi}`);
 
@@ -178,6 +181,26 @@ function pm25_to_cpcb_aqi(pm25) {
     }
   }
   return 500; // off-scale high
+}
+
+/**
+ * Approximate CPCB AQI from PM10 concentration (μg/m³).
+ */
+function pm10_to_cpcb_aqi(pm10) {
+  const breakpoints = [
+    [0,    50,    0,   50],
+    [50,   100,  51,  100],
+    [100,  250, 101,  200],
+    [250,  350, 201,  300],
+    [350,  430, 301,  400],
+    [430,  800, 401,  500],
+  ];
+  for (const [c_lo, c_hi, i_lo, i_hi] of breakpoints) {
+    if (pm10 >= c_lo && pm10 <= c_hi) {
+      return Math.round(((i_hi - i_lo) / (c_hi - c_lo)) * (pm10 - c_lo) + i_lo);
+    }
+  }
+  return 500;
 }
 
 // ---------------------------------------------------------------------------
