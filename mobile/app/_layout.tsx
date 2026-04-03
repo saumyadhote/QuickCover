@@ -36,7 +36,7 @@ function AuthGuard() {
 }
 
 export default function RootLayout() {
-  const [fontsLoaded] = useFonts({
+  const [fontsLoaded, fontError] = useFonts({
     PlayfairDisplay_700Bold,
     PlayfairDisplay_400Regular,
     Montserrat_500Medium,
@@ -46,7 +46,7 @@ export default function RootLayout() {
     Inter_700Bold,
   });
 
-  if (!fontsLoaded) {
+  if (!fontsLoaded && !fontError) {
     return <View style={{ flex: 1, backgroundColor: '#0d0d1a' }} />;
   }
 
