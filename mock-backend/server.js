@@ -275,6 +275,72 @@ app.post('/trigger-disruption', async (req, res) => {
     }
 
     // -----------------------------------------------------------------------
+    // Shift-Level Payout Capping — 8-Hour Duplicate Check
+    //
+    // A single disruption event (e.g. monsoon rain) can persist for many hours,
+    // but our financial model caps payouts at one per disruption type per shift
+    // window (8 hours). If the driver already received a payout for the same
+    // disruption type today, we honour their coverage without a second transfer.
+    //
+    // All timestamps are stored and compared in UTC ISO-8601 format.
+    // "8 hours ago" is computed server-side so timezone differences on the
+    // device cannot be used to game the window.
+    // -----------------------------------------------------------------------
+    const disruptionType = type || 'WEATHER';
+    const eightHoursAgo = new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString();
+
+    const priorPayout = userId
+      ? await dbGet(
+          `SELECT id FROM trips
+           WHERE "userId" = $1
+             AND "disruptionType" = $2
+             AND status = 'disrupted'
+             AND timestamp >= $3`,
+          [userId, disruptionType, eightHoursAgo]
+        )
+      : null; // Unauthenticated requests cannot be duplicate-checked; proceed normally.
+
+    if (priorPayout) {
+      // Coverage already fulfilled for this disruption type within the shift window.
+      // Record the attempt for audit purposes, update global state, and respond
+      // with coverage_honored — no financial transfer is initiated.
+      const honoredAt = new Date().toISOString();
+
+      await dbRun(
+        `INSERT INTO trips (status, earnings, "protectedAmount", timestamp, "hoursWorked", "userId", "disruptionType")
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        ['coverage_honored', 0, 0, honoredAt, null, userId, disruptionType]
+      );
+
+      await dbRun(`
+        UPDATE state
+        SET "disruptionType"      = $1,
+            "disruptionZone"      = $2,
+            "disruptionSeverity"  = $3,
+            "disruptionMessage"   = $4,
+            "disruptionTimestamp" = $5,
+            "claimStatus"         = 'coverage_honored'
+        WHERE id = 1
+      `, [
+        disruptionType,
+        zone || 'ZONE_A',
+        severity || 'HIGH',
+        message || 'Disruption reported',
+        honoredAt,
+      ]);
+
+      console.log(`[CLAIM] Shift-Level Cap — coverage already fulfilled for userId: ${userId}, type: ${disruptionType} within 8h window. No transfer initiated.`);
+
+      const honoredRow = await dbGet('SELECT * FROM state WHERE id = 1');
+      return res.json({
+        message: 'coverage_honored',
+        claimStatus: 'coverage_honored',
+        prior_payout_trip_id: priorPayout.id,
+        state: formatState(honoredRow),
+      });
+    }
+
+    // -----------------------------------------------------------------------
     // Hourly Reimbursement Calculation
     // Driver submits hours_worked (1–8). Payout = hours × ₹80/hr.
     // ₹80/hr is derived from the ₹450 full-shift benchmark ÷ 5.5hr avg shift.
@@ -293,7 +359,6 @@ app.post('/trigger-disruption', async (req, res) => {
     // Weather cross-check — only for WEATHER disruptions when API key is present
     let weatherVerified = false;
     let weatherNote = 'Weather check skipped (non-weather disruption or no API key).';
-    const disruptionType = type || 'WEATHER';
 
     if (disruptionType === 'WEATHER' && process.env.WEATHER_API_KEY) {
       try {

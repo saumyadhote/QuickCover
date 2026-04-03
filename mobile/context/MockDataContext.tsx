@@ -14,7 +14,9 @@ type Disruption = {
 type AppState = {
   isTripActive: boolean;
   disruption: Disruption | null;
-  claimStatus: 'none' | 'processing' | 'approved' | 'paid';
+  // 'coverage_honored' = shift-level cap applied — payout already issued for
+  // this disruption type within the 8-hour shift window; no transfer needed.
+  claimStatus: 'none' | 'processing' | 'approved' | 'paid' | 'coverage_honored';
   weeklyEarnings: number;
   weeklyProtected: number;
   lastPayoutAmount: number;

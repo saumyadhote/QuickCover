@@ -7,7 +7,7 @@ import { useMockData } from '../../context/MockDataContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
   CheckCircle2, Clock, Circle, Camera, Image as ImageIcon,
-  ChevronDown, X, Plus, Filter, ChevronRight,
+  ChevronDown, X, Plus, Filter, ChevronRight, ShieldCheck,
 } from 'lucide-react-native';
 
 const DISRUPTION_TYPES = [
@@ -112,6 +112,81 @@ function ClaimForm({ onClose, onSubmit }: { onClose: () => void; onSubmit: (type
   );
 }
 
+// ── Coverage Honored Card ────────────────────────────────────────────────────
+// Shown when the shift-level payout cap applies: the worker's disruption is
+// genuine and their coverage is acknowledged, but a payout was already issued
+// for the same disruption type within the last 8 hours (one shift window).
+function CoverageHonoredCard({ disruptionType }: { disruptionType?: string }) {
+  const label = disruptionType
+    ? disruptionType.charAt(0) + disruptionType.slice(1).toLowerCase()
+    : 'Weather';
+
+  return (
+    <View style={{
+      backgroundColor: '#f0fdf4',
+      borderRadius: 20,
+      padding: 24,
+      borderWidth: 1.5,
+      borderColor: '#86efac',
+      marginBottom: 16,
+      shadowColor: '#16a34a',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.08,
+      shadowRadius: 8,
+      elevation: 2,
+    }}>
+      {/* Icon + title row */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 14, gap: 12 }}>
+        <View style={{
+          width: 44,
+          height: 44,
+          borderRadius: 22,
+          backgroundColor: '#dcfce7',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}>
+          <ShieldCheck color="#16a34a" size={22} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 16, fontWeight: '800', color: '#14532d' }}>
+            Coverage Honored
+          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 3, gap: 5 }}>
+            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#4ade80' }} />
+            <Text style={{ fontSize: 11, color: '#16a34a', fontWeight: '600' }}>
+              {label} event · Shift window active
+            </Text>
+          </View>
+        </View>
+      </View>
+
+      {/* Message */}
+      <Text style={{ fontSize: 14, color: '#166534', lineHeight: 22, marginBottom: 16 }}>
+        Shift Income Protection for this{' '}
+        <Text style={{ fontWeight: '700' }}>{label.toLowerCase()} event</Text> has already been
+        successfully fulfilled for your current shift. Your base trip earnings remain unaffected.
+      </Text>
+
+      {/* Shift window info strip */}
+      <View style={{
+        backgroundColor: '#dcfce7',
+        borderRadius: 12,
+        padding: 12,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+      }}>
+        <Clock color="#16a34a" size={14} />
+        <Text style={{ fontSize: 12, color: '#15803d', flex: 1, lineHeight: 18 }}>
+          <Text style={{ fontWeight: '700' }}>Why no second transfer?</Text>
+          {' '}Our shift model covers one payout per event type per 8-hour window —
+          preventing double-dipping while still acknowledging every genuine disruption.
+        </Text>
+      </View>
+    </View>
+  );
+}
+
 // ── Claim Status Timeline ────────────────────────────────────────────────────
 function ClaimTimeline({ claimStatus }: { claimStatus: string }) {
   const isClaimSubmitted = claimStatus !== 'none';
@@ -155,6 +230,7 @@ export default function ClaimsScreen() {
 
   const isEmptyState = !state?.claimStatus || state?.claimStatus === 'none';
   const isPayoutCompleted = state?.claimStatus === 'paid';
+  const isCoverageHonored = state?.claimStatus === 'coverage_honored';
 
   // This month mock total
   const thisMonthTotal = 935;
@@ -252,15 +328,22 @@ export default function ClaimsScreen() {
         </LinearGradient>
 
         <View style={{ paddingHorizontal: 16, paddingTop: 16 }}>
-          {/* Active claim timeline */}
-          {!isEmptyState && <ClaimTimeline claimStatus={state?.claimStatus ?? 'none'} />}
+          {/* Coverage honored — shift cap applied, no second payout */}
+          {isCoverageHonored && (
+            <CoverageHonoredCard disruptionType={state?.disruption?.type} />
+          )}
 
-          {/* File another after completion */}
-          {isPayoutCompleted && (
+          {/* Active claim timeline — shown for processing / approved / paid */}
+          {!isEmptyState && !isCoverageHonored && (
+            <ClaimTimeline claimStatus={state?.claimStatus ?? 'none'} />
+          )}
+
+          {/* File another after payout or after coverage honored */}
+          {(isPayoutCompleted || isCoverageHonored) && (
             <TouchableOpacity onPress={handleClaimPress} style={{ backgroundColor: '#f5f3ff', borderRadius: 16, padding: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 1, borderColor: '#ede9fe', marginBottom: 16 }}>
               <View>
-                <Text style={{ fontWeight: '700', fontSize: 14, color: '#7c3aed' }}>Report another disruption?</Text>
-                <Text style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>File a new claim for a separate event</Text>
+                <Text style={{ fontWeight: '700', fontSize: 14, color: '#7c3aed' }}>Report a different disruption?</Text>
+                <Text style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>File a new claim for a different event type</Text>
               </View>
               <ChevronRight color="#7c3aed" size={18} />
             </TouchableOpacity>
