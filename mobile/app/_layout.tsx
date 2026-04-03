@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { View } from 'react-native';
 import { Slot, useRouter, useSegments } from 'expo-router';
 import { MockDataProvider } from '../context/MockDataContext';
 import { AuthProvider, useAuth } from '../context/AuthContext';
@@ -31,7 +32,7 @@ function AuthGuard() {
 }
 
 export default function RootLayout() {
-  useFonts({
+  const [fontsLoaded] = useFonts({
     PlayfairDisplay_700Bold,
     PlayfairDisplay_400Regular,
     Montserrat_500Medium,
@@ -40,6 +41,10 @@ export default function RootLayout() {
     Inter_500Medium,
     Inter_700Bold,
   });
+
+  if (!fontsLoaded) {
+    return <View style={{ flex: 1, backgroundColor: '#0d0d1a' }} />;
+  }
 
   return (
     <AuthProvider>
