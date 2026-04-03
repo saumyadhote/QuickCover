@@ -7,6 +7,12 @@ import { AppLogo } from './components/AppLogo';
 
 const PLATFORMS = ['Blinkit', 'Swiggy', 'Zomato', 'Zepto', 'Dunzo', 'Other'];
 
+const CITIES = [
+  { label: 'Bengaluru', zoneId: 'ZONE_A', sub: 'Koramangala / HSR Layout' },
+  { label: 'Mumbai',    zoneId: 'ZONE_B', sub: 'Bandra / Andheri' },
+  { label: 'Delhi NCR', zoneId: 'ZONE_C', sub: 'Gurugram / Cyber City' },
+];
+
 const inputStyle = {
   backgroundColor: 'rgba(30,41,59,0.8)',
   color: '#ffffff',
@@ -38,6 +44,8 @@ export default function SignupScreen() {
   const [driverId, setDriverId] = useState('');
   const [selectedPlatform, setSelectedPlatform] = useState('Blinkit');
   const [showPlatformPicker, setShowPlatformPicker] = useState(false);
+  const [selectedZone, setSelectedZone] = useState('ZONE_A'); // default Bengaluru
+  const [showCityPicker, setShowCityPicker] = useState(false);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
@@ -66,6 +74,7 @@ export default function SignupScreen() {
         phone: phone.trim(),
         driverId: driverId.trim(),
         platform: selectedPlatform.toLowerCase(),
+        zoneId: selectedZone,
       };
       await register(data);
       router.replace('/onboarding' as any);
@@ -138,6 +147,44 @@ export default function SignupScreen() {
             </View>
           )}
           {!showPlatformPicker && <View style={{ marginBottom: 16 }} />}
+
+          {/* City / Zone */}
+          <Text style={labelStyle}>City</Text>
+          <Text style={{ color: '#64748b', fontSize: 11, marginBottom: 8 }}>
+            Triggers and pricing are calibrated to your city's live weather and AQI data.
+          </Text>
+          <TouchableOpacity
+            onPress={() => { setShowCityPicker(!showCityPicker); setShowPlatformPicker(false); }}
+            style={{ ...inputStyle, marginBottom: 4, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}
+          >
+            <View>
+              <Text style={{ color: '#ffffff', fontSize: 15 }}>
+                {CITIES.find(c => c.zoneId === selectedZone)?.label ?? 'Bengaluru'}
+              </Text>
+              <Text style={{ color: '#64748b', fontSize: 11, marginTop: 1 }}>
+                {CITIES.find(c => c.zoneId === selectedZone)?.sub}
+              </Text>
+            </View>
+            <View style={{ transform: [{ rotate: showCityPicker ? '180deg' : '0deg' }] }}>
+              <ChevronDown color="#64748b" size={18} />
+            </View>
+          </TouchableOpacity>
+
+          {showCityPicker && (
+            <View style={{ backgroundColor: '#0f172a', borderRadius: 12, borderWidth: 1, borderColor: 'rgba(51,65,85,0.5)', marginBottom: 16, overflow: 'hidden' }}>
+              {CITIES.map((c, i) => (
+                <TouchableOpacity
+                  key={c.zoneId}
+                  onPress={() => { setSelectedZone(c.zoneId); setShowCityPicker(false); }}
+                  style={{ paddingHorizontal: 16, paddingVertical: 13, borderBottomWidth: i < CITIES.length - 1 ? 1 : 0, borderBottomColor: 'rgba(30,41,59,1)', backgroundColor: selectedZone === c.zoneId ? 'rgba(99,102,241,0.1)' : 'transparent' }}
+                >
+                  <Text style={{ fontSize: 15, color: selectedZone === c.zoneId ? '#60a5fa' : '#cbd5e1', fontWeight: selectedZone === c.zoneId ? '700' : '400' }}>{c.label}</Text>
+                  <Text style={{ fontSize: 11, color: '#475569', marginTop: 2 }}>{c.sub}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+          {!showCityPicker && <View style={{ marginBottom: 16 }} />}
 
           {/* Driver ID */}
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>

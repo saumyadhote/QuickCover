@@ -30,6 +30,7 @@ export type User = {
   phone: string | null;
   driverId: string;
   platform: string;
+  zoneId: string;
   createdAt: string;
 };
 
@@ -49,6 +50,7 @@ export type RegisterData = {
   phone: string;
   driverId: string;
   platform: string;
+  zoneId: string;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -101,7 +103,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const match = users.find(u => u.email === email && u.password === password);
         if (!match) throw new Error('Invalid email or password.');
         const fakeToken = `local_${Date.now()}`;
-        const fakeUser: User = { id: match.id, name: match.name, email: match.email, phone: match.phone, driverId: match.driverId, platform: match.platform, createdAt: match.createdAt };
+        const fakeUser: User = { id: match.id, name: match.name, email: match.email, phone: match.phone, driverId: match.driverId, platform: match.platform, zoneId: match.zoneId ?? 'ZONE_A', createdAt: match.createdAt };
         await tokenStorage.set(TOKEN_KEY, fakeToken);
         localStorage.setItem('qc_local_user', JSON.stringify(fakeUser));
         setToken(fakeToken);
@@ -128,7 +130,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         users.push(newUser);
         localStorage.setItem('qc_local_users', JSON.stringify(users));
         const fakeToken = `local_${Date.now()}`;
-        const fakeUser: User = { id: newUser.id, name: newUser.name, email: newUser.email, phone: newUser.phone, driverId: newUser.driverId, platform: newUser.platform, createdAt: newUser.createdAt };
+        const fakeUser: User = { id: newUser.id, name: newUser.name, email: newUser.email, phone: newUser.phone, driverId: newUser.driverId, platform: newUser.platform, zoneId: newUser.zoneId ?? 'ZONE_A', createdAt: newUser.createdAt };
         await tokenStorage.set(TOKEN_KEY, fakeToken);
         localStorage.setItem('qc_local_user', JSON.stringify(fakeUser));
         setToken(fakeToken);

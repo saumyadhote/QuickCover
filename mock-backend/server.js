@@ -119,13 +119,23 @@ app.get('/eligibility', async (req, res) => {
 
 app.post('/accept-trip', async (req, res) => {
   try {
-    // Use zone coords from request body if provided; default to ZONE_A (Bengaluru)
-    const { lat, lon } = req.body || {};
-    const zone = OPERATIONAL_ZONES.find(z => z.lat === lat && z.lon === lon)
-               || OPERATIONAL_ZONES[0];
-
     // Optional auth — userId is stored on the policy session for traceability
     const userId = getUserIdFromRequest(req);
+
+    // Zone resolution priority:
+    //   1. User's saved zoneId from their profile (most accurate)
+    //   2. Explicit lat/lon in request body (legacy support)
+    //   3. Default to ZONE_A — Bengaluru
+    let zone = OPERATIONAL_ZONES[0];
+    if (userId) {
+      const userRow = await dbGet('SELECT "zoneId" FROM users WHERE id = $1', [userId]);
+      const userZone = OPERATIONAL_ZONES.find(z => z.id === (userRow?.zoneId ?? 'ZONE_A'));
+      if (userZone) zone = userZone;
+    } else {
+      const { lat, lon } = req.body || {};
+      const bodyZone = OPERATIONAL_ZONES.find(z => z.lat === lat && z.lon === lon);
+      if (bodyZone) zone = bodyZone;
+    }
 
     // Calculate live micro-surcharge from real weather + AQI APIs (falls back to mock if key missing)
     let liveFee   = null;
@@ -288,8 +298,13 @@ app.post('/trigger-disruption', async (req, res) => {
     if (disruptionType === 'WEATHER' && process.env.WEATHER_API_KEY) {
       try {
         const { check_live_weather } = require('./live_parametric_triggers');
-        const primary = OPERATIONAL_ZONES[0];
-        const liveWeather = await check_live_weather(primary.lat, primary.lon);
+        // Use the authenticated user's zone; fall back to ZONE_A (Bengaluru)
+        let checkZone = OPERATIONAL_ZONES[0];
+        if (userId) {
+          const userRow = await dbGet('SELECT "zoneId" FROM users WHERE id = $1', [userId]);
+          checkZone = OPERATIONAL_ZONES.find(z => z.id === (userRow?.zoneId ?? 'ZONE_A')) || OPERATIONAL_ZONES[0];
+        }
+        const liveWeather = await check_live_weather(checkZone.lat, checkZone.lon);
 
         if (liveWeather.triggered) {
           // Confirmed disruption — pay full claimed hours

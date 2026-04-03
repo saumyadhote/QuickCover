@@ -8,13 +8,19 @@ const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'quickcover-dev-secret-change-in-prod';
 const JWT_EXPIRES = '30d';
 
+// Allowed zone IDs — one per supported city
+const VALID_ZONES = ['ZONE_A', 'ZONE_B', 'ZONE_C'];
+
 // POST /auth/register
 router.post('/register', async (req, res) => {
-  const { name, email, password, phone, driverId, platform } = req.body;
+  const { name, email, password, phone, driverId, platform, zoneId } = req.body;
 
   if (!name || !email || !password || !driverId) {
     return res.status(400).json({ error: 'name, email, password, and driverId are required' });
   }
+
+  // Default to ZONE_A (Bengaluru) if not provided or invalid
+  const zone = VALID_ZONES.includes(zoneId) ? zoneId : 'ZONE_A';
 
   try {
     const existing = await dbGet('SELECT id FROM users WHERE email = $1', [email]);
@@ -30,12 +36,12 @@ router.post('/register', async (req, res) => {
     const passwordHash = await bcrypt.hash(password, 12);
 
     await dbRun(
-      `INSERT INTO users (name, email, "passwordHash", phone, "driverId", platform, "createdAt")
-       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-      [name, email, passwordHash, phone || null, driverId, platform || 'blinkit', new Date().toISOString()]
+      `INSERT INTO users (name, email, "passwordHash", phone, "driverId", platform, "zoneId", "createdAt")
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [name, email, passwordHash, phone || null, driverId, platform || 'blinkit', zone, new Date().toISOString()]
     );
 
-    const user = await dbGet('SELECT id, name, email, phone, "driverId", platform, "createdAt" FROM users WHERE email = $1', [email]);
+    const user = await dbGet('SELECT id, name, email, phone, "driverId", platform, "zoneId", "createdAt" FROM users WHERE email = $1', [email]);
 
     const token = jwt.sign({ userId: user.id, email: user.email }, JWT_SECRET, { expiresIn: JWT_EXPIRES });
 
@@ -55,7 +61,7 @@ router.post('/login', async (req, res) => {
   }
 
   try {
-    const user = await dbGet('SELECT * FROM users WHERE email = $1', [email]);
+    const user = await dbGet('SELECT id, name, email, phone, "driverId", platform, "zoneId", "createdAt", "passwordHash", "passwordhash" FROM users WHERE email = $1', [email]);
     if (!user) {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
@@ -88,7 +94,7 @@ router.get('/me', async (req, res) => {
     const token = authHeader.slice(7);
     const payload = jwt.verify(token, JWT_SECRET);
     const user = await dbGet(
-      'SELECT id, name, email, phone, "driverId", platform, "createdAt" FROM users WHERE id = $1',
+      'SELECT id, name, email, phone, "driverId", platform, "zoneId", "createdAt" FROM users WHERE id = $1',
       [payload.userId]
     );
     if (!user) return res.status(404).json({ error: 'User not found' });

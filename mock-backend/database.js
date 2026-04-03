@@ -79,9 +79,11 @@ async function initializeDatabase() {
           phone TEXT,
           "driverId" TEXT NOT NULL UNIQUE,
           platform TEXT DEFAULT 'blinkit',
+          "zoneId" TEXT DEFAULT 'ZONE_A',
           "createdAt" TEXT NOT NULL
         )
       `);
+      await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS "zoneId" TEXT DEFAULT 'ZONE_A'`);
       await client.query(`
         CREATE TABLE IF NOT EXISTS state (
           id INTEGER PRIMARY KEY DEFAULT 1,
@@ -163,8 +165,10 @@ async function initializeDatabase() {
       phone TEXT,
       driverId TEXT NOT NULL UNIQUE,
       platform TEXT DEFAULT 'blinkit',
+      zoneId TEXT DEFAULT 'ZONE_A',
       createdAt TEXT NOT NULL
     )`);
+    try { sqliteDb.exec(`ALTER TABLE users ADD COLUMN zoneId TEXT DEFAULT 'ZONE_A'`); } catch (_) { /* already exists */ }
     sqliteDb.exec(`CREATE TABLE IF NOT EXISTS state (
       id INTEGER PRIMARY KEY CHECK (id = 1),
       isTripActive BOOLEAN DEFAULT 0,
