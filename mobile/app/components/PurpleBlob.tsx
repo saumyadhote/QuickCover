@@ -1,9 +1,53 @@
+import { useEffect } from 'react';
 import { View, useWindowDimensions } from 'react-native';
 import Svg, { Defs, RadialGradient as SvgRadialGradient, Stop, Ellipse } from 'react-native-svg';
+import Animated, {
+  useSharedValue,
+  useAnimatedProps,
+  withRepeat,
+  withTiming,
+  withSequence,
+  Easing,
+} from 'react-native-reanimated';
+
+const AnimatedEllipse = Animated.createAnimatedComponent(Ellipse);
 
 export function PurpleBlob() {
   const { width } = useWindowDimensions();
-  const height = 380;
+  const height = 420;
+
+  // Breathing scale for the main orb
+  const scale = useSharedValue(1);
+  // Subtle horizontal drift for the accent orb
+  const drift = useSharedValue(0);
+
+  useEffect(() => {
+    scale.value = withRepeat(
+      withSequence(
+        withTiming(1.06, { duration: 3200, easing: Easing.inOut(Easing.sine) }),
+        withTiming(0.97, { duration: 3200, easing: Easing.inOut(Easing.sine) }),
+      ),
+      -1,
+      false,
+    );
+    drift.value = withRepeat(
+      withSequence(
+        withTiming(18, { duration: 4000, easing: Easing.inOut(Easing.sine) }),
+        withTiming(-10, { duration: 4000, easing: Easing.inOut(Easing.sine) }),
+      ),
+      -1,
+      false,
+    );
+  }, []);
+
+  const orb1Props = useAnimatedProps(() => ({
+    rx: width * 0.60 * scale.value,
+    ry: height * 0.62 * scale.value,
+  }));
+
+  const orb2Props = useAnimatedProps(() => ({
+    cx: width * 0.15 + drift.value,
+  }));
 
   return (
     <View
@@ -18,7 +62,6 @@ export function PurpleBlob() {
     >
       <Svg width={width} height={height}>
         <Defs>
-          {/* Large central orb — gradient defined in absolute coords via gradientUnits="userSpaceOnUse" */}
           <SvgRadialGradient
             id="orb1"
             cx={width * 0.5}
@@ -36,7 +79,6 @@ export function PurpleBlob() {
             <Stop offset="100%" stopColor="#1e0038" stopOpacity="0"    />
           </SvgRadialGradient>
 
-          {/* Smaller bottom-left orb */}
           <SvgRadialGradient
             id="orb2"
             cx={width * 0.15}
@@ -54,22 +96,22 @@ export function PurpleBlob() {
           </SvgRadialGradient>
         </Defs>
 
-        {/* Large orb */}
-        <Ellipse
+        <AnimatedEllipse
           cx={width * 0.5}
           cy={height * 0.78}
           rx={width * 0.60}
           ry={height * 0.62}
           fill="url(#orb1)"
+          animatedProps={orb1Props}
         />
 
-        {/* Smaller orb */}
-        <Ellipse
+        <AnimatedEllipse
           cx={width * 0.15}
           cy={height * 0.98}
           rx={width * 0.28}
           ry={height * 0.30}
           fill="url(#orb2)"
+          animatedProps={orb2Props}
         />
       </Svg>
     </View>
