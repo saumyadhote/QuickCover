@@ -581,6 +581,57 @@ app.post('/refresh-forecast', async (req, res) => {
   }
 });
 
+// ---------------------------------------------------------------------------
+// GET /pricing/zone — Live pricing for a specific operational zone.
+//
+// Returns the real-time surcharge, risk level, risk score, and raw signal
+// drivers for the requested zone without updating global state.
+// Used by the admin Pricing Engine tab to compare zones side-by-side.
+//
+// Body: { zone_id: 'ZONE_A' | 'ZONE_B' | 'ZONE_C' }
+// ---------------------------------------------------------------------------
+app.post('/pricing/zone', async (req, res) => {
+  const { zone_id } = req.body || {};
+
+  const zone = OPERATIONAL_ZONES.find(z => z.id === zone_id);
+  if (!zone) {
+    return res.status(400).json({
+      error: `Invalid zone_id. Must be one of: ${OPERATIONAL_ZONES.map(z => z.id).join(', ')}`,
+    });
+  }
+
+  if (!process.env.WEATHER_API_KEY) {
+    // No API key — return a mock reading so the dashboard stays usable
+    const { surcharge, riskLevel } = await runMockForecast();
+    return res.json({
+      zone_id: zone.id,
+      zone_label: zone.label,
+      surcharge,
+      riskLevel,
+      riskScore: null,
+      drivers: null,
+      source: 'mock',
+    });
+  }
+
+  try {
+    const pricing = await calculate_live_dynamic_surcharge(zone.lat, zone.lon);
+    console.log(`[PRICING/ZONE] ${zone.id} (${zone.label}) → ₹${pricing.surcharge} [${pricing.riskLevel}]`);
+    res.json({
+      zone_id: zone.id,
+      zone_label: zone.label,
+      surcharge: pricing.surcharge,
+      riskLevel: pricing.riskLevel,
+      riskScore: pricing.riskScore,
+      drivers: pricing.drivers,   // { rainfall_mm_hr, temp_celsius, cpcb_aqi }
+      source: 'live',
+    });
+  } catch (err) {
+    console.error('[PRICING/ZONE] error:', err.message);
+    res.status(500).json({ error: 'Live pricing calculation failed', detail: err.message });
+  }
+});
+
 // Auto-refresh pricing every 15 seconds
 setInterval(() => { runForecast(); }, 15000);
 

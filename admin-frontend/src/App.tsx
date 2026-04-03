@@ -736,34 +736,80 @@ function FeeBar({ label, Icon, value, max, color, desc }: {
 // ─────────────────────────────────────────────
 // Pricing Engine Tab
 // ─────────────────────────────────────────────
+
+type ZonePricing = {
+  zone_id: string;
+  zone_label: string;
+  surcharge: number;
+  riskLevel: 'Low' | 'Medium' | 'High' | 'Critical';
+  riskScore: number | null;
+  drivers: { rainfall_mm_hr: number; temp_celsius: number; cpcb_aqi: number } | null;
+  source: 'live' | 'mock';
+};
+
+const ZONES = [
+  { id: 'ZONE_A', label: 'Bengaluru — Koramangala / HSR' },
+  { id: 'ZONE_B', label: 'Mumbai — Bandra / Andheri' },
+  { id: 'ZONE_C', label: 'Delhi — Gurugram / Cyber City' },
+];
+
 function PricingTab({
-  state, feeHistory, refreshForecast,
+  state, feeHistory,
 }: {
   state: AppState;
   feeHistory: FeePoint[];
-  refreshForecast: () => Promise<void>;
 }) {
-  const riskColor = state.currentRiskLevel === 'Low' ? '#4edea3'
-    : state.currentRiskLevel === 'Medium' ? '#ffb95f'
+  const [selectedZoneId, setSelectedZoneId] = useState('ZONE_A');
+  const [zonePricing, setZonePricing] = useState<ZonePricing | null>(null);
+  const [zoneLoading, setZoneLoading] = useState(false);
+
+  const fetchZonePricing = useCallback(async (zoneId: string) => {
+    setZoneLoading(true);
+    try {
+      const res = await axios.post(`${API_URL}/pricing/zone`, { zone_id: zoneId }, { timeout: 15000 });
+      setZonePricing(res.data);
+    } catch (e) {
+      console.error('Zone pricing fetch failed:', e);
+      setZonePricing(null);
+    } finally {
+      setZoneLoading(false);
+    }
+  }, []);
+
+  // Fetch on mount and whenever the selected zone changes
+  useEffect(() => {
+    fetchZonePricing(selectedZoneId);
+  }, [selectedZoneId, fetchZonePricing]);
+
+  // Display values: zone-specific when available, fall back to global state
+  const displayFee = zonePricing?.surcharge ?? state.currentMicroFee;
+  const displayRisk = (zonePricing?.riskLevel ?? state.currentRiskLevel) as 'Low' | 'Medium' | 'High' | 'Critical';
+
+  const riskColor = displayRisk === 'Low' ? '#4edea3'
+    : displayRisk === 'Medium' ? '#ffb95f'
     : '#ffb4ab';
 
-  // Decompose fee into 3 driver components based on risk level
+  // Decompose fee into 3 driver components. Use live drivers when available.
   const baseRate = 1.50;
-  const weatherContrib = state.currentRiskLevel === 'High' ? 1.08
-    : state.currentRiskLevel === 'Medium' ? 0.45 : 0.12;
-  const aqiContrib = state.currentRiskLevel === 'High' ? 0.45
-    : state.currentRiskLevel === 'Medium' ? 0.20 : 0.06;
-  const histContrib = Math.max(0, state.currentMicroFee - baseRate - weatherContrib - aqiContrib);
+  const rain = zonePricing?.drivers?.rainfall_mm_hr ?? 0;
+  const temp = zonePricing?.drivers?.temp_celsius ?? 25;
+  const aqi  = zonePricing?.drivers?.cpcb_aqi ?? 50;
+
+  const weatherContrib = displayRisk === 'High' || displayRisk === 'Critical' ? 1.08
+    : displayRisk === 'Medium' ? 0.45 : 0.12;
+  const aqiContrib = displayRisk === 'High' || displayRisk === 'Critical' ? 0.45
+    : displayRisk === 'Medium' ? 0.20 : 0.06;
+  const histContrib = Math.max(0, displayFee - baseRate - weatherContrib - aqiContrib);
   const maxContrib = 1.5;
 
-  const conditionLabel = state.currentRiskLevel === 'High'
-    ? 'Severe weather + AQI alert active — fee at ceiling'
-    : state.currentRiskLevel === 'Medium'
-    ? 'Moderate rain and traffic detected — fee elevated'
-    : 'Clear conditions across NCR delivery grid — fee near floor';
+  const conditionLabel = displayRisk === 'High' || displayRisk === 'Critical'
+    ? `Severe weather + AQI alert active in ${ZONES.find(z => z.id === selectedZoneId)?.label} — fee at ceiling`
+    : displayRisk === 'Medium'
+    ? `Moderate conditions detected in ${ZONES.find(z => z.id === selectedZoneId)?.label} — fee elevated`
+    : `Clear conditions in ${ZONES.find(z => z.id === selectedZoneId)?.label} — fee near floor`;
 
-  const ConditionIcon = state.currentRiskLevel === 'High' ? CloudLightning
-    : state.currentRiskLevel === 'Medium' ? Cloud : Sun;
+  const ConditionIcon = displayRisk === 'High' || displayRisk === 'Critical' ? CloudLightning
+    : displayRisk === 'Medium' ? Cloud : Sun;
 
   // Build SVG path from feeHistory
   const sparkW = 1000, sparkH = 300;
@@ -803,13 +849,72 @@ function PricingTab({
           <h2 className="text-3xl font-bold tracking-tight">AI Pricing Observatory</h2>
           <p className="text-sm text-[#c2c6d6] mt-1">The fee is never flat. Watch it respond to the world in real time.</p>
         </div>
-        <button
-          onClick={refreshForecast}
-          className="flex items-center gap-2 px-6 py-3 bg-gradient-to-br from-[#adc6ff] to-[#4d8eff] text-[#002e6a] font-semibold text-sm rounded-lg shadow-lg shadow-[#adc6ff]/10 active:scale-95 transition-transform"
-        >
-          <RefreshCw size={16} />
-          Force Recalculate
-        </button>
+        <div className="flex items-center gap-3">
+          {/* Zone selector */}
+          <div className="relative">
+            <div className="flex items-center gap-2 px-4 py-2.5 bg-[#191f31] border border-[#424754]/30 rounded-lg">
+              <MapPin size={14} className="text-[#adc6ff] flex-shrink-0" />
+              <select
+                value={selectedZoneId}
+                onChange={e => setSelectedZoneId(e.target.value)}
+                className="bg-transparent text-sm font-semibold text-[#dce1fb] outline-none cursor-pointer pr-2"
+                style={{ appearance: 'none' }}
+              >
+                {ZONES.map(z => (
+                  <option key={z.id} value={z.id} style={{ background: '#191f31' }}>
+                    {z.id} — {z.label.split(' — ')[0]}
+                  </option>
+                ))}
+              </select>
+              {zoneLoading && <LoaderCircle size={12} className="animate-spin text-[#adc6ff]" />}
+              {!zoneLoading && zonePricing?.source === 'live' && (
+                <span className="w-1.5 h-1.5 rounded-full bg-[#4edea3] animate-pulse" />
+              )}
+            </div>
+          </div>
+          <button
+            onClick={() => fetchZonePricing(selectedZoneId)}
+            disabled={zoneLoading}
+            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-br from-[#adc6ff] to-[#4d8eff] text-[#002e6a] font-semibold text-sm rounded-lg shadow-lg shadow-[#adc6ff]/10 active:scale-95 transition-transform disabled:opacity-60"
+          >
+            <RefreshCw size={16} className={zoneLoading ? 'animate-spin' : ''} />
+            Recalculate
+          </button>
+        </div>
+      </div>
+
+      {/* Zone info strip */}
+      <div className="flex items-center gap-4 mb-6 px-4 py-3 bg-[#151b2d] rounded-xl border border-[#424754]/10">
+        <MapPin size={14} className="text-[#adc6ff]" />
+        <div className="flex-1 min-w-0">
+          <span className="text-xs font-bold text-[#adc6ff]">{selectedZoneId}</span>
+          <span className="text-xs text-[#8c909f] ml-2">{ZONES.find(z => z.id === selectedZoneId)?.label}</span>
+        </div>
+        {zonePricing?.drivers && (
+          <div className="flex items-center gap-6 text-[10px] font-mono">
+            <span className="text-[#adc6ff]">
+              <span className="text-[#8c909f]">Rain </span>{zonePricing.drivers.rainfall_mm_hr.toFixed(1)} mm/hr
+            </span>
+            <span className="text-[#ffb95f]">
+              <span className="text-[#8c909f]">Temp </span>{zonePricing.drivers.temp_celsius.toFixed(1)}°C
+            </span>
+            <span className="text-[#ffb4ab]">
+              <span className="text-[#8c909f]">AQI </span>{Math.round(zonePricing.drivers.cpcb_aqi)}
+            </span>
+            {zonePricing.riskScore !== null && (
+              <span className="text-[#8c909f]">
+                Score <span className="text-[#dce1fb]">{zonePricing.riskScore.toFixed(3)}</span>
+              </span>
+            )}
+          </div>
+        )}
+        <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${
+          zonePricing?.source === 'live'
+            ? 'text-[#4edea3] bg-[#4edea3]/10 border-[#4edea3]/20'
+            : 'text-[#8c909f] bg-[#8c909f]/10 border-[#8c909f]/20'
+        }`}>
+          {zonePricing?.source === 'live' ? 'LIVE API' : 'MOCK'}
+        </span>
       </div>
 
       <div className="grid grid-cols-12 gap-6">
@@ -817,24 +922,31 @@ function PricingTab({
         {/* Hero Fee Card */}
         <div className="col-span-12 lg:col-span-4 bg-[#23293c] p-8 flex flex-col justify-between min-h-[300px] relative overflow-hidden rounded-xl">
           <div className="relative z-10">
-            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#c2c6d6]">Live Output — XGBoost Model</span>
+            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#c2c6d6]">Live Output — {selectedZoneId}</span>
             <h3 className="text-[#8c909f] text-sm mt-1">Micro-Fee This Epoch</h3>
           </div>
           <div className="relative z-10">
-            <div className="text-7xl font-extrabold tracking-tighter flex items-baseline gap-2 transition-all duration-500" style={{ color: riskColor }}>
-              <span className="text-3xl text-[#adc6ff] font-medium">₹</span>
-              {state.currentMicroFee.toFixed(2)}
-            </div>
+            {zoneLoading ? (
+              <div className="flex items-center gap-3 text-[#8c909f] py-4">
+                <LoaderCircle size={24} className="animate-spin text-[#adc6ff]" />
+                <span className="text-sm">Fetching live data…</span>
+              </div>
+            ) : (
+              <div className="text-7xl font-extrabold tracking-tighter flex items-baseline gap-2 transition-all duration-500" style={{ color: riskColor }}>
+                <span className="text-3xl text-[#adc6ff] font-medium">₹</span>
+                {displayFee.toFixed(2)}
+              </div>
+            )}
             <div className="flex items-center gap-3 mt-4 flex-wrap">
               <span className="text-xs font-bold px-3 py-1.5 rounded-full border flex items-center gap-1.5 transition-colors duration-500"
                 style={{ color: riskColor, backgroundColor: riskColor + '15', borderColor: riskColor + '33' }}>
                 <ConditionIcon size={14} />
-                {state.currentRiskLevel} Risk
+                {displayRisk} Risk
               </span>
               <span className="text-[10px] text-[#8c909f]">= ₹{baseRate.toFixed(2)} base + risk drivers</span>
             </div>
           </div>
-          {/* sparkline inside hero */}
+          {/* sparkline — global history for trend context */}
           <div className="mt-4 h-12 opacity-60">
             <FeeSparkline history={feeHistory} color={riskColor} />
           </div>
@@ -863,14 +975,18 @@ function PricingTab({
               <div className="h-full bg-[#8c909f]/50 rounded-full" style={{ width: `${(baseRate / state.currentMicroFee) * 100}%` }} />
             </div>
             <FeeBar label="Weather / IMD API" Icon={Droplets} value={weatherContrib} max={maxContrib} color="#adc6ff"
-              desc={state.currentRiskLevel === 'High' ? 'Active monsoon alert — peak surcharge applied' : state.currentRiskLevel === 'Medium' ? 'Light precipitation detected in delivery grid' : 'Clear skies — minimal weather surcharge'} />
+              desc={zonePricing?.drivers
+                ? `Rain: ${rain.toFixed(1)} mm/hr · Temp: ${temp.toFixed(1)}°C${rain > 15 ? ' — heavy rain threshold breached' : temp > 43 ? ' — extreme heat threshold breached' : ' — within normal range'}`
+                : displayRisk === 'High' ? 'Active monsoon alert — peak surcharge applied' : displayRisk === 'Medium' ? 'Light precipitation detected in delivery grid' : 'Clear skies — minimal weather surcharge'} />
             <FeeBar label="AQI / CPCB Signal" Icon={Wind} value={aqiContrib} max={maxContrib} color="#ffb95f"
-              desc={state.currentRiskLevel === 'High' ? 'PM2.5 >400 — severe exposure risk' : state.currentRiskLevel === 'Medium' ? 'Moderate air quality degradation' : 'AQI within safe limits'} />
+              desc={zonePricing?.drivers
+                ? `CPCB AQI: ~${Math.round(aqi)}${aqi > 300 ? ' — severe pollution threshold breached' : aqi > 200 ? ' — poor air quality' : ' — within acceptable range'}`
+                : displayRisk === 'High' ? 'PM2.5 >400 — severe exposure risk' : displayRisk === 'Medium' ? 'Moderate air quality degradation' : 'AQI within safe limits'} />
             <FeeBar label="Historical Volatility" Icon={History} value={histContrib} max={maxContrib} color="#ffb4ab"
               desc="5-year claim cluster model — rolling anomaly window" />
             <div className="flex items-center justify-between pt-3 border-t border-[#424754]/20">
-              <span className="text-sm font-bold">Total Micro-Fee</span>
-              <span className="font-mono font-bold text-lg" style={{ color: riskColor }}>₹{state.currentMicroFee.toFixed(2)}</span>
+              <span className="text-sm font-bold">Total Micro-Fee ({selectedZoneId})</span>
+              <span className="font-mono font-bold text-lg" style={{ color: riskColor }}>₹{displayFee.toFixed(2)}</span>
             </div>
           </div>
         </div>
@@ -1351,7 +1467,6 @@ export default function App() {
         <PricingTab
           state={state}
           feeHistory={feeHistory}
-          refreshForecast={refreshForecast}
         />
       )}
       {tab === 'partners' && <PartnersTab state={state} />}
