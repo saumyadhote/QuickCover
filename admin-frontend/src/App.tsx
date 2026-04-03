@@ -6,7 +6,7 @@ import {
   AlertTriangle, Droplets, Wind, ShieldCheck, CheckCircle, LoaderCircle,
   Eye, Trash2, KeyRound, ChevronsDown, FileText, Plus,
   History, Cloud, CloudLightning, Sun, Banknote,
-  ArrowRight, Activity, Radio,
+  ArrowRight, Activity, Radio, MapPin, PowerOff, Timer, Play,
 } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
@@ -33,6 +33,16 @@ type OpsEvent = {
   msg: string;
   tag?: string;
   tagColor?: string;
+};
+
+type ZoneOutage = {
+  id: number;
+  zoneId: string;
+  startTime: string;
+  reason: string;
+  status: string;
+  elapsed_minutes: number;
+  will_trigger: boolean;
 };
 
 const FALLBACK: AppState = {
@@ -263,16 +273,192 @@ function LiveOpsFeed({ events }: { events: OpsEvent[] }) {
 }
 
 // ─────────────────────────────────────────────
+// Zone Outage Manager (4th Parametric Trigger)
+// ─────────────────────────────────────────────
+const ZONE_LABELS: Record<string, string> = {
+  ZONE_A: 'Bengaluru — Koramangala',
+  ZONE_B: 'Mumbai — Bandra / Andheri',
+  ZONE_C: 'Delhi — Gurugram / Cyber City',
+};
+
+function ZoneOutagePanel({
+  outages, startOutage, resolveOutage,
+}: {
+  outages: ZoneOutage[];
+  startOutage: (zoneId: string) => Promise<void>;
+  resolveOutage: (zoneId: string) => Promise<void>;
+}) {
+  const activeByZone: Record<string, ZoneOutage> = {};
+  for (const o of outages) activeByZone[o.zoneId] = o;
+
+  return (
+    <section className="bg-[#191f31] p-6 rounded-xl border border-[#424754]/10">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <PowerOff size={18} className="text-[#ffb4ab]" />
+          <h3 className="text-sm font-bold uppercase tracking-widest">Zone Outage Manager</h3>
+        </div>
+        <span className="px-2 py-0.5 rounded-full bg-[#ffb4ab]/10 text-[#ffb4ab] text-[10px] font-bold uppercase border border-[#ffb4ab]/20">
+          4th Trigger
+        </span>
+      </div>
+      <p className="text-[10px] text-[#8c909f] mb-5">
+        Log a platform outage per zone. Claims auto-file for all active workers after 90 min.
+      </p>
+      <div className="space-y-3">
+        {(['ZONE_A', 'ZONE_B', 'ZONE_C'] as const).map(zoneId => {
+          const active = activeByZone[zoneId];
+          return (
+            <div key={zoneId} className={`bg-[#0c1324] rounded-lg border p-4 transition-colors ${active ? 'border-[#ffb4ab]/30' : 'border-[#424754]/20'}`}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 min-w-0">
+                  <MapPin size={13} className={active ? 'text-[#ffb4ab]' : 'text-[#424754]'} />
+                  <span className="text-xs font-bold">{zoneId}</span>
+                  <span className="text-[10px] text-[#8c909f] truncate">{ZONE_LABELS[zoneId]}</span>
+                </div>
+                {active ? (
+                  <button
+                    onClick={() => resolveOutage(zoneId)}
+                    className="ml-3 flex-shrink-0 text-[10px] font-bold text-[#4edea3] border border-[#4edea3]/30 px-2 py-1 rounded hover:bg-[#4edea3]/10 transition-colors"
+                  >
+                    Resolve
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => startOutage(zoneId)}
+                    className="ml-3 flex-shrink-0 text-[10px] font-bold text-[#ffb4ab] border border-[#ffb4ab]/30 px-2 py-1 rounded hover:bg-[#ffb4ab]/10 transition-colors"
+                  >
+                    Start Outage
+                  </button>
+                )}
+              </div>
+              {active && (
+                <div className="mt-2 flex items-center gap-2">
+                  <Timer size={11} className={active.will_trigger ? 'text-[#ffb4ab]' : 'text-[#ffb95f]'} />
+                  <span className={`text-[10px] font-bold ${active.will_trigger ? 'text-[#ffb4ab]' : 'text-[#ffb95f]'}`}>
+                    {active.elapsed_minutes}m elapsed
+                    {active.will_trigger
+                      ? ' — threshold breached, trigger fired'
+                      : ` — trigger fires in ${90 - active.elapsed_minutes}m`}
+                  </span>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+// ─────────────────────────────────────────────
+// Zero-Touch Cron Evaluation Panel
+// ─────────────────────────────────────────────
+function CronEvalPanel({
+  onRun,
+}: {
+  onRun: () => Promise<{ claims_created: number; breached_zones: { zone_id: string; type: string }[] } | null>;
+}) {
+  const [running, setRunning] = useState(false);
+  const [lastResult, setLastResult] = useState<{
+    claims_created: number;
+    breached_zones: { zone_id: string; type: string }[];
+    ran_at: string;
+  } | null>(null);
+
+  const handleRun = async () => {
+    setRunning(true);
+    try {
+      const result = await onRun();
+      if (result) {
+        setLastResult({ ...result, ran_at: nowIST() });
+      }
+    } finally {
+      setRunning(false);
+    }
+  };
+
+  return (
+    <section className="bg-[#191f31] p-6 rounded-xl border border-[#424754]/10">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <Zap size={18} className="text-[#adc6ff]" />
+          <h3 className="text-sm font-bold uppercase tracking-widest">Zero-Touch Cron Eval</h3>
+        </div>
+        <span className="px-2 py-0.5 rounded-full bg-[#adc6ff]/10 text-[#adc6ff] text-[10px] font-bold uppercase border border-[#adc6ff]/20">
+          Auto-Claims
+        </span>
+      </div>
+      <p className="text-[10px] text-[#8c909f] mb-5">
+        Poll all zones against live APIs. Auto-creates Pending Review claims for every active worker in a breached zone — no driver action needed.
+      </p>
+
+      <button
+        onClick={handleRun}
+        disabled={running}
+        className="w-full flex items-center justify-center gap-2 py-3 bg-gradient-to-br from-[#adc6ff] to-[#4d8eff] text-[#002e6a] font-bold text-sm rounded-lg shadow-lg shadow-[#adc6ff]/10 active:scale-95 transition-transform disabled:opacity-50 disabled:cursor-not-allowed mb-5"
+      >
+        {running ? (
+          <>
+            <LoaderCircle size={16} className="animate-spin" />
+            Evaluating all zones…
+          </>
+        ) : (
+          <>
+            <Play size={16} />
+            Run Trigger Evaluation Now
+          </>
+        )}
+      </button>
+
+      {lastResult ? (
+        <div className={`p-4 rounded-lg border ${lastResult.claims_created > 0 ? 'bg-[#ffb4ab]/5 border-[#ffb4ab]/20' : 'bg-[#4edea3]/5 border-[#4edea3]/20'}`}>
+          <div className="flex items-center justify-between mb-2">
+            <span className={`text-xs font-bold ${lastResult.claims_created > 0 ? 'text-[#ffb4ab]' : 'text-[#4edea3]'}`}>
+              {lastResult.claims_created > 0
+                ? `${lastResult.claims_created} auto-claim(s) created`
+                : 'No thresholds breached'}
+            </span>
+            <span className="text-[10px] font-mono text-[#424754]">{lastResult.ran_at}</span>
+          </div>
+          {lastResult.breached_zones.length > 0 && (
+            <div className="space-y-1">
+              {lastResult.breached_zones.map((z, i) => (
+                <div key={i} className="text-[10px] text-[#ffb95f] flex items-center gap-1.5">
+                  <AlertTriangle size={10} />
+                  {z.zone_id} — {z.type}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="p-4 rounded-lg bg-[#0c1324] border border-[#424754]/10 text-center">
+          <p className="text-[10px] text-[#424754]">No evaluation run yet this session</p>
+        </div>
+      )}
+
+      <p className="text-[9px] text-[#424754] mt-3 text-right">Also runs automatically every 60s when WEATHER_API_KEY is set</p>
+    </section>
+  );
+}
+
+// ─────────────────────────────────────────────
 // Overview Tab
 // ─────────────────────────────────────────────
 function OverviewTab({
   state, feeHistory, opsEvents, triggerDisruption, refreshForecast,
+  outages, startOutage, resolveOutage, runCronEval,
 }: {
   state: AppState;
   feeHistory: FeePoint[];
   opsEvents: OpsEvent[];
   triggerDisruption: (type: string, severity: string, message: string) => Promise<void>;
   refreshForecast: () => Promise<void>;
+  outages: ZoneOutage[];
+  startOutage: (zoneId: string) => Promise<void>;
+  resolveOutage: (zoneId: string) => Promise<void>;
+  runCronEval: () => Promise<{ claims_created: number; breached_zones: { zone_id: string; type: string }[] } | null>;
 }) {
   const dailyOrders = 213120;
   const grossPremium = state.currentMicroFee * dailyOrders;
@@ -511,6 +697,12 @@ function OverviewTab({
             <p className="text-[9px] text-[#424754] mt-1.5 text-right">Auto-updates every 15s</p>
           </div>
         </section>
+      </div>
+
+      {/* Parametric Trigger Controls — Zone Outage + Zero-Touch Cron */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <ZoneOutagePanel outages={outages} startOutage={startOutage} resolveOutage={resolveOutage} />
+        <CronEvalPanel onRun={runCronEval} />
       </div>
     </>
   );
@@ -965,6 +1157,7 @@ export default function App() {
   const consecutiveFailures = useRef(0);
   const [feeHistory, setFeeHistory] = useState<FeePoint[]>([]);
   const [opsEvents, setOpsEvents] = useState<OpsEvent[]>([]);
+  const [outages, setOutages] = useState<ZoneOutage[]>([]);
   const clock = useISTClock();
 
   // Track previous state for generating ops events
@@ -1051,6 +1244,56 @@ export default function App() {
     return () => { cancelled = true; clearInterval(id); };
   }, [pushEvent]);
 
+  // Poll active zone outages every 15s — shows elapsed time and trigger status
+  useEffect(() => {
+    let cancelled = false;
+    const fetchOutages = async () => {
+      try {
+        const res = await axios.get(`${API_URL}/admin/zone-outages`, { timeout: 8000 });
+        if (!cancelled) setOutages(res.data?.active_outages ?? []);
+      } catch { /* non-fatal */ }
+    };
+    fetchOutages();
+    const id = setInterval(fetchOutages, 15000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, []);
+
+  const startOutage = useCallback(async (zoneId: string) => {
+    try {
+      await axios.post(`${API_URL}/admin/zone-outage`, { zone_id: zoneId, reason: 'Platform disruption reported via ops console', action: 'start' });
+      // Refresh outage list immediately
+      const res = await axios.get(`${API_URL}/admin/zone-outages`);
+      setOutages(res.data?.active_outages ?? []);
+      pushEvent(makeEvent('#ffb4ab', `Zone outage started — ${zoneId}. Auto-claim fires after 90 min.`, 'OUTAGE', '#ffb4ab'));
+    } catch (e) { console.error(e); }
+  }, [pushEvent]);
+
+  const resolveOutage = useCallback(async (zoneId: string) => {
+    try {
+      await axios.post(`${API_URL}/admin/zone-outage`, { zone_id: zoneId, action: 'resolve' });
+      const res = await axios.get(`${API_URL}/admin/zone-outages`);
+      setOutages(res.data?.active_outages ?? []);
+      pushEvent(makeEvent('#4edea3', `Zone outage resolved — ${zoneId}.`, 'OUTAGE', '#4edea3'));
+    } catch (e) { console.error(e); }
+  }, [pushEvent]);
+
+  const runCronEval = useCallback(async () => {
+    try {
+      const res = await axios.post(`${API_URL}/cron/evaluate-live-triggers`, {}, { timeout: 30000 });
+      const result = { claims_created: res.data.claims_created ?? 0, breached_zones: res.data.breached_zones ?? [] };
+      if (result.claims_created > 0) {
+        pushEvent(makeEvent('#ffb4ab', `Zero-touch cron: ${result.claims_created} auto-claim(s) created across ${result.breached_zones.length} zone(s).`, 'CRON', '#ffb4ab'));
+      } else {
+        pushEvent(makeEvent('#4edea3', 'Zero-touch cron: all zones clear — no parametric thresholds breached.', 'CRON', '#4edea3'));
+      }
+      return result;
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Unknown error';
+      pushEvent(makeEvent('#ffb95f', `Cron eval failed — ${msg}`, 'CRON', '#ffb95f'));
+      return null;
+    }
+  }, [pushEvent]);
+
   const triggerDisruption = useCallback(async (type: string, severity: string, message: string) => {
     try {
       // hours_worked: 4 → ₹320 payout (4 × ₹80/hr); zone defaults to ZONE_A server-side
@@ -1098,6 +1341,10 @@ export default function App() {
           opsEvents={opsEvents}
           triggerDisruption={triggerDisruption}
           refreshForecast={refreshForecast}
+          outages={outages}
+          startOutage={startOutage}
+          resolveOutage={resolveOutage}
+          runCronEval={runCronEval}
         />
       )}
       {tab === 'pricing' && (
