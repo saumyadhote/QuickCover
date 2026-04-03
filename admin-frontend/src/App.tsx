@@ -509,9 +509,19 @@ function OverviewTab({
   resolveOutage: (zoneId: string) => Promise<void>;
   runCronEval: () => Promise<{ claims_created: number; breached_zones: { zone_id: string; type: string }[] } | null>;
 }) {
-  const dailyOrders = 213120;
-  const grossPremium = state.currentMicroFee * dailyOrders;
-  const claimsPayout = state.weeklyProtected;
+  const LOCALES = {
+    ZONE_A: { id: 'ZONE_A', name: 'Bengaluru', active: 34210, dailyOrders: 284100, payoutExtrapolation: 1250, feeOffset: 0.8 },
+    ZONE_B: { id: 'ZONE_B', name: 'Mumbai', active: 41890, dailyOrders: 312050, payoutExtrapolation: 1650, feeOffset: -0.2 },
+    ZONE_C: { id: 'ZONE_C', name: 'Delhi NCR', active: 24890, dailyOrders: 213120, payoutExtrapolation: 890, feeOffset: 0.0 },
+  };
+  const [selectedZone, setSelectedZone] = useState<keyof typeof LOCALES>('ZONE_C');
+  const locale = LOCALES[selectedZone];
+
+  const dailyOrders = locale.dailyOrders;
+  const zoneMicroFee = Math.max(1.5, state.currentMicroFee + locale.feeOffset);
+  const grossPremium = zoneMicroFee * dailyOrders;
+  const driversPaid = state.weeklyProtected > 0 ? locale.payoutExtrapolation : 0;
+  const claimsPayout = state.weeklyProtected * driversPaid;
   const netMarginPct = grossPremium > 0
     ? (((grossPremium - claimsPayout) / grossPremium) * 100).toFixed(1)
     : '71.2';
@@ -529,8 +539,9 @@ function OverviewTab({
     : '#ffb4ab';
 
   // Fee delta vs previous reading
-  const prevFee = feeHistory.length >= 2 ? feeHistory[feeHistory.length - 2].fee : state.currentMicroFee;
-  const feeDelta = state.currentMicroFee - prevFee;
+  const prevFeeRaw = feeHistory.length >= 2 ? feeHistory[feeHistory.length - 2].fee : state.currentMicroFee;
+  const prevZoneFee = Math.max(1.5, prevFeeRaw + locale.feeOffset);
+  const feeDelta = zoneMicroFee - prevZoneFee;
 
   return (
     <>
@@ -567,7 +578,21 @@ function OverviewTab({
             <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-[#3d4560] mb-1">Financial Performance</p>
             <h3 className="text-xl font-bold text-white tracking-tight">Revenue, Profit &amp; Loss</h3>
           </div>
-          <span className="text-xs text-[#3d4560]">Blinkit Underwriting Pool · NCR</span>
+          <div className="flex bg-white/[0.02] border border-white/5 rounded-lg p-1 backdrop-blur-md">
+            {(Object.keys(LOCALES) as Array<keyof typeof LOCALES>).map(key => (
+              <button
+                key={key}
+                onClick={() => setSelectedZone(key)}
+                className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
+                  selectedZone === key
+                    ? 'bg-[#adc6ff]/10 text-[#adc6ff] border border-[#adc6ff]/20 shadow-sm'
+                    : 'text-[#8c909f] hover:text-white hover:bg-white/[0.05]'
+                }`}
+              >
+                {LOCALES[key].name}
+              </button>
+            ))}
+          </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 
@@ -583,7 +608,7 @@ function OverviewTab({
               <span className="text-[22px] font-medium text-[#adc6ff]/60">₹</span>
               <h4 className="text-4xl font-bold text-white tracking-tight">{animGWP.toFixed(2)}<span className="text-2xl font-semibold text-[#adc6ff]/70 ml-0.5">L</span></h4>
             </div>
-            <p className="text-[11px] text-[#4d5f80] mt-2">₹{state.currentMicroFee.toFixed(2)}/order × {dailyOrders.toLocaleString('en-IN')}</p>
+            <p className="text-[11px] text-[#4d5f80] mt-2">₹{zoneMicroFee.toFixed(2)}/order × {dailyOrders.toLocaleString('en-IN')}</p>
             <div className="mt-5 h-10">
               <FeeSparkline history={feeHistory} color="#adc6ff" />
             </div>
@@ -603,7 +628,7 @@ function OverviewTab({
               <span className="text-[22px] font-medium text-[#ffb4ab]/60">₹</span>
               <h4 className="text-4xl font-bold text-white tracking-tight">{Math.round(animClaims).toLocaleString('en-IN')}</h4>
             </div>
-            <p className="text-[11px] text-[#4d5f80] mt-2">Weekly protected earnings disbursed</p>
+            <p className="text-[11px] text-[#4d5f80] mt-2">{driversPaid > 0 ? `${driversPaid.toLocaleString('en-IN')} drivers paid — ` : ''}Total sums disbursed</p>
             <div className="mt-5 h-10">
               <svg className="w-full h-full" viewBox="0 0 100 40" preserveAspectRatio="none">
                 <path d="M0 30 L15 32 L30 28 L45 35 L60 33 L75 38 L90 34 L100 36" fill="none" stroke="#ffb4ab44" strokeWidth="2" />
@@ -639,16 +664,16 @@ function OverviewTab({
           <div className="absolute inset-0 bg-gradient-to-br from-white/[0.02] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
           <p className="text-[10px] font-bold uppercase tracking-widest text-[#8c909f] mb-2 relative">Active Deliveries</p>
           <div className="flex items-center gap-2">
-            <p className="text-3xl font-bold">{state.isTripActive ? '24,893' : '24,892'}</p>
+            <p className="text-3xl font-bold">{state.isTripActive ? (locale.active + 1).toLocaleString('en-IN') : locale.active.toLocaleString('en-IN')}</p>
             {state.isTripActive && <span className="w-2 h-2 bg-[#4edea3] rounded-full animate-pulse" />}
           </div>
-          <p className="text-[10px] text-[#8c909f] mt-1">NCR Region — Blinkit</p>
+          <p className="text-[10px] text-[#8c909f] mt-1">{locale.name} Region — Blinkit</p>
         </div>
         <div className="bg-white/[0.015] p-6 rounded-3xl border border-white/5 backdrop-blur-2xl shadow-[0_8px_30px_rgb(0,0,0,0.4)] relative group overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-br from-white/[0.02] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
           <p className="text-[10px] font-bold uppercase tracking-widest text-[#8c909f] mb-2 relative">AI Micro-Fee</p>
           <div className="flex items-baseline gap-1.5">
-            <p className="text-3xl font-bold" style={{ color: riskColor }}>₹{state.currentMicroFee.toFixed(2)}</p>
+            <p className="text-3xl font-bold" style={{ color: riskColor }}>₹{zoneMicroFee.toFixed(2)}</p>
             {feeDelta !== 0 && (
               <span className={`text-xs font-bold ${feeDelta > 0 ? 'text-[#ffb95f]' : 'text-[#4edea3]'}`}>
                 {feeDelta > 0 ? '▲' : '▼'}{Math.abs(feeDelta).toFixed(2)}
@@ -714,9 +739,9 @@ function OverviewTab({
                 {state.claimStatus === 'paid' && <CheckCircle size={14} />}
                 {state.claimStatus === 'approved' && <Banknote size={14} />}
                 {state.claimStatus === 'processing' && <LoaderCircle size={14} className="animate-spin" />}
-                {state.claimStatus === 'processing' && 'Claim Processing — AI cross-verification in progress…'}
-                {state.claimStatus === 'approved' && `Claim Approved — ₹${(state.lastPayoutAmount || state.weeklyProtected).toLocaleString('en-IN')} payout authorised`}
-                {state.claimStatus === 'paid' && `₹${state.weeklyProtected.toLocaleString('en-IN')} transferred via UPI`}
+                {state.claimStatus === 'processing' && `Disruption Processing — Authenticating ${driversPaid > 0 ? driversPaid.toLocaleString('en-IN') : locale.payoutExtrapolation.toLocaleString('en-IN')} workers…`}
+                {state.claimStatus === 'approved' && `Disruption Approved — ₹${((state.lastPayoutAmount || state.weeklyProtected) * (driversPaid > 0 ? driversPaid : locale.payoutExtrapolation)).toLocaleString('en-IN')} total payout authorised`}
+                {state.claimStatus === 'paid' && `₹${(state.weeklyProtected * driversPaid).toLocaleString('en-IN')} total pool sums transferred to ${driversPaid.toLocaleString('en-IN')} drivers via UPI`}
               </p>
             </div>
           )}
@@ -734,9 +759,9 @@ function OverviewTab({
           </div>
           <div className="space-y-3 mb-6">
             {[
-              { type: 'WEATHER', sev: 'HIGH', msg: 'Severe waterlogging in Sector 42. IMD: 28mm/hr.', label: 'Flash Flood Warning', sub: 'IMD threshold breached · ₹450 payout', Icon: Droplets, color: '#adc6ff', btnClass: 'disruption-btn-weather' },
-              { type: 'POLLUTION', sev: 'HIGH', msg: 'AQI crossed 450 in primary delivery grid.', label: 'Severe AQI Spike', sub: 'CPCB AQI >450 · ₹450 payout', Icon: Wind, color: '#ffb95f', btnClass: 'disruption-btn-pollution' },
-              { type: 'CURFEW', sev: 'CRITICAL', msg: 'Unplanned Section 144 grid disruption in NCR.', label: 'Civic Disruption', sub: 'Section 144 / curfew · ₹450 payout', Icon: ShieldCheck, color: '#ffb4ab', btnClass: 'disruption-btn-curfew' },
+              { type: 'WEATHER', sev: 'HIGH', msg: `Severe waterlogging in ${locale.name}. IMD: 28mm/hr.`, label: 'Flash Flood Warning', sub: `IMD threshold breached · ₹${(450 * locale.payoutExtrapolation).toLocaleString('en-IN')} sum payout`, Icon: Droplets, color: '#adc6ff', btnClass: 'disruption-btn-weather' },
+              { type: 'POLLUTION', sev: 'HIGH', msg: 'AQI crossed 450 in primary delivery grid.', label: 'Severe AQI Spike', sub: `CPCB AQI >450 · ₹${(450 * locale.payoutExtrapolation).toLocaleString('en-IN')} sum payout`, Icon: Wind, color: '#ffb95f', btnClass: 'disruption-btn-pollution' },
+              { type: 'CURFEW', sev: 'CRITICAL', msg: `Unplanned Section 144 grid disruption in ${locale.name}.`, label: 'Civic Disruption', sub: `Section 144 / curfew · ₹${(450 * locale.payoutExtrapolation).toLocaleString('en-IN')} sum payout`, Icon: ShieldCheck, color: '#ffb4ab', btnClass: 'disruption-btn-curfew' },
             ].map(evt => (
               <button
                 key={evt.type}
