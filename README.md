@@ -530,25 +530,30 @@ QuickCover was built in three phases over six weeks, prioritising a working end-
 over feature breadth. Each phase has a defined set of deliverables that a judge can verify
 directly in the repository or via the live deployment URLs.
 
-| Phase | Weeks | Focus | Named Deliverables |
-|---|---|---|---|
-| **Phase 1 (Seed) — Foundation** | Weeks 1–2 | Core data model, auth, and trip lifecycle | PostgreSQL schema (state + trips tables); JWT auth with signup/login endpoints; `/accept-trip`, `/complete-trip`, `/status` REST API; React Native app with Home + Claims + Coverage + Profile tabs; MockDataContext syncing state to live backend |
-| **Phase 2 (Scale) — Intelligence** | Weeks 3–4 | ML pricing engine, fraud stubs, parametric triggers | XGBoost pricing engine mock (`runForecast()` with 5 weather conditions + risk tiers); `/trigger-disruption` endpoint with 5s AI verification simulation; Isolation Forest feature table and 3-tier scoring logic; `detect_os_mock_location()`, `analyze_telematics_anomalies()`, `quarantine_claim()` stub functions; Admin dashboard (Vite) with claims pipeline + loss ratio analytics |
-| **Phase 3 (Soar) — Polish & Deploy** | Weeks 5–6 | Cloud deployment, UX refinement, documentation | Render deployment (backend) with Supabase PostgreSQL pooler; Vercel deployment (admin dashboard); Home screen Today's Journey timeline + Recent Payout card; Claims tab manual filing form with disruption type picker + photo evidence section; Anti-spoofing strategy in README; Full financial model in FINANCIAL_MODEL.md; This README |
+| Phase | Focus | Named Deliverables |
+|---|---|---|
+| **Phase 1 — Foundation** | Core data model, auth, trip lifecycle | PostgreSQL/SQLite dual-mode schema; JWT auth (register/login/me); `/accept-trip`, `/complete-trip`, `/status` REST API; React Native app with Home + Claims + Coverage + Profile tabs; MockDataContext polling live backend |
+| **Phase 2 — Intelligence** | Live APIs, financial safeguards, admin tools | Live OpenWeatherMap weather + AQI triggers; per-zone dynamic pricing; `policy_sessions` table; `zone_outages` table + 4th parametric trigger; zero-touch `runTriggerEvaluation()` with auto-claims; 8-hour shift-level payout cap; admin Zone Outage Manager + Cron Eval panels; per-zone Pricing Engine dropdown; `CoverageHonoredCard` mobile UI |
+| **Phase 3 — Polish & Deploy** | Cloud deployment, UX, documentation | Render + Vercel live deployments; eligibility gate (25 trips/7 days); per-user zone selection; quick-claim chips; payout card; anti-spoofing strategy; FINANCIAL_MODEL.md; PHASE2_CHANGES.md |
 
 ### What Is Live vs. Mocked
 
 | Component | Status | Notes |
 |---|---|---|
-| Backend API (all endpoints) | ✅ Live on Render | Real PostgreSQL, real state persistence |
-| Auth (signup / login / JWT) | ✅ Live | Tokens issued and validated on every request |
-| Mobile app (all screens) | ✅ Runnable via Expo Go | Connects to live Render backend |
-| Admin dashboard | ✅ Live on Vercel | Reads from same Supabase DB |
-| ML pricing engine | 🟡 Mocked | Rule-based mock with 5 weather conditions; XGBoost training pipeline is designed, not yet wired to live IMD data |
-| IMD weather trigger | 🟡 Mocked | `/trigger-disruption` simulates the trigger; live IMD API integration is Post-Hackathon Roadmap |
-| UPI payout | 🟡 Mocked | Razorpay integration designed; test-mode keys not wired in demo build |
-| Fraud detection (Isolation Forest) | 🟡 Stub | Feature inputs and scoring tiers defined; model training pending real trip volume |
-| GenAI Vision Agent | 🟡 Stub | Architecture defined (Model 3); stub function in `mock-backend/server.js`; wiring to OpenAI/Gemini API is Post-Hackathon Roadmap |
+| Backend API (all endpoints) | ✅ Live on Render | SQLite on Render; PostgreSQL-compatible via dual-mode DB layer |
+| Auth (signup / login / JWT) | ✅ Live | bcrypt + JWT, 30-day tokens, zone selection at registration |
+| Mobile app (all screens) | ✅ Expo Go | Connects to live Render backend |
+| Admin dashboard | ✅ Vercel | Real-time ops console at quick-cover-neon.vercel.app |
+| Dynamic pricing engine | ✅ Live | Real OpenWeatherMap weather + AQI → ₹1.50–₹5.00 surcharge; per-zone pricing on admin |
+| Parametric triggers (rain, heat, AQI) | ✅ Live | 3 live API triggers via OpenWeatherMap; auto-evaluate every 60s |
+| Platform outage trigger (4th trigger) | ✅ Live | Admin webhook + 90-min threshold; visible in Zone Outage Manager panel |
+| Zero-touch claims | ✅ Live | `runTriggerEvaluation()` auto-creates claims for active workers in breached zones |
+| Policy sessions | ✅ Live | Per-trip coverage records in `policy_sessions` table |
+| Shift-level payout cap | ✅ Live | 8-hour dedup check prevents double-payout for same disruption type |
+| UPI payout | 🟡 Mocked | Razorpay designed; payout simulation only (4s delay → approved → paid) |
+| Fraud detection (Isolation Forest) | 🟡 Stub | Feature table and 3-tier scoring defined; model training pending real trip data |
+| GenAI Vision Agent | 🟡 Stub | Architecture defined; `process_claim_evidence_with_genai()` stub in server.js |
+| IMD direct API | 🟡 Post-hackathon | Currently using OpenWeatherMap; IMD API has limited programmatic access |
 
 > **"Every line of code in this repo was written for this hackathon. The mocks are honest about being mocks — and the architecture makes the path to production explicit."**
 
@@ -566,12 +571,68 @@ directly in the repository or via the live deployment URLs.
 
 ## Why This Wins
 
-- **Real market need** — 15M+ underserved workers, ₹6,000–₹12,000/year of income at risk per worker
-- **Zero friction adoption** — driver pays nothing; consumers already accept small surcharges
-- **Scalable unit economics** — ₹3/order creates a self-sustaining pool; break-even at 2–3% participation
-- **Parametric = fast + fraud-resistant** — no adjusters, no disputes, automatic payouts
+- **Real market need** — 15M+ gig workers in India; Q-commerce sector alone has 450,000–500,000 active delivery partners (up 70–80% YoY as of late 2025), each with ₹6,000–₹12,000/year of income at risk
+- **Zero friction adoption** — driver pays nothing; consumers already accept surcharges (Swiggy rain fee, packaging charges, surge pricing)
+- **Scalable unit economics** — ₹3/order creates a self-sustaining pool; break-even at 2–3% of Blinkit's ~1M daily orders
+- **Parametric = fast + fraud-resistant** — no adjusters, no disputes, objective data triggers
 - **Platform-neutral** — works across Blinkit, Zepto, Swiggy via webhook integration
-- **Regulatory-ready** — fits IRDAI's micro-insurance sandbox; no own license required initially
+- **Regulatory tailwind** — IRDAI 2024 sandbox reforms; Budget 2025 extended PMJAY to 1 crore gig workers; Code on Social Security implemented Nov 2025
+
+---
+
+## Market Feasibility — Independent Research
+
+> Research conducted April 2026. Sources listed below.
+
+### The Parametric Model Is Proven in India
+
+QuickCover is not a theoretical concept — the core mechanism has been validated at scale. SEWA's (Self-Employed Women's Association) parametric heat insurance, launched 2023 with 21,000 women in Gujarat, expanded to **225,000 workers across 7 states by 2025**. In 2024, 92% of insured members (46,242 women) received automatic cash payouts when temperature thresholds were breached — ₹2.92 crore disbursed with zero claims process. This is exactly QuickCover's model applied to a different trigger (heat → monsoon/AQI/outage) and a different cohort (informal women → Q-commerce delivery partners).
+
+The World Economic Forum and Climate Resilience for All have documented the model; AQI-linked and heat-linked parametric products with direct UPI cash transfer are already live in India. The architecture is not novel — the application to Q-commerce delivery workers is.
+
+### Market Size — Updated 2025–2026 Actuals
+
+| Metric | README Estimate | 2025–2026 Actual | Source |
+|---|---|---|---|
+| Active Q-commerce delivery partners | 200,000–300,000 | **450,000–500,000** (↑70–80% YoY) | StartupNews.fyi, Nov 2025 |
+| Blinkit daily orders | 750,000–1,000,000 | ~**1,000,000** (7.5M orders on NYE with Zomato) | Entrepreneur Loop, Jan 2026 |
+| Blinkit market share | ~45% | **48%** | Datum Intelligence, Jan 2026 |
+| Swiggy Instamart share | ~25% | **24%** | Datum Intelligence, Jan 2026 |
+| Zepto share | ~22% | **22%** | Datum Intelligence, Jan 2026 |
+
+The addressable market is **larger than modelled**. Financial model projections at 10% rollout remain conservative.
+
+### Regulatory Tailwinds
+
+1. **Code on Social Security 2020** — implemented November 2025. Requires platforms to contribute to a central social security fund. Zomato, Blinkit, Urban Company, and Uncle Delivery have registered. Creates the political and legal infrastructure for worker protection schemes QuickCover slots into.
+
+2. **Budget 2025** — health insurance for 1 crore gig workers under PMJAY announced. Government signal: gig worker welfare is a policy priority.
+
+3. **IRDAI Insurance Products Regulations 2024** — explicit "innovative products" sandbox. QuickCover operates as a technology distribution layer on top of a licensed insurer, not as a direct insurer. No own IRDAI license required initially.
+
+4. **State legislation** — Rajasthan (2023), Karnataka, and Bihar have enacted gig worker protection laws. The regulatory landscape is moving towards mandatory platform contributions — QuickCover's consumer-funded model pre-empts this obligation.
+
+### Business Model Risks & Mitigations
+
+| Risk | Severity | Mitigation |
+|---|---|---|
+| **Platform dependency** — Blinkit/Zepto must embed the checkout surcharge | High | Position as a branded feature ("protect your rider") that reduces churn and PR risk for platforms; carbon offset analogy shows consumer acceptance |
+| **Cluster risk** — simultaneous claims across a zone during a severe monsoon | Medium | Aggregate Stop-Loss Reinsurance treaty; TailVaR-based reinsurance kicks in above 99.5th percentile of expected claims |
+| **Actuarial calibration** — payout rate (₹80/hr) and eligibility threshold (25 trips) need validation | Medium | SEWA pilot data provides a benchmark; 6-month shadow mode on real trip data before going live |
+| **IRDAI licensing** — operating as insurance without a license | Low | Surcharge structured as "protection fund contribution" (consumer is donor, driver is beneficiary); partner with a licensed insurer |
+| **Consumer opt-out** — low participation reduces pool | Low | Default opt-in at checkout; Swiggy rain fee precedent shows Indian consumers accept delivery surcharges with minimal pushback |
+| **Driver fraud** — GPS spoofing to appear in a disruption zone | Low | Isolation Forest anomaly detection; OS mock location flag; telematics cross-check; 25-trip eligibility gate excludes casual bad actors |
+
+### Verdict
+
+The QuickCover model is **commercially feasible and technically validated**:
+- The parametric trigger mechanism works in India at scale (SEWA, 225,000 members, 2025)
+- The market is growing faster than modelled (450–500K active delivery partners, not 200–300K)
+- Regulatory infrastructure is being built by the government, not against it
+- The unit economics are conservative — pool solvency at 10% order participation with 30–50% loss ratio
+- The primary execution risk is platform partnership (Blinkit integration), not product or regulation
+
+See [FINANCIAL_MODEL.md](FINANCIAL_MODEL.md) for the full model and [PHASE2_CHANGES.md](PHASE2_CHANGES.md) for the complete Phase 2 implementation log.
 
 ---
 

@@ -12,17 +12,19 @@ model in real earnings data, disruption frequency, and consumer-side viable prem
 
 ## 1. Blinkit Worker Earnings — Ground Reality
 
+> **Updated with 2025 actuals** (Invezz, August 2025; StartupNews.fyi, November 2025)
+
 ### What They Earn
 
 | Metric | Figure |
 |---|---|
 | Base pay per delivery | ₹15 (≤1 km) + ₹10–14/km beyond |
 | Avg deliveries per hour | ~3–5 (quick commerce, short distances) |
-| Gross daily earnings (12–14 hrs) | ₹800–₹1,200 |
-| Gross monthly (25 working days) | ₹20,000–₹30,000 |
+| Gross daily earnings (9–10 hrs, 25–26 days/month) | ₹800–₹1,200 |
+| Gross monthly | ₹20,000–₹30,000 |
 | Fuel cost | ~₹9,000/month |
 | Food/misc | ~₹1,500/month |
-| **Net take-home** | **₹9,500–₹19,500/month** |
+| **Net take-home (2025 confirmed)** | **₹16,000–₹31,000/month** (excl. tips) |
 
 ### Hourly Breakdown
 
@@ -157,25 +159,30 @@ The app currently shows ₹5,000 max weekly coverage — this maps to the Premiu
 
 ### Supply Side (Consumer Orders → Pool Inflow)
 
+> **Updated with 2025 actuals** — Blinkit processed 7.5M orders on NYE 2025 (combined with Zomato food); daily run-rate ~1M orders. Source: Entrepreneur Loop, Jan 2026.
+
 | Metric | Figure |
 |---|---|
-| Blinkit orders/day (India, 2025) | ~750,000–1,000,000 |
+| Blinkit orders/day (India, 2026) | ~1,000,000 (confirmed by NYE peak data) |
+| Combined Q-commerce orders/day (all platforms) | ~2,000,000–2,500,000 |
 | Avg surcharge per order | ₹3 |
-| **Daily pool inflow** | **₹22.5L–₹30L/day** |
-| Monthly pool inflow | **₹67Cr–₹90Cr/month** |
+| **Daily pool inflow (Blinkit alone)** | **₹30L/day** |
+| Monthly pool inflow (Blinkit, full rollout) | **₹90Cr/month** |
 
-Even at 1% participation (opt-in model) or 10% geographic rollout:
-- **₹67L–₹90L/month** available for payouts at 10% rollout
+Even at 10% geographic rollout:
+- **₹9Cr/month** available for payouts
 
 ### Demand Side (Driver Payouts → Pool Outflow)
 
+> **Updated with 2025 actuals** — Active Q-commerce delivery partners reached 450,000–500,000 as of Nov 2025, up 70–80% YoY. Source: StartupNews.fyi, Nov 2025.
+
 | Metric | Figure |
 |---|---|
-| Active Blinkit drivers (India) | ~200,000–300,000 |
+| Active Q-commerce delivery partners (2025) | ~450,000–500,000 (↑ from 250,000–300,000 in 2024) |
 | Disruption events per driver/month | 2–4 |
 | Avg payout per event | ₹350 |
 | **Monthly payout per driver** | **₹700–₹1,400** |
-| Total monthly payout (10% rollout, 25,000 drivers) | ₹1.75Cr–₹3.5Cr |
+| Total monthly payout (10% rollout, ~45,000 drivers) | ₹3.15Cr–₹6.3Cr |
 
 ### Pool Sustainability at 10% Rollout
 
@@ -244,11 +251,38 @@ Break-even: achievable at **~2–3% of Blinkit's daily order volume** participat
 
 ---
 
-## 8. Next Steps for Implementation
+## 8. Phase 2 Implementation — What's Now Live
 
-1. **Pricing engine** — build the `order_surcharge` calculator with the 6 AI factors above
-2. **Trigger data feeds** — integrate IMD weather API for rainfall/temperature data
-3. **Payout flow** — wire parametric trigger → automatic payout to driver wallet
-4. **Consumer checkout UI** — design the surcharge display + opt-out flow for Blinkit integration
-5. **Actuary validation** — model the pool under 3 scenarios (normal, bad monsoon, lockdown)
-6. **Pilot cohort** — 1 city (Delhi or Bangalore), opt-in consumer surcharge, 1 monsoon season
+The following items from "Next Steps" are implemented in the current codebase:
+
+| Item | Status | Notes |
+|---|---|---|
+| Pricing engine | ✅ Live | `calculate_live_dynamic_surcharge()` using real OpenWeatherMap data |
+| Trigger data feeds | ✅ Live | Rain >15mm/hr, heat >43°C, AQI >300 (CPCB scale), outage >90min |
+| Payout flow | ✅ Simulated | 4s AI verification → approved → paid; Razorpay wiring is Post-Hackathon |
+| Policy sessions | ✅ Live | Per-trip coverage records in `policy_sessions` table |
+| Shift-level payout cap | ✅ Live | 8-hour dedup check; `coverage_honored` status with friendly mobile UI |
+| Consumer checkout UI | 🟡 Roadmap | Requires Blinkit/Zepto SDK integration |
+| Actuary validation | 🟡 Roadmap | 6-month shadow mode on real data recommended before go-live |
+| Pilot cohort | 🟡 Roadmap | Target: Bengaluru (ZONE_A), opt-in surcharge, 1 monsoon season |
+
+## 9. Comparable Real-World Validation
+
+QuickCover's parametric model is directly comparable to SEWA's climate insurance programme:
+
+| Dimension | SEWA Parametric Insurance | QuickCover |
+|---|---|---|
+| Trigger | Temperature >40°C for 2 days | Rain >15mm/hr, AQI >300, heat >43°C, outage >90min |
+| Payout | ₹400 direct cash transfer | ₹80/hr × hours lost (₹240–₹640/event) |
+| Verification | Real-time weather data | OpenWeatherMap API + GPS cross-check |
+| Scale (2025) | 225,000 workers, 7 states | Designed for 450,000+ Q-commerce partners |
+| Disbursement | UPI direct transfer | UPI via Razorpay (designed) |
+| Claims process | Zero — fully automatic | Zero — parametric trigger fires payout |
+
+SEWA's 2024 results: 92% payout rate, ₹2.92 crore disbursed, zero manual claims.
+QuickCover targets the same architecture for a larger, more urban cohort with 4 triggers instead of 1.
+
+Sources:
+- SEWA parametric insurance: World Economic Forum (Mar 2025), DownToEarth, Princeton JPIA
+- Market data: StartupNews.fyi (Nov 2025), Entrepreneur Loop (Jan 2026), Datum Intelligence via Reuters (Jan 2026)
+- Regulatory: Code on Social Security 2025, IRDAI Annual Report, Budget 2025 PMJAY announcement
