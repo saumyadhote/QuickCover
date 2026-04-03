@@ -661,10 +661,129 @@ app.get('/admin/zone-outages', async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
-// Task 4 — /cron/evaluate-live-triggers
-// Zero-touch claims management: poll live APIs for all active zones and
-// auto-insert a "Pending Review" claim for every active worker in a breached zone.
+// Zero-Touch Claims Management
+//
+// runTriggerEvaluation() — core evaluation function called by both the cron
+// endpoint and the automatic 60-second interval.
+//
+// For each breached zone it:
+//   1. Queries policy_sessions for every worker whose session is 'active' in
+//      that zone — one row per real gig worker, not a global flag.
+//   2. Deduplicates — skips any worker who already has a pending_review or
+//      processing trip logged in the last 60 minutes.
+//   3. Inserts one 'pending_review' trip per eligible worker, stamped with
+//      userId, zoneId, and disruptionType for the anti-spoofing audit trail.
+//   4. Updates the global state row (MVP display) to reflect the latest breach
+//      so the mobile app can show the disruption banner.
 // ---------------------------------------------------------------------------
+
+async function runTriggerEvaluation() {
+  // --- Weather + AQI triggers (3 live API triggers) ---
+  const breachedZones = await evaluate_all_zones(OPERATIONAL_ZONES);
+
+  // --- 4th Trigger — Platform Outage > 90 minutes ---
+  const ninetyMinutesAgo = new Date(Date.now() - 90 * 60 * 1000).toISOString();
+  const longOutages = await dbAll(
+    `SELECT * FROM zone_outages WHERE status = 'active' AND "startTime" <= $1`,
+    [ninetyMinutesAgo]
+  );
+  for (const outage of longOutages) {
+    const elapsedMin = Math.floor((Date.now() - new Date(outage.startTime).getTime()) / 60000);
+    const alreadyBreached = breachedZones.some(b => b.zone_id === outage.zoneId && b.type === 'OUTAGE');
+    if (!alreadyBreached) {
+      breachedZones.push({
+        zone_id:  outage.zoneId,
+        type:     'OUTAGE',
+        severity: 'HIGH',
+        message:  `Platform outage in ${outage.zoneId} active for ${elapsedMin} min — ${outage.reason || 'Zone closure'}`,
+      });
+      console.log(`[CRON] Outage trigger fired — Zone: ${outage.zoneId}, duration: ${elapsedMin} min`);
+    }
+  }
+
+  if (breachedZones.length === 0) {
+    console.log('[CRON] No parametric thresholds breached across all zones.');
+    return { claims_created: 0, breached_zones: [], zones_checked: OPERATIONAL_ZONES.length };
+  }
+
+  let claims_created = 0;
+  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+  const now = new Date().toISOString();
+
+  for (const breach of breachedZones) {
+    console.log(`[CRON] Breach detected — Zone: ${breach.zone_id}, Type: ${breach.type}`);
+
+    // Find all workers with an active coverage session in this zone
+    const activeSessions = await dbAll(
+      `SELECT * FROM policy_sessions WHERE status = 'active' AND "zoneId" = $1`,
+      [breach.zone_id]
+    );
+
+    if (activeSessions.length === 0) {
+      console.log(`[CRON] Zone ${breach.zone_id}: no active workers — skipping.`);
+      continue;
+    }
+
+    for (const session of activeSessions) {
+      const workerUserId = session.userId;
+
+      // Deduplicate: skip if this worker already has a recent auto-claim
+      const existing = await dbGet(
+        `SELECT id FROM trips
+         WHERE "userId" = $1
+           AND status IN ('pending_review', 'processing')
+           AND timestamp >= $2`,
+        [workerUserId, oneHourAgo]
+      );
+      if (existing) {
+        console.log(`[CRON] Worker ${workerUserId} already has a recent pending claim — skipping.`);
+        continue;
+      }
+
+      // Insert one 'pending_review' trip for this worker, tagged with zone + disruption type
+      await dbRun(
+        `INSERT INTO trips (status, earnings, "protectedAmount", timestamp, "hoursWorked", "userId", "zoneId", "disruptionType")
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        ['pending_review', 0, 0, now, null, workerUserId, breach.zone_id, breach.type]
+      );
+
+      // Close the worker's active policy session — they're now in quarantine/review
+      await dbRun(
+        `UPDATE policy_sessions SET status = 'disrupted', "endTime" = $1
+         WHERE id = $2`,
+        [now, session.id]
+      );
+
+      claims_created++;
+      console.log(`[CRON] Auto-claim (Pending Review) created — userId: ${workerUserId}, zone: ${breach.zone_id}, type: ${breach.type}`);
+    }
+
+    // Update global state row so the mobile app disruption banner reflects the latest breach
+    await dbRun(`
+      UPDATE state
+      SET "disruptionType"      = $1,
+          "disruptionZone"      = $2,
+          "disruptionSeverity"  = $3,
+          "disruptionMessage"   = $4,
+          "disruptionTimestamp" = $5,
+          "claimStatus"         = CASE WHEN "claimStatus" = 'none' THEN 'processing' ELSE "claimStatus" END
+      WHERE id = 1
+    `, [breach.type, breach.zone_id, breach.severity, breach.message, now]);
+  }
+
+  console.log(`[CRON] Evaluation complete — ${claims_created} claim(s) auto-created across ${breachedZones.length} breached zone(s).`);
+  return { claims_created, breached_zones: breachedZones, zones_checked: OPERATIONAL_ZONES.length };
+}
+
+// Auto-run trigger evaluation every 60 seconds when API key is present
+setInterval(async () => {
+  if (!process.env.WEATHER_API_KEY) return;
+  try {
+    await runTriggerEvaluation();
+  } catch (err) {
+    console.error('[CRON] Auto-evaluation error:', err.message);
+  }
+}, 60000);
 
 app.post('/cron/evaluate-live-triggers', async (req, res) => {
   if (!process.env.WEATHER_API_KEY) {
@@ -672,88 +791,13 @@ app.post('/cron/evaluate-live-triggers', async (req, res) => {
   }
 
   try {
-    // --- Weather + AQI triggers (3 live API triggers) ---
-    const breachedZones = await evaluate_all_zones(OPERATIONAL_ZONES);
-
-    // --- Req 4: 4th Trigger — Platform Outage > 90 minutes ---
-    // Any zone_outage record that has been 'active' for over 90 minutes is treated
-    // as a parametric trigger, matching the "zone closure > 90 min" design spec.
-    const ninetyMinutesAgo = new Date(Date.now() - 90 * 60 * 1000).toISOString();
-    const longOutages = await dbAll(
-      `SELECT * FROM zone_outages WHERE status = 'active' AND "startTime" <= $1`,
-      [ninetyMinutesAgo]
-    );
-    for (const outage of longOutages) {
-      const elapsedMin = Math.floor((Date.now() - new Date(outage.startTime).getTime()) / 60000);
-      // Only add if this zone isn't already in the breached list from weather/AQI
-      const alreadyBreached = breachedZones.some(b => b.zone_id === outage.zoneId && b.type === 'OUTAGE');
-      if (!alreadyBreached) {
-        breachedZones.push({
-          zone_id:  outage.zoneId,
-          type:     'OUTAGE',
-          severity: 'HIGH',
-          message:  `Platform outage in ${outage.zoneId} has been active for ${elapsedMin} min — ${outage.reason || 'Zone closure'}`,
-        });
-        console.log(`[CRON] Outage trigger fired — Zone: ${outage.zoneId}, duration: ${elapsedMin} min`);
-      }
-    }
-
-    if (breachedZones.length === 0) {
-      console.log('[CRON] No parametric thresholds breached across all zones.');
-      return res.json({ message: 'No thresholds breached.', claims_created: 0, zones_checked: OPERATIONAL_ZONES.length });
-    }
-
-    let claims_created = 0;
-
-    for (const breach of breachedZones) {
-      console.log(`[CRON] Threshold breached — Zone: ${breach.zone_id}, Type: ${breach.type}, Severity: ${breach.severity}`);
-
-      // Query the trips table for active workers in this zone.
-      // A trip with status = 'active' (or we check the global isTripActive flag for the MVP)
-      // In the current single-driver MVP the state table is the source of truth.
-      const state = await dbGet('SELECT * FROM state WHERE id = 1');
-
-      if (state.isTripActive && state.claimStatus === 'none') {
-        // Auto-insert a Pending Review claim into trips table (hoursWorked null — not yet logged)
-        await dbRun(
-          `INSERT INTO trips (status, earnings, "protectedAmount", timestamp, "hoursWorked") VALUES ($1, $2, $3, $4, $5)`,
-          ['pending_review', 0, 0, new Date().toISOString(), null]
-        );
-
-        // Update global state to reflect the parametric disruption
-        await dbRun(`
-          UPDATE state
-          SET "disruptionType"      = $1,
-              "disruptionZone"      = $2,
-              "disruptionSeverity"  = $3,
-              "disruptionMessage"   = $4,
-              "disruptionTimestamp" = $5,
-              "claimStatus"         = 'processing'
-          WHERE id = 1
-        `, [
-          breach.type,
-          breach.zone_id,
-          breach.severity,
-          breach.message,
-          new Date().toISOString(),
-        ]);
-
-        claims_created++;
-        console.log(`[CRON] Auto-claim created (Pending Review) for zone ${breach.zone_id} — ${breach.message}`);
-      } else {
-        console.log(`[CRON] Zone ${breach.zone_id} breached but no active unprotected trip found — skipping auto-claim.`);
-      }
-    }
-
+    const result = await runTriggerEvaluation();
     const finalState = await dbGet('SELECT * FROM state WHERE id = 1');
     res.json({
-      message: `Cron run complete. ${claims_created} claim(s) auto-created.`,
-      breached_zones: breachedZones,
-      claims_created,
-      zones_checked: OPERATIONAL_ZONES.length,
+      message: `Cron run complete. ${result.claims_created} claim(s) auto-created.`,
+      ...result,
       state: formatState(finalState),
     });
-
   } catch (error) {
     console.error('[CRON] evaluate-live-triggers error:', error.message);
     res.status(500).json({ error: 'Cron evaluation failed', detail: error.message });

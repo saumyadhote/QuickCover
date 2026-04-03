@@ -110,7 +110,9 @@ async function initializeDatabase() {
           "protectedAmount" REAL,
           timestamp TEXT,
           "hoursWorked" REAL DEFAULT NULL,
-          "userId" INTEGER DEFAULT NULL
+          "userId" INTEGER DEFAULT NULL,
+          "zoneId" TEXT DEFAULT NULL,
+          "disruptionType" TEXT DEFAULT NULL
         )
       `);
       // ---------------------------------------------------------------------------
@@ -151,6 +153,8 @@ async function initializeDatabase() {
       // Migrations: add columns to existing tables that predate them
       await client.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS "hoursWorked" REAL DEFAULT NULL`);
       await client.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS "userId" INTEGER DEFAULT NULL`);
+      await client.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS "zoneId" TEXT DEFAULT NULL`);
+      await client.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS "disruptionType" TEXT DEFAULT NULL`);
       await client.query(`ALTER TABLE state ADD COLUMN IF NOT EXISTS "lastPayoutAmount" REAL DEFAULT 0`);
     } finally {
       client.release();
@@ -192,7 +196,9 @@ async function initializeDatabase() {
       protectedAmount REAL,
       timestamp TEXT,
       hoursWorked REAL DEFAULT NULL,
-      userId INTEGER DEFAULT NULL
+      userId INTEGER DEFAULT NULL,
+      zoneId TEXT DEFAULT NULL,
+      disruptionType TEXT DEFAULT NULL
     )`);
 
     // ---------------------------------------------------------------------------

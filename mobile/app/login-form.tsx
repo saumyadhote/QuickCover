@@ -155,7 +155,7 @@ export default function LoginScreen() {
                 letterSpacing: -0.14,
                 color: '#6C7278',
               }}
-              placeholder="Delivery ID"
+              placeholder="Email / Delivery ID"
               placeholderTextColor="#6C7278"
               autoCapitalize="none"
               keyboardType="email-address"
@@ -175,7 +175,7 @@ export default function LoginScreen() {
             paddingVertical: 14,
             gap: 12,
           }}>
-            <Lock size={16} color="#ACB5BB" strokeWidth={1.3} />
+            <Lock size={16} color="#0052B4" strokeWidth={1.3} />
             <TextInput
               style={{
                 flex: 1,
