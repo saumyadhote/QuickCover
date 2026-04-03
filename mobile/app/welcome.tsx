@@ -178,7 +178,7 @@ export default function WelcomeScreen() {
       <LinearGradient
         colors={['rgba(13,13,26,0.55)', 'rgba(13,13,26,0)', 'rgba(13,13,26,0)', 'rgba(13,13,26,0.72)', 'rgba(13,13,26,0.97)']}
         locations={[0, 0.12, 0.45, 0.70, 1]}
-        style={{ position: 'absolute', inset: 0, zIndex: 1, pointerEvents: 'none' }}
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1, pointerEvents: 'none' }}
       />
 
       {/* ── Top: logo ── */}

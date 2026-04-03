@@ -15,8 +15,12 @@ function AuthGuard() {
     if (loading) return;
 
     const inAuthGroup = segments[0] === '(tabs)';
-    const onLoginOrSignup = segments[0] === 'login' || segments[0] === 'login-form' || segments[0] === 'signup' || segments[0] === 'welcome' || segments[0] === undefined || segments.length === 0;
-    const onOnboarding = segments[0] === 'onboarding';
+    const onSplash      = segments[0] === undefined || segments.length === 0;
+    const onLoginOrSignup = segments[0] === 'login' || segments[0] === 'login-form' || segments[0] === 'signup' || segments[0] === 'welcome';
+    const onOnboarding  = segments[0] === 'onboarding';
+
+    // Let the splash screen always play — it handles its own navigation
+    if (onSplash) return;
 
     if (!user && (inAuthGroup || onOnboarding)) {
       router.replace('/login-form');

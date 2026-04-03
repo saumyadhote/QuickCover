@@ -3,23 +3,19 @@ import { View, useWindowDimensions } from 'react-native';
 import Svg, { Defs, RadialGradient as SvgRadialGradient, Stop, Ellipse } from 'react-native-svg';
 import Animated, {
   useSharedValue,
-  useAnimatedProps,
+  useAnimatedStyle,
   withRepeat,
   withTiming,
   withSequence,
   Easing,
 } from 'react-native-reanimated';
 
-const AnimatedEllipse = Animated.createAnimatedComponent(Ellipse);
-
 export function PurpleBlob() {
   const { width } = useWindowDimensions();
   const height = 420;
 
-  // Breathing scale for the main orb
+  // Breathing scale for the whole blob layer
   const scale = useSharedValue(1);
-  // Subtle horizontal drift for the accent orb
-  const drift = useSharedValue(0);
 
   useEffect(() => {
     scale.value = withRepeat(
@@ -30,35 +26,22 @@ export function PurpleBlob() {
       -1,
       false,
     );
-    drift.value = withRepeat(
-      withSequence(
-        withTiming(18, { duration: 4000, easing: Easing.inOut(Easing.sine) }),
-        withTiming(-10, { duration: 4000, easing: Easing.inOut(Easing.sine) }),
-      ),
-      -1,
-      false,
-    );
   }, []);
 
-  const orb1Props = useAnimatedProps(() => ({
-    rx: width * 0.60 * scale.value,
-    ry: height * 0.62 * scale.value,
-  }));
-
-  const orb2Props = useAnimatedProps(() => ({
-    cx: width * 0.15 + drift.value,
+  const containerStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
   }));
 
   return (
-    <View
-      style={{
+    <Animated.View
+      style={[{
         position: 'absolute',
         bottom: 0,
         left: 0,
         right: 0,
         height,
         pointerEvents: 'none',
-      }}
+      }, containerStyle]}
     >
       <Svg width={width} height={height}>
         <Defs>
@@ -96,24 +79,22 @@ export function PurpleBlob() {
           </SvgRadialGradient>
         </Defs>
 
-        <AnimatedEllipse
+        <Ellipse
           cx={width * 0.5}
           cy={height * 0.78}
           rx={width * 0.60}
           ry={height * 0.62}
           fill="url(#orb1)"
-          animatedProps={orb1Props}
         />
 
-        <AnimatedEllipse
+        <Ellipse
           cx={width * 0.15}
           cy={height * 0.98}
           rx={width * 0.28}
           ry={height * 0.30}
           fill="url(#orb2)"
-          animatedProps={orb2Props}
         />
       </Svg>
-    </View>
+    </Animated.View>
   );
 }
