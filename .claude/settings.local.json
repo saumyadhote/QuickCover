@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node --check server.js)",
+      "Bash(node --check database.js)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(npx tsc:*)",
+      "Bash(curl -s -X POST https://quickcover.onrender.com/auth/login -H \"Content-Type: application/json\" -d '{\"\"\"\"email\"\"\"\":\"\"\"\"tarunsita13@gmail.com\"\"\"\",\"\"\"\"password\"\"\"\":\"\"\"\"tarun123\"\"\"\"}')",
+      "Bash(curl:*)",
+      "Bash(npm run:*)",
+      "WebSearch",
+      "WebFetch(domain:21st.dev)",
+      "WebFetch(domain:allshadcn.com)"
+    ]
+  }
+}

@@ -3,12 +3,79 @@
 @tailwind utilities;
 
 body {
-  background-color: #0c1324;
+  background-color: #030303;
   font-family: 'Inter', sans-serif;
-  color: #dce1fb;
+  color: #ededed;
+}
+
+.bg-dot-pattern {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.bg-noise {
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  opacity: 0.25;
+  mix-blend-mode: overlay;
 }
 
 .glass-panel {
   background: rgba(35, 41, 60, 0.8);
   backdrop-filter: blur(12px);
+}
+
+/* ─── Sonar ping (topnav status indicator) ─── */
+@keyframes sonar-ping {
+  0% { transform: scale(1); opacity: 0.7; }
+  100% { transform: scale(2.8); opacity: 0; }
+}
+.sonar-ring {
+  animation: sonar-ping 1.8s ease-out infinite;
+}
+
+/* ─── Shimmer skeleton ─── */
+@keyframes shimmer-slide {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.shimmer {
+  background: linear-gradient(90deg, #1e253a 25%, #2a3350 50%, #1e253a 75%);
+  background-size: 200% 100%;
+  animation: shimmer-slide 1.4s ease-in-out infinite;
+}
+
+/* ─── Risk badge breathing glow ─── */
+@keyframes risk-breathe-red {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 180, 171, 0.5), 0 0 6px rgba(255, 180, 171, 0.2); }
+  50%       { box-shadow: 0 0 0 5px rgba(255, 180, 171, 0.08), 0 0 18px rgba(255, 180, 171, 0.4); }
+}
+@keyframes risk-breathe-yellow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 185, 95, 0.5), 0 0 6px rgba(255, 185, 95, 0.15); }
+  50%       { box-shadow: 0 0 0 5px rgba(255, 185, 95, 0.08), 0 0 18px rgba(255, 185, 95, 0.35); }
+}
+.risk-badge-critical { animation: risk-breathe-red 1.8s ease-in-out infinite; }
+.risk-badge-high     { animation: risk-breathe-red 2.2s ease-in-out infinite; }
+.risk-badge-medium   { animation: risk-breathe-yellow 2.8s ease-in-out infinite; }
+
+/* ─── Ops Feed newest entry slide-in ─── */
+@keyframes slide-in-right {
+  from { transform: translateX(14px); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+.ops-entry-new {
+  animation: slide-in-right 0.22s ease-out forwards;
+}
+
+/* ─── Disruption button hover glows ─── */
+.disruption-btn-weather:hover:not(:disabled)   { box-shadow: 0 0 22px rgba(173, 198, 255, 0.28); }
+.disruption-btn-pollution:hover:not(:disabled) { box-shadow: 0 0 22px rgba(255, 185, 95, 0.28); }
+.disruption-btn-curfew:hover:not(:disabled)    { box-shadow: 0 0 22px rgba(255, 180, 171, 0.28); }
+
+/* ─── Disruption-active card glow (P&L Claims Payouts card) ─── */
+@keyframes disruption-card-pulse {
+  0%, 100% { box-shadow: 0 0 0 1px rgba(255, 180, 171, 0.2), 0 0 16px rgba(255, 180, 171, 0.06); }
+  50%       { box-shadow: 0 0 0 1px rgba(255, 180, 171, 0.55), 0 0 28px rgba(255, 180, 171, 0.18); }
+}
+.disruption-active-glow {
+  animation: disruption-card-pulse 2.4s ease-in-out infinite;
 }

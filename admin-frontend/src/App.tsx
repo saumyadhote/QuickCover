@@ -68,6 +68,43 @@ function useISTClock() {
   return time;
 }
 
+// Smoothly counts up/down to a new number over `duration` ms
+function useAnimatedNumber(target: number, duration = 650): number {
+  const [display, setDisplay] = useState(target);
+  const prev = useRef(target);
+  const raf = useRef<number | undefined>(undefined);
+  useEffect(() => {
+    const from = prev.current;
+    if (from === target) return;
+    const start = performance.now();
+    const animate = (now: number) => {
+      const t = Math.min((now - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - t, 3); // ease-out cubic
+      setDisplay(from + (target - from) * eased);
+      if (t < 1) {
+        raf.current = requestAnimationFrame(animate);
+      } else {
+        prev.current = target;
+        setDisplay(target);
+      }
+    };
+    raf.current = requestAnimationFrame(animate);
+    return () => { if (raf.current) cancelAnimationFrame(raf.current); };
+  }, [target, duration]);
+  return display;
+}
+
+// Sonar-ping status dot for topnav
+function SonarDot({ online }: { online: boolean }) {
+  if (!online) return <span className="w-1.5 h-1.5 rounded-full bg-[#ffb4ab]" />;
+  return (
+    <span className="relative flex items-center justify-center w-3 h-3">
+      <span className="sonar-ring absolute w-3 h-3 rounded-full bg-[#4edea3]" />
+      <span className="relative w-1.5 h-1.5 rounded-full bg-[#4edea3]" />
+    </span>
+  );
+}
+
 function nowIST() {
   return new Date().toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour12: false });
 }
@@ -116,77 +153,85 @@ function Shell({
   return (
     <div className="text-[#dce1fb]">
       {/* Sidebar */}
-      <aside className="fixed left-0 top-0 h-screen w-[260px] z-50 bg-[#0c1324] flex flex-col py-6 px-4 border-r border-[#424754]/15">
-        <div className="mb-10 px-2 flex items-center gap-3">
-          <QCLogo size={36} />
+      <aside className="fixed left-0 top-0 h-screen w-[240px] z-50 bg-[#020202]/90 backdrop-blur-2xl flex flex-col border-r border-white/5 shadow-2xl">
+        {/* Logo — same height as topnav */}
+        <div className="h-16 flex items-center gap-3 px-5 border-b border-white/[0.05] flex-shrink-0">
+          <QCLogo size={30} />
           <div>
-            <h1 className="text-base font-bold tracking-tighter text-[#dce1fb] uppercase leading-none">QuickCover</h1>
-            <p className="text-[9px] uppercase tracking-[0.2em] text-[#4edea3] font-semibold mt-0.5">Ops Console</p>
+            <h1 className="text-[13px] font-bold tracking-tight text-white leading-none">QuickCover</h1>
+            <p className="text-[9px] uppercase tracking-[0.18em] text-[#4edea3]/80 font-semibold mt-0.5">Ops Console</p>
           </div>
         </div>
-        <nav className="flex-1 space-y-1">
+
+        {/* Nav */}
+        <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
+          <p className="text-[9px] uppercase tracking-[0.15em] text-[#3d4560] font-semibold px-3 mb-2 mt-1">Navigation</p>
           {nav.map(n => (
             <button
               key={n.id}
               onClick={() => setTab(n.id)}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm transition-all duration-200 text-left rounded-lg ${
+              className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm transition-all duration-150 text-left rounded-lg ${
                 tab === n.id
-                  ? 'text-[#adc6ff] font-semibold bg-[#adc6ff]/10 border border-[#adc6ff]/20'
-                  : 'text-[#c2c6d6] hover:text-[#dce1fb] hover:bg-[#191f31] font-medium border border-transparent'
+                  ? 'text-white font-semibold bg-white/[0.07]'
+                  : 'text-[#6b7898] hover:text-[#c8d0e8] hover:bg-white/[0.04] font-medium'
               }`}
             >
-              <n.Icon size={18} />
+              <n.Icon size={16} className={tab === n.id ? 'text-[#adc6ff]' : ''} />
               <span>{n.label}</span>
+              {tab === n.id && <span className="ml-auto w-1 h-4 rounded-full bg-[#adc6ff]" />}
             </button>
           ))}
         </nav>
-        <div className="mt-auto space-y-1">
-          <div className="px-3 py-4 mb-4 bg-[#151b2d] rounded-lg border border-[#424754]/10">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] uppercase tracking-widest text-[#c2c6d6]">Core Engine</span>
-              <span className={`w-2 h-2 rounded-full ${backendOnline ? 'bg-[#4edea3] animate-pulse' : 'bg-[#ffb4ab]'}`} />
+
+        {/* Footer */}
+        <div className="px-3 pb-4 space-y-1 border-t border-white/[0.05] pt-3">
+          <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg bg-white/[0.03] border border-white/[0.05]">
+            <div className={`w-2 h-2 rounded-full flex-shrink-0 ${backendOnline ? 'bg-[#4edea3]' : 'bg-[#ffb4ab]'}`}
+              style={backendOnline ? { boxShadow: '0 0 6px #4edea3' } : {}} />
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold text-[#c8d0e8]">{backendOnline ? 'Engine Online' : 'Engine Offline'}</p>
+              <p className="text-[9px] text-[#3d4560]">{backendOnline ? 'All systems nominal' : 'Reconnecting…'}</p>
             </div>
-            <div className="h-1 bg-[#2e3447] w-full overflow-hidden rounded-full">
-              <div className={`h-full rounded-full transition-all ${backendOnline ? 'bg-[#4edea3] w-full' : 'bg-[#ffb4ab] w-1/3'}`} />
-            </div>
-            <p className="text-[9px] mt-1.5 text-[#8c909f]">{backendOnline ? 'All systems nominal' : 'Engine offline'}</p>
           </div>
-          <button className="w-full flex items-center gap-3 px-3 py-2 text-[#c2c6d6] hover:text-[#dce1fb] hover:bg-[#191f31] transition-colors rounded-lg">
-            <Settings size={18} />
-            <span className="text-sm font-medium">Settings</span>
+          <button className="w-full flex items-center gap-3 px-3 py-2 text-[#6b7898] hover:text-[#c8d0e8] hover:bg-white/[0.04] transition-colors rounded-lg">
+            <Settings size={15} /><span className="text-sm font-medium">Settings</span>
           </button>
-          <button className="w-full flex items-center gap-3 px-3 py-2 text-[#c2c6d6] hover:text-[#dce1fb] hover:bg-[#191f31] transition-colors rounded-lg">
-            <HelpCircle size={18} />
-            <span className="text-sm font-medium">Support</span>
+          <button className="w-full flex items-center gap-3 px-3 py-2 text-[#6b7898] hover:text-[#c8d0e8] hover:bg-white/[0.04] transition-colors rounded-lg">
+            <HelpCircle size={15} /><span className="text-sm font-medium">Support</span>
           </button>
         </div>
       </aside>
 
       {/* Topnav */}
-      <header className="fixed top-0 right-0 w-[calc(100%-260px)] z-40 bg-[#0c1324]/90 backdrop-blur-xl border-b border-[#424754]/15 flex items-center h-16 px-8 gap-6">
-        <div className="flex items-center gap-4 mr-auto">
-          <span className="text-[#c2c6d6] text-[10px] uppercase tracking-widest">Env:</span>
-          <span className={`flex items-center gap-1.5 text-xs font-semibold ${backendOnline ? 'text-[#4edea3]' : 'text-[#ffb4ab]'}`}>
-            <span className={`w-1.5 h-1.5 rounded-full ${backendOnline ? 'bg-[#4edea3] animate-pulse' : 'bg-[#ffb4ab]'}`} />
-            Backend: {backendOnline ? 'LIVE' : 'OFFLINE'}
+      <header className="fixed top-0 right-0 w-[calc(100%-240px)] z-40 bg-[#020202]/70 backdrop-blur-2xl border-b border-white/5 flex items-center h-16 px-8 gap-6 shadow-sm">
+        <div className="flex items-center gap-3 mr-auto">
+          <span className="text-[10px] uppercase tracking-[0.15em] text-[#3d4560] font-semibold">Environment</span>
+          <div className="h-3.5 w-px bg-white/[0.08]" />
+          <span className={`flex items-center gap-2 text-xs font-semibold ${backendOnline ? 'text-[#4edea3]' : 'text-[#ffb4ab]'}`}>
+            <SonarDot online={backendOnline} />
+            {backendOnline ? 'Production · Live' : 'Offline'}
           </span>
         </div>
-        <span className="text-xs font-mono text-[#8c909f]">{clock} IST</span>
+        <span className="text-xs font-mono text-[#3d4560]">{clock} IST</span>
+        <div className="h-3.5 w-px bg-white/[0.08]" />
         <button
           onClick={onReset}
-          className="bg-[#151b2d] px-4 py-1.5 text-[#adc6ff] border border-[#424754]/30 text-xs hover:bg-[#2e3447] transition-colors active:scale-95 rounded-md"
+          className="px-3 py-1.5 text-[#6b7898] border border-white/[0.08] text-xs hover:text-white hover:border-white/[0.15] hover:bg-white/[0.04] transition-all rounded-md"
         >
-          Reset Demo Data
+          Reset Demo
         </button>
-        {/* Logo badge */}
-        <div className="flex items-center justify-center bg-[#151b2d] border border-[#4edea3]/20 w-9 h-9 rounded-lg">
-          <QCLogo size={24} />
+        <div className="flex items-center justify-center bg-white/[0.04] border border-white/[0.08] w-8 h-8 rounded-lg">
+          <QCLogo size={20} />
         </div>
       </header>
 
       {/* Content */}
-      <main className="ml-[260px] pt-16 min-h-screen bg-[#0c1324] p-8">
-        {children}
+      <main className="ml-[240px] pt-16 min-h-screen bg-[#000000] p-8 relative overflow-hidden">
+        <div className="absolute inset-0 bg-dot-pattern [mask-image:linear-gradient(to_bottom,white,transparent)] pointer-events-none opacity-50" />
+        <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-[#4edea3]/[0.02] to-[#adc6ff]/[0.03] pointer-events-none" />
+        <div className="relative z-10">
+          {children}
+        </div>
       </main>
     </div>
   );
@@ -247,8 +292,8 @@ function LiveOpsFeed({ events }: { events: OpsEvent[] }) {
       ) : events.map((e, i) => (
         <div
           key={e.id}
-          className={`flex items-start gap-3 px-4 py-3 border-b border-[#424754]/10 transition-all duration-500 ${
-            i === 0 ? 'bg-[#151b2d]' : 'hover:bg-[#151b2d]/50'
+          className={`flex items-start gap-3 px-5 py-4 border-b border-white/[0.02] transition-colors duration-300 ${
+            i === 0 ? 'bg-white/[0.03] ops-entry-new' : 'hover:bg-white/[0.02]'
           }`}
           style={{ opacity: Math.max(0.3, 1 - i * 0.045) }}
         >
@@ -292,8 +337,9 @@ function ZoneOutagePanel({
   for (const o of outages) activeByZone[o.zoneId] = o;
 
   return (
-    <section className="bg-[#191f31] p-6 rounded-xl border border-[#424754]/10">
-      <div className="flex items-center justify-between mb-4">
+    <section className="bg-white/[0.015] p-6 rounded-3xl border border-white/5 backdrop-blur-2xl shadow-[0_8px_30px_rgb(0,0,0,0.4)] relative overflow-hidden group">
+      <div className="absolute inset-0 bg-gradient-to-br from-white/[0.01] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-3xl" />
+      <div className="flex items-center justify-between mb-4 relative z-10">
         <div className="flex items-center gap-3">
           <PowerOff size={18} className="text-[#ffb4ab]" />
           <h3 className="text-sm font-bold uppercase tracking-widest">Zone Outage Manager</h3>
@@ -302,14 +348,14 @@ function ZoneOutagePanel({
           4th Trigger
         </span>
       </div>
-      <p className="text-[10px] text-[#8c909f] mb-5">
+      <p className="text-[10px] text-[#8c909f] mb-5 relative z-10">
         Log a platform outage per zone. Claims auto-file for all active workers after 90 min.
       </p>
-      <div className="space-y-3">
+      <div className="space-y-3 relative z-10">
         {(['ZONE_A', 'ZONE_B', 'ZONE_C'] as const).map(zoneId => {
           const active = activeByZone[zoneId];
           return (
-            <div key={zoneId} className={`bg-[#0c1324] rounded-lg border p-4 transition-colors ${active ? 'border-[#ffb4ab]/30' : 'border-[#424754]/20'}`}>
+            <div key={zoneId} className={`bg-white/[0.02] rounded-xl border p-4 transition-colors backdrop-blur-md ${active ? 'border-[#ffb4ab]/30' : 'border-white/5'}`}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 min-w-0">
                   <MapPin size={13} className={active ? 'text-[#ffb4ab]' : 'text-[#424754]'} />
@@ -379,8 +425,9 @@ function CronEvalPanel({
   };
 
   return (
-    <section className="bg-[#191f31] p-6 rounded-xl border border-[#424754]/10">
-      <div className="flex items-center justify-between mb-4">
+    <section className="bg-white/[0.015] p-6 rounded-3xl border border-white/5 backdrop-blur-2xl shadow-[0_8px_30px_rgb(0,0,0,0.4)] relative overflow-hidden group">
+      <div className="absolute inset-0 bg-gradient-to-br from-white/[0.01] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-3xl" />
+      <div className="flex items-center justify-between mb-4 relative z-10">
         <div className="flex items-center gap-3">
           <Zap size={18} className="text-[#adc6ff]" />
           <h3 className="text-sm font-bold uppercase tracking-widest">Zero-Touch Cron Eval</h3>
@@ -389,37 +436,38 @@ function CronEvalPanel({
           Auto-Claims
         </span>
       </div>
-      <p className="text-[10px] text-[#8c909f] mb-5">
+      <p className="text-[10px] text-[#8c909f] mb-5 relative z-10">
         Poll all zones against live APIs. Auto-creates Pending Review claims for every active worker in a breached zone — no driver action needed.
       </p>
 
-      <button
-        onClick={handleRun}
-        disabled={running}
-        className="w-full flex items-center justify-center gap-2 py-3 bg-gradient-to-br from-[#adc6ff] to-[#4d8eff] text-[#002e6a] font-bold text-sm rounded-lg shadow-lg shadow-[#adc6ff]/10 active:scale-95 transition-transform disabled:opacity-50 disabled:cursor-not-allowed mb-5"
-      >
-        {running ? (
-          <>
-            <LoaderCircle size={16} className="animate-spin" />
-            Evaluating all zones…
-          </>
-        ) : (
-          <>
-            <Play size={16} />
-            Run Trigger Evaluation Now
-          </>
-        )}
-      </button>
+      <div className="relative z-10">
+        <button
+          onClick={handleRun}
+          disabled={running}
+          className="w-full flex items-center justify-center gap-2 py-3 bg-gradient-to-br from-[#adc6ff] to-[#4d8eff] text-[#002e6a] font-bold text-sm rounded-xl shadow-lg shadow-[#adc6ff]/10 hover:opacity-90 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed mb-5"
+        >
+          {running ? (
+            <>
+              <LoaderCircle size={16} className="animate-spin" />
+              Evaluating all zones…
+            </>
+          ) : (
+            <>
+              <Play size={16} />
+              Run Trigger Evaluation Now
+            </>
+          )}
+        </button>
 
       {lastResult ? (
-        <div className={`p-4 rounded-lg border ${lastResult.claims_created > 0 ? 'bg-[#ffb4ab]/5 border-[#ffb4ab]/20' : 'bg-[#4edea3]/5 border-[#4edea3]/20'}`}>
+        <div className={`p-4 rounded-xl border backdrop-blur-md ${lastResult.claims_created > 0 ? 'bg-[#ffb4ab]/5 border-[#ffb4ab]/20' : 'bg-[#4edea3]/5 border-[#4edea3]/20'}`}>
           <div className="flex items-center justify-between mb-2">
             <span className={`text-xs font-bold ${lastResult.claims_created > 0 ? 'text-[#ffb4ab]' : 'text-[#4edea3]'}`}>
               {lastResult.claims_created > 0
                 ? `${lastResult.claims_created} auto-claim(s) created`
                 : 'No thresholds breached'}
             </span>
-            <span className="text-[10px] font-mono text-[#424754]">{lastResult.ran_at}</span>
+            <span className="text-[10px] font-mono text-[#8c909f]">{lastResult.ran_at}</span>
           </div>
           {lastResult.breached_zones.length > 0 && (
             <div className="space-y-1">
@@ -433,12 +481,13 @@ function CronEvalPanel({
           )}
         </div>
       ) : (
-        <div className="p-4 rounded-lg bg-[#0c1324] border border-[#424754]/10 text-center">
-          <p className="text-[10px] text-[#424754]">No evaluation run yet this session</p>
+        <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5 text-center backdrop-blur-md">
+          <p className="text-[10px] text-[#8c909f]">No evaluation run yet this session</p>
         </div>
       )}
 
       <p className="text-[9px] text-[#424754] mt-3 text-right">Also runs automatically every 60s when WEATHER_API_KEY is set</p>
+      </div>
     </section>
   );
 }
@@ -467,6 +516,12 @@ function OverviewTab({
     ? (((grossPremium - claimsPayout) / grossPremium) * 100).toFixed(1)
     : '71.2';
 
+  // Animated display values for P&L cards
+  const animGWP = useAnimatedNumber(grossPremium / 100000);
+  const animClaims = useAnimatedNumber(claimsPayout);
+  const animMargin = useAnimatedNumber(parseFloat(netMarginPct));
+  const animSurplus = useAnimatedNumber(Math.max(0, grossPremium - claimsPayout));
+
   // Pool health: reduces when claims are paid out relative to pool
   const poolHealth = Math.min(100, Math.max(60, 100 - (claimsPayout / (grossPremium * 0.01))));
   const riskColor = state.currentRiskLevel === 'Low' ? '#4edea3'
@@ -479,100 +534,119 @@ function OverviewTab({
 
   return (
     <>
-      {/* Enterprise Partner Strip */}
-      <section className="mb-8">
-        <div className="flex items-center justify-between bg-[#191f31] border-l-4 border-[#4edea3] p-4 rounded-r-xl">
-          <div className="flex items-center gap-6">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-[#2e3447] flex items-center justify-center border border-[#424754]/20">
-                <Zap size={18} className="text-[#4edea3]" fill="#4edea3" />
-              </div>
-              <div>
-                <h2 className="text-sm font-bold tracking-tight">Active Partner: Blinkit</h2>
-                <p className="text-[10px] uppercase tracking-widest text-[#4edea3] font-bold">Priority Node</p>
-              </div>
+      {/* Partner Status Strip */}
+      <section className="mb-8 flex items-center justify-between px-5 py-3.5 bg-white/[0.015] border border-white/5 rounded-2xl backdrop-blur-3xl shadow-[0_8px_30px_rgb(0,0,0,0.4)]">
+        <div className="flex items-center gap-5">
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-lg bg-[#4edea3]/10 border border-[#4edea3]/20 flex items-center justify-center">
+              <Zap size={13} className="text-[#4edea3]" />
             </div>
-            <div className="h-8 w-[1px] bg-[#424754]/20" />
-            <div className="flex gap-4">
-              {['Instamart', 'Zepto'].map(p => (
-                <div key={p} className="flex items-center gap-2 opacity-30 cursor-not-allowed select-none">
-                  <span className="text-xs font-semibold">{p}</span>
-                  <span className="text-[9px] text-[#8c909f] border border-[#8c909f]/30 px-1 rounded">PENDING</span>
-                </div>
-              ))}
+            <div>
+              <p className="text-xs font-semibold text-white">Blinkit</p>
+              <p className="text-[9px] text-[#4edea3] font-semibold uppercase tracking-widest">Active Partner</p>
             </div>
           </div>
-          <div className="text-right">
-            <p className="text-[10px] text-[#c2c6d6] font-bold uppercase tracking-widest">Live Feed Status</p>
-            <p className="text-xs text-[#4edea3] flex items-center justify-end gap-1 font-mono">
-              <span className="w-1.5 h-1.5 bg-[#4edea3] rounded-full animate-pulse" />
-              CONNECTED: 1.2ms latency
-            </p>
-          </div>
+          <div className="h-4 w-px bg-white/[0.07]" />
+          {['Instamart', 'Zepto'].map(p => (
+            <span key={p} className="text-xs text-[#3d4560] flex items-center gap-1.5">
+              {p}
+              <span className="text-[8px] border border-white/[0.08] px-1 py-px rounded text-[#3d4560]">PENDING</span>
+            </span>
+          ))}
+        </div>
+        <div className="flex items-center gap-2 text-xs text-[#4edea3] font-mono">
+          <span className="w-1.5 h-1.5 bg-[#4edea3] rounded-full animate-pulse" />
+          1.2ms latency
         </div>
       </section>
 
       {/* P&L Cards */}
       <section className="mb-8">
-        <div className="flex items-end justify-between mb-4">
+        <div className="flex items-end justify-between mb-5">
           <div>
-            <h3 className="text-xl font-bold tracking-tight">Revenue, Profit &amp; Loss</h3>
-            <p className="text-xs text-[#c2c6d6]">Real-time financial performance for Blinkit underwriting pool.</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-[#3d4560] mb-1">Financial Performance</p>
+            <h3 className="text-xl font-bold text-white tracking-tight">Revenue, Profit &amp; Loss</h3>
           </div>
+          <span className="text-xs text-[#3d4560]">Blinkit Underwriting Pool · NCR</span>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-[#191f31] border-l-4 border-[#adc6ff] p-6 rounded-r-xl">
-            <p className="text-[10px] font-bold tracking-[0.1em] uppercase text-[#c2c6d6] mb-1">Gross Written Premium</p>
-            <div className="flex items-baseline gap-2">
-              <h4 className="text-3xl font-bold tracking-tighter">₹{(grossPremium / 100000).toFixed(2)}L</h4>
-              <span className="text-[#4edea3] text-xs font-bold">+12.4%</span>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+          {/* GWP */}
+          <div className="relative bg-white/[0.015] border border-white/5 p-6 rounded-3xl overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.4)] backdrop-blur-xl group hover:border-[#adc6ff]/20 transition-all duration-300">
+            <div className="absolute inset-0 bg-gradient-to-br from-[#adc6ff]/[0.02] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            <div className="absolute top-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-[#adc6ff]/80 via-[#6e9fff]/80 to-transparent" />
+            <div className="flex items-start justify-between mb-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#4d5f80]">Gross Written Premium</p>
+              <span className="text-[10px] font-bold text-[#4edea3] bg-[#4edea3]/10 px-2 py-0.5 rounded-full">+12.4%</span>
             </div>
-            <p className="text-[10px] text-[#8c909f] mt-1">₹{state.currentMicroFee.toFixed(2)}/order × {dailyOrders.toLocaleString('en-IN')}</p>
-            <div className="mt-4 h-10">
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-[22px] font-medium text-[#adc6ff]/60">₹</span>
+              <h4 className="text-4xl font-bold text-white tracking-tight">{animGWP.toFixed(2)}<span className="text-2xl font-semibold text-[#adc6ff]/70 ml-0.5">L</span></h4>
+            </div>
+            <p className="text-[11px] text-[#4d5f80] mt-2">₹{state.currentMicroFee.toFixed(2)}/order × {dailyOrders.toLocaleString('en-IN')}</p>
+            <div className="mt-5 h-10">
               <FeeSparkline history={feeHistory} color="#adc6ff" />
             </div>
           </div>
-          <div className="bg-[#191f31] border-l-4 border-[#ffb4ab] p-6 rounded-r-xl">
-            <p className="text-[10px] font-bold tracking-[0.1em] uppercase text-[#c2c6d6] mb-1">Claims Payouts</p>
-            <div className="flex items-baseline gap-2">
-              <h4 className="text-3xl font-bold tracking-tighter">₹{claimsPayout.toLocaleString('en-IN')}</h4>
-              <span className={`text-xs font-bold ${claimsPayout > 0 ? 'text-[#ffb4ab]' : 'text-[#4edea3]'}`}>
+
+          {/* Claims */}
+          <div className={`relative bg-white/[0.015] border border-white/5 p-6 rounded-3xl overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.4)] backdrop-blur-xl group hover:border-[#ffb4ab]/20 transition-all duration-300 ${state.disruption ? 'disruption-active-glow' : ''}`}>
+            <div className="absolute inset-0 bg-gradient-to-br from-[#ffb4ab]/[0.02] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            <div className={`absolute top-0 left-0 right-0 h-[1.5px] bg-gradient-to-r ${claimsPayout > 0 ? 'from-[#ffb4ab]/80 via-[#ff8a7a]/80 to-transparent' : 'from-white/[0.08] to-transparent'}`} />
+            <div className="flex items-start justify-between mb-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#4d5f80]">Claims Payouts</p>
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${claimsPayout > 0 ? 'text-[#ffb4ab] bg-[#ffb4ab]/10' : 'text-[#4edea3] bg-[#4edea3]/10'}`}>
                 {claimsPayout > 0 ? 'Active' : 'None'}
               </span>
             </div>
-            <p className="text-[10px] text-[#8c909f] mt-1">Weekly protected earnings disbursed</p>
-            <div className="mt-4 h-10">
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-[22px] font-medium text-[#ffb4ab]/60">₹</span>
+              <h4 className="text-4xl font-bold text-white tracking-tight">{Math.round(animClaims).toLocaleString('en-IN')}</h4>
+            </div>
+            <p className="text-[11px] text-[#4d5f80] mt-2">Weekly protected earnings disbursed</p>
+            <div className="mt-5 h-10">
               <svg className="w-full h-full" viewBox="0 0 100 40" preserveAspectRatio="none">
-                <path d="M0 30 L15 32 L30 28 L45 35 L60 33 L75 38 L90 34 L100 36" fill="none" stroke="#ffb4ab" strokeWidth="2" />
+                <path d="M0 30 L15 32 L30 28 L45 35 L60 33 L75 38 L90 34 L100 36" fill="none" stroke="#ffb4ab44" strokeWidth="2" />
               </svg>
             </div>
           </div>
-          <div className="bg-[#191f31] border-l-4 border-[#4edea3] p-6 rounded-r-xl">
-            <p className="text-[10px] font-bold tracking-[0.1em] uppercase text-[#c2c6d6] mb-1">Net Margin (Profit)</p>
-            <div className="flex items-baseline gap-2">
-              <h4 className="text-3xl font-bold tracking-tighter">{netMarginPct}%</h4>
-              <span className="text-[#4edea3] text-xs font-bold">↑ live</span>
+
+          {/* Net Margin */}
+          <div className="relative bg-white/[0.015] border border-white/5 p-6 rounded-3xl overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.4)] backdrop-blur-xl group hover:border-[#4edea3]/20 transition-all duration-300">
+            <div className="absolute inset-0 bg-gradient-to-br from-[#4edea3]/[0.02] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            <div className="absolute top-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-[#4edea3]/80 via-[#2dc98e]/80 to-transparent" />
+            <div className="flex items-start justify-between mb-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#4d5f80]">Net Margin</p>
+              <span className="text-[10px] font-bold text-[#4edea3] bg-[#4edea3]/10 px-2 py-0.5 rounded-full">↑ live</span>
             </div>
-            <p className="text-[10px] text-[#8c909f] mt-1">Pool surplus: ₹{Math.max(0, grossPremium - claimsPayout).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
-            <div className="mt-3 h-1.5 w-full bg-[#2e3447] rounded-full overflow-hidden">
-              <div className="h-full bg-[#4edea3] transition-all duration-700 rounded-full" style={{ width: `${Math.min(100, parseFloat(netMarginPct))}%` }} />
+            <div className="flex items-baseline gap-1.5">
+              <h4 className="text-4xl font-bold text-white tracking-tight">{animMargin.toFixed(1)}</h4>
+              <span className="text-2xl font-semibold text-[#4edea3]/70">%</span>
             </div>
+            <p className="text-[11px] text-[#4d5f80] mt-2">Pool surplus ₹{Math.round(animSurplus).toLocaleString('en-IN')}</p>
+            <div className="mt-4 h-1.5 w-full bg-white/[0.05] rounded-full overflow-hidden">
+              <div className="h-full rounded-full transition-all duration-700" style={{ width: `${Math.min(100, animMargin)}%`, background: 'linear-gradient(90deg, #4edea3, #2dc98e)' }} />
+            </div>
+            <p className="text-[10px] text-[#4edea3]/60 mt-1.5">Loss ratio ~{(100 - animMargin).toFixed(1)}%</p>
           </div>
+
         </div>
       </section>
 
-      {/* Metric Row — removed XGBoost label, replaced with Pool Health */}
+      {/* Metric Row */}
       <section className="mb-8 grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-[#191f31] p-5 rounded-xl border border-[#424754]/10">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-[#c2c6d6] mb-1">Active Deliveries</p>
+        <div className="bg-white/[0.015] p-6 rounded-3xl border border-white/5 backdrop-blur-2xl shadow-[0_8px_30px_rgb(0,0,0,0.4)] relative group overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-white/[0.02] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          <p className="text-[10px] font-bold uppercase tracking-widest text-[#8c909f] mb-2 relative">Active Deliveries</p>
           <div className="flex items-center gap-2">
             <p className="text-3xl font-bold">{state.isTripActive ? '24,893' : '24,892'}</p>
             {state.isTripActive && <span className="w-2 h-2 bg-[#4edea3] rounded-full animate-pulse" />}
           </div>
           <p className="text-[10px] text-[#8c909f] mt-1">NCR Region — Blinkit</p>
         </div>
-        <div className="bg-[#191f31] p-5 rounded-xl border border-[#424754]/10 relative overflow-hidden">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-[#c2c6d6] mb-1">AI Micro-Fee</p>
+        <div className="bg-white/[0.015] p-6 rounded-3xl border border-white/5 backdrop-blur-2xl shadow-[0_8px_30px_rgb(0,0,0,0.4)] relative group overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-white/[0.02] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          <p className="text-[10px] font-bold uppercase tracking-widest text-[#8c909f] mb-2 relative">AI Micro-Fee</p>
           <div className="flex items-baseline gap-1.5">
             <p className="text-3xl font-bold" style={{ color: riskColor }}>₹{state.currentMicroFee.toFixed(2)}</p>
             {feeDelta !== 0 && (
@@ -585,17 +659,21 @@ function OverviewTab({
           {/* live risk ribbon */}
           <div className="absolute right-0 top-0 bottom-0 w-1 transition-colors duration-700" style={{ backgroundColor: riskColor }} />
         </div>
-        <div className="bg-[#191f31] p-5 rounded-xl border border-[#424754]/10">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-[#c2c6d6] mb-1">Risk Level</p>
+        <div className="bg-white/[0.015] p-6 rounded-3xl border border-white/5 backdrop-blur-2xl shadow-[0_8px_30px_rgb(0,0,0,0.4)] relative group overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-white/[0.02] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          <p className="text-[10px] font-bold uppercase tracking-widest text-[#8c909f] mb-2 relative">Risk Level</p>
           <span className={`inline-block text-xl font-bold px-3 py-1 rounded-full border mt-1 transition-colors duration-500 ${
-            state.currentRiskLevel === 'Low' ? 'text-[#4edea3] bg-[#4edea3]/10 border-[#4edea3]/30' :
-            state.currentRiskLevel === 'Medium' ? 'text-[#ffb95f] bg-[#ffb95f]/10 border-[#ffb95f]/30' :
-            'text-[#ffb4ab] bg-[#ffb4ab]/10 border-[#ffb4ab]/30'
+            state.currentRiskLevel === 'Low'
+              ? 'text-[#4edea3] bg-[#4edea3]/10 border-[#4edea3]/30'
+              : state.currentRiskLevel === 'Medium'
+              ? 'text-[#ffb95f] bg-[#ffb95f]/10 border-[#ffb95f]/30 risk-badge-medium'
+              : 'text-[#ffb4ab] bg-[#ffb4ab]/10 border-[#ffb4ab]/30 risk-badge-high'
           }`}>{state.currentRiskLevel}</span>
           <p className="text-[10px] text-[#8c909f] mt-2">AI pricing classification</p>
         </div>
-        <div className="bg-[#191f31] p-5 rounded-xl border border-[#424754]/10">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-[#c2c6d6] mb-1">Pool Health</p>
+        <div className="bg-white/[0.015] p-6 rounded-3xl border border-white/5 backdrop-blur-2xl shadow-[0_8px_30px_rgb(0,0,0,0.4)] relative group overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-white/[0.02] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          <p className="text-[10px] font-bold uppercase tracking-widest text-[#8c909f] mb-2 relative">Pool Health</p>
           <div className="flex items-baseline gap-1">
             <p className="text-3xl font-bold text-[#4edea3]">{poolHealth.toFixed(1)}%</p>
           </div>
@@ -610,9 +688,9 @@ function OverviewTab({
       {/* Ops Feed + Disruption Simulator */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
 
-        {/* Live Operations Feed — replaces claim timeline */}
-        <section className="bg-[#191f31] rounded-xl border border-[#424754]/10 overflow-hidden">
-          <div className="flex items-center justify-between px-6 py-4 border-b border-[#424754]/10">
+        {/* Live Operations Feed */}
+        <section className="bg-white/[0.015] rounded-3xl border border-white/5 backdrop-blur-2xl shadow-[0_8px_30px_rgb(0,0,0,0.4)] overflow-hidden">
+          <div className="flex items-center justify-between px-6 py-5 border-b border-white/5 bg-white/[0.01]">
             <div className="flex items-center gap-3">
               <div className="w-2 h-2 bg-[#4edea3] rounded-full animate-pulse" />
               <h3 className="text-sm font-bold uppercase tracking-widest">Live Operations Feed</h3>
@@ -645,8 +723,9 @@ function OverviewTab({
         </section>
 
         {/* Disruption Simulator */}
-        <section className="bg-[#191f31] p-6 rounded-xl border border-[#424754]/10">
-          <div className="flex items-center justify-between mb-6">
+        <section className="bg-white/[0.015] p-6 rounded-3xl border border-white/5 backdrop-blur-2xl shadow-[0_8px_30px_rgb(0,0,0,0.4)] relative group">
+          <div className="absolute inset-0 bg-gradient-to-br from-white/[0.01] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-3xl" />
+          <div className="flex items-center justify-between mb-6 relative z-10">
             <div className="flex items-center gap-3">
               <AlertTriangle size={18} className="text-[#ffb95f]" />
               <h3 className="text-sm font-bold uppercase tracking-widest">Disruption Simulator</h3>
@@ -655,15 +734,15 @@ function OverviewTab({
           </div>
           <div className="space-y-3 mb-6">
             {[
-              { type: 'WEATHER', sev: 'HIGH', msg: 'Severe waterlogging in Sector 42. IMD: 28mm/hr.', label: 'Flash Flood Warning', sub: 'IMD threshold breached · ₹450 payout', Icon: Droplets, color: '#adc6ff' },
-              { type: 'POLLUTION', sev: 'HIGH', msg: 'AQI crossed 450 in primary delivery grid.', label: 'Severe AQI Spike', sub: 'CPCB AQI >450 · ₹450 payout', Icon: Wind, color: '#ffb95f' },
-              { type: 'CURFEW', sev: 'CRITICAL', msg: 'Unplanned Section 144 grid disruption in NCR.', label: 'Civic Disruption', sub: 'Section 144 / curfew · ₹450 payout', Icon: ShieldCheck, color: '#ffb4ab' },
+              { type: 'WEATHER', sev: 'HIGH', msg: 'Severe waterlogging in Sector 42. IMD: 28mm/hr.', label: 'Flash Flood Warning', sub: 'IMD threshold breached · ₹450 payout', Icon: Droplets, color: '#adc6ff', btnClass: 'disruption-btn-weather' },
+              { type: 'POLLUTION', sev: 'HIGH', msg: 'AQI crossed 450 in primary delivery grid.', label: 'Severe AQI Spike', sub: 'CPCB AQI >450 · ₹450 payout', Icon: Wind, color: '#ffb95f', btnClass: 'disruption-btn-pollution' },
+              { type: 'CURFEW', sev: 'CRITICAL', msg: 'Unplanned Section 144 grid disruption in NCR.', label: 'Civic Disruption', sub: 'Section 144 / curfew · ₹450 payout', Icon: ShieldCheck, color: '#ffb4ab', btnClass: 'disruption-btn-curfew' },
             ].map(evt => (
               <button
                 key={evt.type}
                 onClick={() => triggerDisruption(evt.type, evt.sev, evt.msg)}
                 disabled={state.claimStatus === 'processing' || state.claimStatus === 'approved'}
-                className="w-full bg-[#0c1324] hover:bg-[#2e3447] border border-[#424754]/30 p-4 rounded-lg text-left transition-all group disabled:opacity-40 disabled:cursor-not-allowed"
+                className={`w-full bg-white/[0.02] hover:bg-white/[0.05] border border-white/5 p-4 rounded-xl text-left transition-all duration-300 group/btn disabled:opacity-40 disabled:cursor-not-allowed ${evt.btnClass} backdrop-blur-md relative z-10`}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -680,7 +759,7 @@ function OverviewTab({
           </div>
 
           {/* ML fee refresh strip */}
-          <div className="bg-[#0c1324] rounded-lg border border-[#424754]/20 p-4">
+          <div className="bg-white/[0.02] rounded-xl border border-white/5 p-4 mt-6 backdrop-blur-md relative z-10">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Brain size={14} className="text-[#adc6ff]" />
@@ -866,7 +945,7 @@ function PricingTab({
                   </option>
                 ))}
               </select>
-              {zoneLoading && <LoaderCircle size={12} className="animate-spin text-[#adc6ff]" />}
+              {zoneLoading && <span className="w-1.5 h-1.5 rounded-full bg-[#adc6ff] animate-pulse" />}
               {!zoneLoading && zonePricing?.source === 'live' && (
                 <span className="w-1.5 h-1.5 rounded-full bg-[#4edea3] animate-pulse" />
               )}
@@ -927,9 +1006,10 @@ function PricingTab({
           </div>
           <div className="relative z-10">
             {zoneLoading ? (
-              <div className="flex items-center gap-3 text-[#8c909f] py-4">
-                <LoaderCircle size={24} className="animate-spin text-[#adc6ff]" />
-                <span className="text-sm">Fetching live data…</span>
+              <div className="py-4 space-y-3">
+                <div className="shimmer h-16 w-36 rounded-lg" />
+                <div className="shimmer h-4 w-28 rounded-md" />
+                <div className="shimmer h-3 w-20 rounded-md opacity-60" />
               </div>
             ) : (
               <div className="text-7xl font-extrabold tracking-tighter flex items-baseline gap-2 transition-all duration-500" style={{ color: riskColor }}>
