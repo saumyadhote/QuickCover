@@ -466,8 +466,8 @@ app.post('/trigger-disruption', async (req, res) => {
       `, [payoutAmount]);
 
       await dbRun(
-        `INSERT INTO trips (status, earnings, "protectedAmount", timestamp, "hoursWorked", "userId") VALUES ($1, $2, $3, $4, $5, $6)`,
-        ['disrupted', 10, payoutAmount, new Date().toISOString(), claimedHours, userId]
+        `INSERT INTO trips (status, earnings, "protectedAmount", timestamp, "hoursWorked", "userId", "disruptionType") VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        ['disrupted', 10, payoutAmount, new Date().toISOString(), claimedHours, userId, disruptionType]
       );
 
       await dbRun('UPDATE state SET "isTripActive" = FALSE WHERE id = 1');

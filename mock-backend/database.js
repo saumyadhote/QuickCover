@@ -231,6 +231,8 @@ async function initializeDatabase() {
     // Migrations: add columns to existing SQLite tables that predate them
     try { sqliteDb.exec(`ALTER TABLE trips ADD COLUMN hoursWorked REAL DEFAULT NULL`); } catch (_) { /* already exists */ }
     try { sqliteDb.exec(`ALTER TABLE trips ADD COLUMN userId INTEGER DEFAULT NULL`); } catch (_) { /* already exists */ }
+    try { sqliteDb.exec(`ALTER TABLE trips ADD COLUMN zoneId TEXT DEFAULT NULL`); } catch (_) { /* already exists */ }
+    try { sqliteDb.exec(`ALTER TABLE trips ADD COLUMN disruptionType TEXT DEFAULT NULL`); } catch (_) { /* already exists */ }
     try { sqliteDb.exec(`ALTER TABLE state ADD COLUMN lastPayoutAmount REAL DEFAULT 0`); } catch (_) { /* already exists */ }
   }
 
