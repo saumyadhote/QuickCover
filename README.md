@@ -3,6 +3,8 @@
 
 > *Submitted to Guidewire DEVTrails 2026: Unicorn Chase*
 
+**[🎥 Watch the Phase 2 End-to-End Demo Video Here](https://youtu.be/ODmFYYMETlQ)**
+
 ---
 
 ## The Problem
@@ -145,6 +147,10 @@ dynamically surges the microcharge to ₹5.00 to adequately fund the risk pool.
 | Extreme heat | >43°C for 2+ hrs | ₹250–400/shift |
 | Platform outage | Zone unavailable >90 mins | ₹200–350 |
 | Lockdown / curfew | Govt. notification | ₹500–700/day |
+
+### Shift-Level Payout Capping (8-Hour Rolling Window)
+
+To protect pool liquidity and prevent double-dipping, QuickCover enforces a hard financial safeguard: **one payout per disruption type per 8-hour shift window**. Before any payout is released, the backend queries the worker's trip history for any prior payout of the same disruption type (e.g. `WEATHER`, `OUTAGE`) within the last 8 hours. If a prior payout is found, coverage is recorded as `"Verified Disruption — Coverage Honored"` — the event is acknowledged and logged, but no second financial transfer is initiated. This prevents a single sustained monsoon event (which can persist for 6–12 hours) from generating multiple payouts in a single shift, keeping the loss ratio within the actuarially modelled 30–50% target band.
 
 ### Catastrophe Risk Capital & Reinsurance Strategy
 
