@@ -358,6 +358,141 @@
     .signup-row button:hover { text-decoration: underline; }
 
     /* ────────────────────────────────
+       SIGNUP SCREEN
+    ──────────────────────────────── */
+    #screen-signup {
+      overflow-y: auto;
+      padding: 56px 24px 48px;
+      background: #0d0d1a;
+    }
+
+    .signup-header {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .signup-heading {
+      font-family: 'Inter', sans-serif;
+      font-size: 26px;
+      font-weight: 700;
+      color: #ffffff;
+      letter-spacing: -.5px;
+    }
+
+    .signup-sub {
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+      color: #94a3b8;
+      text-align: center;
+      padding: 0 12px;
+    }
+
+    .form-card {
+      background: #1e2538;
+      border: 1px solid rgba(51,65,85,.6);
+      border-radius: 24px;
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+
+    .field-label {
+      font-family: 'Inter', sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      margin-bottom: 8px;
+      display: block;
+    }
+
+    .field-input {
+      width: 100%;
+      background: rgba(30,41,59,.8);
+      color: #ffffff;
+      border: 1px solid rgba(51,65,85,.5);
+      border-radius: 12px;
+      padding: 14px 16px;
+      font-family: 'Inter', sans-serif;
+      font-size: 15px;
+      font-weight: 400;
+      outline: none;
+      margin-bottom: 16px;
+      transition: border-color .2s;
+      -webkit-appearance: none;
+    }
+    .field-input::placeholder { color: #64748b; }
+    .field-input:focus { border-color: rgba(99,102,241,.5); }
+
+    .field-select {
+      width: 100%;
+      background: rgba(30,41,59,.8);
+      color: #ffffff;
+      border: 1px solid rgba(51,65,85,.5);
+      border-radius: 12px;
+      padding: 14px 16px;
+      font-family: 'Inter', sans-serif;
+      font-size: 15px;
+      outline: none;
+      margin-bottom: 16px;
+      cursor: pointer;
+      -webkit-appearance: none;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+    }
+    .field-select option { background: #1e2538; }
+
+    .driver-id-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .autogen-btn {
+      background: rgba(99,102,241,.15);
+      border: 1px solid rgba(99,102,241,.3);
+      border-radius: 8px;
+      padding: 4px 10px;
+      color: #a5b4fc;
+      font-family: 'Inter', sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .autogen-btn:hover { background: rgba(99,102,241,.25); }
+
+    .field-hint {
+      font-family: 'Inter', sans-serif;
+      font-size: 11px;
+      color: #64748b;
+      margin-bottom: 8px;
+      margin-top: -8px;
+    }
+
+    .btn-create-account {
+      width: 100%;
+      background: #2563eb;
+      border: none;
+      border-radius: 16px;
+      padding: 16px;
+      color: #ffffff;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 17px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity .2s, transform .15s;
+    }
+    .btn-create-account:hover { opacity: .9; }
+    .btn-create-account:active { transform: scale(.99); }
+    .btn-create-account:disabled { opacity: .55; cursor: wait; }
+
+    /* ────────────────────────────────
        HOME SCREEN
     ──────────────────────────────── */
     #screen-home {
@@ -560,8 +695,70 @@
     <!-- ══ WELCOME ══ -->
     <div class="screen" id="screen-welcome">
       <p class="welcome-heading">Secure every delivery,<br>the smart way.</p>
-      <button class="btn-get-started" onclick="goto('login')">Get Started</button>
+      <button class="btn-get-started" onclick="goto('signup')">Get Started</button>
       <button class="btn-login-text" onclick="goto('login')">Log In</button>
+    </div>
+
+    <!-- ══ SIGNUP ══ -->
+    <div class="screen" id="screen-signup">
+      <div class="signup-header">
+        <svg width="40" height="40" viewBox="0 0 32 32" fill="none">
+          <path d="M16 2L4 7v9c0 6.075 5.144 11.5 12 13 6.856-1.5 12-6.925 12-13V7L16 2z" fill="#7B3FE0"/>
+          <path d="M10 16.5 L14.5 21.5 L22 12" stroke="#fff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <p class="signup-heading">Create Account</p>
+        <p class="signup-sub">Enter your details to start your income protection.</p>
+      </div>
+
+      <div class="form-card">
+        <label class="field-label">Full Name</label>
+        <input id="su-name" class="field-input" type="text" placeholder="Arjun Kumar" autocomplete="name" />
+
+        <label class="field-label">Email</label>
+        <input id="su-email" class="field-input" type="email" placeholder="you@example.com" autocomplete="email" />
+
+        <label class="field-label">Phone Number</label>
+        <input id="su-phone" class="field-input" type="tel" placeholder="+91 98765 43210" autocomplete="tel" />
+
+        <label class="field-label">Gig Platform</label>
+        <select id="su-platform" class="field-select">
+          <option value="blinkit">Blinkit</option>
+          <option value="swiggy">Swiggy</option>
+          <option value="zomato">Zomato</option>
+          <option value="zepto">Zepto</option>
+          <option value="dunzo">Dunzo</option>
+          <option value="other">Other</option>
+        </select>
+
+        <label class="field-label">City</label>
+        <select id="su-zone" class="field-select">
+          <option value="ZONE_A">Bengaluru — Koramangala / HSR</option>
+          <option value="ZONE_B">Mumbai — Bandra / Andheri</option>
+          <option value="ZONE_C">Delhi NCR — Gurugram / Cyber City</option>
+        </select>
+
+        <div class="driver-id-row">
+          <label class="field-label" style="margin-bottom:0">Driver / Partner ID</label>
+          <button class="autogen-btn" onclick="autoGenId()">Auto-generate</button>
+        </div>
+        <p class="field-hint">Your unique ID from your gig platform partner portal</p>
+        <input id="su-driverid" class="field-input" type="text" placeholder="e.g. BLK-2024-78432" />
+
+        <label class="field-label">Password</label>
+        <input id="su-pwd" class="field-input" type="password" placeholder="Min. 8 characters" autocomplete="new-password" />
+
+        <label class="field-label">Confirm Password</label>
+        <input id="su-pwd2" class="field-input" type="password" placeholder="••••••••" autocomplete="new-password" style="margin-bottom:4px;" />
+
+        <div class="error-bar" id="signup-error"></div>
+
+        <button class="btn-create-account" id="btn-signup" onclick="handleSignup()">Create Account</button>
+      </div>
+
+      <div class="signup-row">
+        <span>Already have an account?&nbsp;</span>
+        <button onclick="goto('login')">Log In</button>
+      </div>
     </div>
 
     <!-- ══ LOGIN ══ -->
@@ -616,7 +813,7 @@
 
       <div class="signup-row">
         <span>Don't have an account?&nbsp;</span>
-        <button onclick="goto('welcome')">Sign Up</button>
+        <button onclick="goto('signup')">Sign Up</button>
       </div>
     </div>
 
@@ -779,6 +976,70 @@
       handleLogin();
     }
   });
+
+  /* ── auto-generate driver ID ── */
+  function autoGenId() {
+    const platform = document.getElementById('su-platform').value;
+    const prefix = platform.slice(0,3).toUpperCase();
+    const year = new Date().getFullYear();
+    const num = Math.floor(10000 + Math.random() * 89999);
+    document.getElementById('su-driverid').value = `${prefix}-${year}-${num}`;
+  }
+
+  /* ── signup ── */
+  async function handleSignup() {
+    const name     = document.getElementById('su-name').value.trim();
+    const email    = document.getElementById('su-email').value.trim();
+    const phone    = document.getElementById('su-phone').value.trim();
+    const platform = document.getElementById('su-platform').value;
+    const zoneId   = document.getElementById('su-zone').value;
+    const driverId = document.getElementById('su-driverid').value.trim();
+    const pwd      = document.getElementById('su-pwd').value;
+    const pwd2     = document.getElementById('su-pwd2').value;
+    const errEl    = document.getElementById('signup-error');
+    const btn      = document.getElementById('btn-signup');
+
+    errEl.textContent = '';
+
+    if (!name || !email || !driverId || !pwd) {
+      errEl.textContent = 'Name, email, Driver ID and password are required.';
+      return;
+    }
+    if (pwd !== pwd2) {
+      errEl.textContent = 'Passwords do not match.';
+      return;
+    }
+    if (pwd.length < 8) {
+      errEl.textContent = 'Password must be at least 8 characters.';
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Creating account…';
+
+    try {
+      const res  = await fetch(API + '/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, password: pwd, phone, driverId, platform, zoneId }),
+        signal: AbortSignal.timeout(10000),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Registration failed. Please try again.');
+      _token = data.token;
+      localStorage.setItem('qc_token', _token);
+      document.getElementById('home-name').textContent = name.split(' ')[0];
+      goto('home');
+      startPolling();
+    } catch (err) {
+      errEl.textContent = err.message === 'The operation was aborted.'
+        ? 'Connection timed out. Try again.'
+        : err.message;
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Create Account';
+    }
+  }
 
   /* ── splash ── */
   function runSplash(then) {
