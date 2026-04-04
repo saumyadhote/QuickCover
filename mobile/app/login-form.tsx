@@ -1,46 +1,21 @@
-import { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator } from 'react-native';
+import { useState, useEffect, useRef } from 'react';
+import { View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator, Animated, Easing } from 'react-native';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  withDelay,
-  Easing,
-} from 'react-native-reanimated';
-import Svg, { Path, Rect, Circle, Defs, LinearGradient as SvgLinearGradient, Stop } from 'react-native-svg';
+import Svg, { Path, Circle } from 'react-native-svg';
 import { useAuth } from '../context/AuthContext';
 import { PurpleBlob } from './components/PurpleBlob';
 
-// Main logo — concentric circles with shield, matching Figma spec (82×82)
 function MainLogo({ size = 82 }: { size?: number }) {
-  const s = size / 82;
   return (
     <Svg width={size} height={size} viewBox="0 0 82 82" fill="none">
-      {/* Ellipse 244 — outermost ring */}
       <Circle cx="41" cy="41" r="40" stroke="rgba(123,63,224,0.5)" strokeWidth="1.2" fill="none" />
-      {/* Ellipse 245 */}
       <Circle cx="41" cy="41" r="33.4" stroke="rgba(123,63,224,0.6)" strokeWidth="1.2" fill="none" />
-      {/* Ellipse 246 */}
       <Circle cx="41" cy="41" r="26.8" stroke="rgba(123,63,224,0.75)" strokeWidth="1.2" fill="none" />
-      {/* Ellipse 247 — innermost ring */}
       <Circle cx="41" cy="41" r="20.1" stroke="rgba(123,63,224,0.9)" strokeWidth="1.2" fill="none" />
-      {/* Shield body — #7B3FE0, Figma top:29% bottom:38.36% left:28.33% right:28.34% of 82px */}
-      <Path
-        d="M41 24 L57 31 L57 45 C57 55 41 61 41 61 C41 61 25 55 25 45 L25 31 Z"
-        fill="#7B3FE0"
-      />
-      {/* Checkmark — #F6F0FF, Figma top:51.09% bottom:24.87% left:38.89% right:30.53% */}
-      <Path
-        d="M33 42 L39 49 L52 34"
-        stroke="#F6F0FF"
-        strokeWidth="3"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        fill="none"
-      />
+      <Path d="M41 24 L57 31 L57 45 C57 55 41 61 41 61 C41 61 25 55 25 45 L25 31 Z" fill="#7B3FE0" />
+      <Path d="M33 42 L39 49 L52 34" stroke="#F6F0FF" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" fill="none" />
     </Svg>
   );
 }
@@ -55,32 +30,21 @@ export default function LoginScreen() {
   const [error, setError]   = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Entrance animations
-  const iconOpacity = useSharedValue(0);
-  const iconY       = useSharedValue(-16);
-  const cardOpacity = useSharedValue(0);
-  const cardY       = useSharedValue(24);
-  const btnsOpacity = useSharedValue(0);
-
-  const iconStyle = useAnimatedStyle(() => ({
-    opacity: iconOpacity.value,
-    transform: [{ translateY: iconY.value }],
-  }));
-  const cardStyle = useAnimatedStyle(() => ({
-    opacity: cardOpacity.value,
-    transform: [{ translateY: cardY.value }],
-  }));
-  const btnsStyle = useAnimatedStyle(() => ({
-    opacity: btnsOpacity.value,
-  }));
+  const iconOpacity = useRef(new Animated.Value(0)).current;
+  const iconY       = useRef(new Animated.Value(-16)).current;
+  const cardOpacity = useRef(new Animated.Value(0)).current;
+  const cardY       = useRef(new Animated.Value(24)).current;
+  const btnsOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     const ease = Easing.out(Easing.cubic);
-    iconOpacity.value = withDelay(60,  withTiming(1, { duration: 500, easing: ease }));
-    iconY.value       = withDelay(60,  withTiming(0, { duration: 500, easing: ease }));
-    cardOpacity.value = withDelay(200, withTiming(1, { duration: 550, easing: ease }));
-    cardY.value       = withDelay(200, withTiming(0, { duration: 550, easing: ease }));
-    btnsOpacity.value = withDelay(420, withTiming(1, { duration: 450, easing: ease }));
+    Animated.parallel([
+      Animated.sequence([Animated.delay(60),  Animated.timing(iconOpacity, { toValue: 1, duration: 500, easing: ease, useNativeDriver: true })]),
+      Animated.sequence([Animated.delay(60),  Animated.timing(iconY,       { toValue: 0, duration: 500, easing: ease, useNativeDriver: true })]),
+      Animated.sequence([Animated.delay(200), Animated.timing(cardOpacity, { toValue: 1, duration: 550, easing: ease, useNativeDriver: true })]),
+      Animated.sequence([Animated.delay(200), Animated.timing(cardY,       { toValue: 0, duration: 550, easing: ease, useNativeDriver: true })]),
+      Animated.sequence([Animated.delay(420), Animated.timing(btnsOpacity, { toValue: 1, duration: 450, easing: ease, useNativeDriver: true })]),
+    ]).start();
   }, []);
 
   const handleLogin = async () => {
@@ -113,15 +77,13 @@ export default function LoginScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Logo + Heading — Figma: column, centered, gap 16 */}
-        <Animated.View style={[{ alignItems: 'center', marginBottom: 32, gap: 16 }, iconStyle]}>
+        <Animated.View style={{ alignItems: 'center', marginBottom: 32, gap: 16, opacity: iconOpacity, transform: [{ translateY: iconY }] }}>
           <MainLogo size={82} />
-          {/* Heading — Inter 700 32px lineHeight 130% letterSpacing -0.02em color #EEEEEE */}
           <Text style={{
             fontFamily: 'Inter_700Bold',
             fontSize: 32,
-            lineHeight: 42,           // 130% of 32
-            letterSpacing: -0.64,     // -0.02em of 32px
+            lineHeight: 42,
+            letterSpacing: -0.64,
             color: '#EEEEEE',
             textAlign: 'center',
           }}>
@@ -129,32 +91,18 @@ export default function LoginScreen() {
           </Text>
         </Animated.View>
 
-        {/* Input card — Figma: white bg, borderRadius 10, two stacked fields with divider */}
-        <Animated.View style={[{
+        <Animated.View style={{
           backgroundColor: '#FFFFFF',
           borderRadius: 10,
           marginBottom: 12,
           overflow: 'hidden',
-        }, cardStyle]}>
-
-          {/* Delivery ID field */}
-          <View style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            paddingHorizontal: 14,
-            paddingVertical: 14,
-            gap: 12,
-          }}>
+          opacity: cardOpacity,
+          transform: [{ translateY: cardY }],
+        }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 14, gap: 12 }}>
             <Mail size={16} color="#0052B4" strokeWidth={1.3} />
             <TextInput
-              style={{
-                flex: 1,
-                fontFamily: 'Inter_500Medium',
-                fontSize: 14,
-                lineHeight: 20,
-                letterSpacing: -0.14,
-                color: '#6C7278',
-              }}
+              style={{ flex: 1, fontFamily: 'Inter_500Medium', fontSize: 14, lineHeight: 20, letterSpacing: -0.14, color: '#6C7278' }}
               placeholder="Email / Delivery ID"
               placeholderTextColor="#6C7278"
               autoCapitalize="none"
@@ -164,27 +112,12 @@ export default function LoginScreen() {
             />
           </View>
 
-          {/* Divider */}
-          <View style={{ height: 1, backgroundColor: '#EDF1F3', marginHorizontal: 0 }} />
+          <View style={{ height: 1, backgroundColor: '#EDF1F3' }} />
 
-          {/* Password field */}
-          <View style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            paddingHorizontal: 14,
-            paddingVertical: 14,
-            gap: 12,
-          }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 14, gap: 12 }}>
             <Lock size={16} color="#0052B4" strokeWidth={1.3} />
             <TextInput
-              style={{
-                flex: 1,
-                fontFamily: 'Inter_500Medium',
-                fontSize: 14,
-                lineHeight: 20,
-                letterSpacing: -0.14,
-                color: '#1A1C1E',
-              }}
+              style={{ flex: 1, fontFamily: 'Inter_500Medium', fontSize: 14, lineHeight: 20, letterSpacing: -0.14, color: '#1A1C1E' }}
               placeholder="Password"
               placeholderTextColor="#ACB5BB"
               secureTextEntry={!showPassword}
@@ -200,74 +133,45 @@ export default function LoginScreen() {
           </View>
         </Animated.View>
 
-        <Animated.View style={btnsStyle}>
-          {/* Forgot password — Figma: Inter 500 12px, #EEEEEE, centered, underlined */}
+        <Animated.View style={{ opacity: btnsOpacity }}>
           <TouchableOpacity style={{ alignSelf: 'stretch', marginBottom: 24 }}>
             <Text style={{
-              fontFamily: 'Inter_500Medium',
-              fontSize: 12,
-              lineHeight: 17,
-              letterSpacing: -0.12,
-              color: '#EEEEEE',
-              textAlign: 'center',
-              textDecorationLine: 'underline',
+              fontFamily: 'Inter_500Medium', fontSize: 12, lineHeight: 17, letterSpacing: -0.12,
+              color: '#EEEEEE', textAlign: 'center', textDecorationLine: 'underline',
             }}>
               Forgot Your Password ?
             </Text>
           </TouchableOpacity>
 
-          {/* Error */}
           {error ? (
-            <Text style={{ color: '#f87171', fontSize: 13, textAlign: 'center', marginBottom: 12 }}>
-              {error}
-            </Text>
+            <Text style={{ color: '#f87171', fontSize: 13, textAlign: 'center', marginBottom: 12 }}>{error}</Text>
           ) : null}
 
-          {/* Log In button — Figma: #101828 bg, blue border #375DFB, borderRadius 10, Montserrat 500 16px */}
           <TouchableOpacity
             onPress={handleLogin}
             disabled={loading}
             activeOpacity={0.85}
             style={{
-              backgroundColor: '#101828',
-              borderRadius: 10,
-              paddingVertical: 13,
-              paddingHorizontal: 24,
-              alignItems: 'center',
-              borderWidth: 1,
-              borderColor: '#375DFB',
-              // Shadow matching Figma box-shadow
-              shadowColor: '#253EA7',
-              shadowOffset: { width: 0, height: 1 },
-              shadowOpacity: 0.48,
-              shadowRadius: 2,
-              elevation: 3,
-              marginBottom: 24,
+              backgroundColor: '#101828', borderRadius: 10, paddingVertical: 13,
+              paddingHorizontal: 24, alignItems: 'center', borderWidth: 1, borderColor: '#375DFB',
+              shadowColor: '#253EA7', shadowOffset: { width: 0, height: 1 },
+              shadowOpacity: 0.48, shadowRadius: 2, elevation: 3, marginBottom: 24,
             }}
           >
             {loading
               ? <ActivityIndicator color="#ffffff" size="small" />
-              : <Text style={{
-                  fontFamily: 'Montserrat_500Medium',
-                  fontSize: 16,
-                  lineHeight: 22,
-                  letterSpacing: -0.16,
-                  color: '#FFFFFF',
-                }}>
+              : <Text style={{ fontFamily: 'Montserrat_500Medium', fontSize: 16, lineHeight: 22, letterSpacing: -0.16, color: '#FFFFFF' }}>
                   Log In
                 </Text>
             }
           </TouchableOpacity>
 
-          {/* Sign up link */}
           <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}>
             <Text style={{ color: 'rgba(255,255,255,0.35)', fontFamily: 'Inter_500Medium', fontSize: 14 }}>
               Don't have an account?{' '}
             </Text>
             <TouchableOpacity onPress={() => router.push('/signup')}>
-              <Text style={{ color: '#a855f7', fontFamily: 'Montserrat_600SemiBold', fontSize: 14 }}>
-                Sign Up
-              </Text>
+              <Text style={{ color: '#a855f7', fontFamily: 'Montserrat_600SemiBold', fontSize: 14 }}>Sign Up</Text>
             </TouchableOpacity>
           </View>
         </Animated.View>

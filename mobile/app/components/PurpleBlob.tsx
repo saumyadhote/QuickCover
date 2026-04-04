@@ -1,47 +1,33 @@
-import { useEffect } from 'react';
-import { View, useWindowDimensions } from 'react-native';
+import { useEffect, useRef } from 'react';
+import { Animated, Easing, useWindowDimensions } from 'react-native';
 import Svg, { Defs, RadialGradient as SvgRadialGradient, Stop, Ellipse } from 'react-native-svg';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withRepeat,
-  withTiming,
-  withSequence,
-  Easing,
-} from 'react-native-reanimated';
 
 export function PurpleBlob() {
   const { width } = useWindowDimensions();
   const height = 420;
 
-  // Breathing scale for the whole blob layer
-  const scale = useSharedValue(1);
+  const scale = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    scale.value = withRepeat(
-      withSequence(
-        withTiming(1.06, { duration: 3200, easing: Easing.inOut(Easing.sine) }),
-        withTiming(0.97, { duration: 3200, easing: Easing.inOut(Easing.sine) }),
-      ),
-      -1,
-      false,
-    );
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(scale, { toValue: 1.06, duration: 3200, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(scale, { toValue: 0.97, duration: 3200, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+      ])
+    ).start();
   }, []);
-
-  const containerStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
 
   return (
     <Animated.View
-      style={[{
+      style={{
         position: 'absolute',
         bottom: 0,
         left: 0,
         right: 0,
         height,
-        pointerEvents: 'none',
-      }, containerStyle]}
+        transform: [{ scale }],
+      }}
+      pointerEvents="none"
     >
       <Svg width={width} height={height}>
         <Defs>
