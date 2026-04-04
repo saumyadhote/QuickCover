@@ -1,6 +1,6 @@
 {
-  "buildCommand": "npx expo export --platform web && node inject-phone-frame.js",
-  "outputDirectory": "dist",
+  "buildCommand": "echo 'Static web UI — no build step needed'",
+  "outputDirectory": "web",
   "framework": null,
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
