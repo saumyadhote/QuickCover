@@ -103,7 +103,7 @@ html = html.replace(
     /* Mobile: full-screen, no frame */
     @media (max-width: 480px) {
       body {
-        background: #ffffff;
+        background: #0d0d1a;
         display: block;
       }
       .phone-frame {
@@ -111,12 +111,15 @@ html = html.replace(
         height: 100vh;
         border-radius: 0;
         box-shadow: none;
-        background: transparent;
+        background: #0d0d1a;
       }
       .phone-frame::before,
       .phone-side-btn,
       .page-label {
         display: none;
+      }
+      #root {
+        border-radius: 0;
       }
     }
   </style>`
