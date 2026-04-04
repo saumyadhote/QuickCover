@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
   TextInput, KeyboardAvoidingView, Platform,
@@ -232,6 +232,15 @@ export default function ClaimsScreen() {
   const isPayoutCompleted = state?.claimStatus === 'paid';
   const isCoverageHonored = state?.claimStatus === 'coverage_honored';
 
+  const [returnToInitial, setReturnToInitial] = useState(false);
+  useEffect(() => {
+    if (state?.claimStatus !== 'paid') { setReturnToInitial(false); return; }
+    const t = setTimeout(() => setReturnToInitial(true), 3000);
+    return () => clearTimeout(t);
+  }, [state?.claimStatus]);
+
+  const showInitial = isEmptyState || returnToInitial;
+
   // This month mock total
   const thisMonthTotal = 935;
   const paidCount = 4;
@@ -291,7 +300,7 @@ export default function ClaimsScreen() {
           </View>
 
           {/* Quick claim chips */}
-          {isEmptyState && (
+          {showInitial && (
             <View style={{ marginTop: 20 }}>
               <Text style={{ fontSize: 11, color: '#94a3b8', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 12 }}>Quick Claim</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingRight: 4 }}>
@@ -334,12 +343,12 @@ export default function ClaimsScreen() {
           )}
 
           {/* Active claim timeline — shown for processing / approved / paid */}
-          {!isEmptyState && !isCoverageHonored && (
+          {!showInitial && !isCoverageHonored && (
             <ClaimTimeline claimStatus={state?.claimStatus ?? 'none'} />
           )}
 
           {/* File another after payout or after coverage honored */}
-          {(isPayoutCompleted || isCoverageHonored) && (
+          {!showInitial && (isPayoutCompleted || isCoverageHonored) && (
             <TouchableOpacity onPress={handleClaimPress} style={{ backgroundColor: '#f5f3ff', borderRadius: 16, padding: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 1, borderColor: '#ede9fe', marginBottom: 16 }}>
               <View>
                 <Text style={{ fontWeight: '700', fontSize: 14, color: '#7c3aed' }}>Report a different disruption?</Text>
