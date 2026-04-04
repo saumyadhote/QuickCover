@@ -125,6 +125,29 @@
       transition: opacity .35s ease;
     }
 
+    /* ── Splash screen ── */
+    #screen-splash {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+      background: #0d0d1a;
+      opacity: 0;
+      transition: opacity .5s ease;
+      pointer-events: none;
+    }
+    #screen-splash.visible { opacity: 1; pointer-events: all; }
+
+    .splash-graphic {
+      animation: splashPulse 1.8s ease-in-out infinite;
+    }
+    @keyframes splashPulse {
+      0%, 100% { transform: scale(1);    opacity: 1; }
+      50%       { transform: scale(1.04); opacity: .9; }
+    }
+
     /* ── Screen system ── */
     .screen {
       position: absolute;
@@ -500,6 +523,31 @@
 
   <div class="app-root">
 
+    <!-- ══ SPLASH ══ -->
+    <div id="screen-splash">
+      <!-- Mirrors HeroGraphic / MainLogo from index.tsx + login-form.tsx -->
+      <div class="splash-graphic">
+        <svg width="240" height="240" viewBox="0 0 280 280" fill="none">
+          <!-- Concentric rings -->
+          <circle cx="140" cy="140" r="128" stroke="rgba(168,85,247,0.20)" stroke-width="1"   fill="none"/>
+          <circle cx="140" cy="140" r="110" stroke="rgba(168,85,247,0.30)" stroke-width="1"   fill="none"/>
+          <circle cx="140" cy="140" r="92"  stroke="rgba(168,85,247,0.42)" stroke-width="1.2" fill="none"/>
+          <circle cx="140" cy="140" r="74"  stroke="rgba(168,85,247,0.55)" stroke-width="1.2" stroke-dasharray="6 4" fill="none"/>
+          <circle cx="140" cy="140" r="56"  stroke="rgba(168,85,247,0.70)" stroke-width="1.5" fill="none"/>
+          <!-- Shield body -->
+          <path d="M140 78 L194 102 L194 146 C194 177 140 196 140 196 C140 196 92 177 92 146 L92 102 Z"
+                fill="#a855f7"/>
+          <!-- Outer glow -->
+          <path d="M140 72 L200 98 L200 150 C200 183 140 204 140 204 C140 204 80 183 80 150 L80 98 Z"
+                fill="#c084fc" opacity="0.18"/>
+          <!-- Checkmark -->
+          <path d="M114 140 L133 160 L170 114"
+                stroke="#ffffff" stroke-width="10"
+                stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        </svg>
+      </div>
+    </div>
+
     <!-- Orb layer -->
     <div class="orb-layer">
       <div class="orb-main"></div>
@@ -732,8 +780,30 @@
     }
   });
 
+  /* ── splash ── */
+  function runSplash(then) {
+    const el = document.getElementById('screen-splash');
+    // Fade in
+    requestAnimationFrame(() => {
+      el.classList.add('visible');
+      // Hold ~1s then fade out
+      setTimeout(() => {
+        el.style.transition = 'opacity .5s ease';
+        el.style.opacity = '0';
+        setTimeout(() => {
+          el.style.pointerEvents = 'none';
+          then();
+        }, 500);
+      }, 1100);
+    });
+  }
+
   /* ── restore session ── */
   async function init() {
+    // Always show splash first
+    let destination = 'welcome';
+    let userName = null;
+
     if (_token) {
       try {
         const res = await fetch(API + '/auth/me', {
@@ -742,16 +812,27 @@
         });
         if (res.ok) {
           const d = await res.json();
-          document.getElementById('home-name').textContent = (d.user.name || 'Driver').split(' ')[0];
-          goto('home');
-          startPolling();
-          return;
+          userName = (d.user.name || 'Driver').split(' ')[0];
+          destination = 'home';
+        } else {
+          localStorage.removeItem('qc_token');
+          _token = null;
         }
-      } catch { /* cold start — fall through */ }
-      localStorage.removeItem('qc_token');
-      _token = null;
+      } catch {
+        localStorage.removeItem('qc_token');
+        _token = null;
+      }
     }
-    goto('welcome');
+
+    runSplash(() => {
+      if (destination === 'home') {
+        document.getElementById('home-name').textContent = userName;
+        goto('home');
+        startPolling();
+      } else {
+        goto('welcome');
+      }
+    });
   }
 
   init();
