@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useMockData } from '../../context/MockDataContext';
@@ -87,17 +87,16 @@ function StandbyBanner({
         </View>
       </View>
 
-      {isLocked ? (
-        <View style={{ backgroundColor: 'rgba(248,113,113,0.1)', borderRadius: 10, paddingVertical: 8, paddingHorizontal: 12, borderWidth: 1, borderColor: 'rgba(248,113,113,0.2)' }}>
+      {isLocked && (
+        <View style={{ backgroundColor: 'rgba(248,113,113,0.1)', borderRadius: 10, paddingVertical: 7, paddingHorizontal: 12, borderWidth: 1, borderColor: 'rgba(248,113,113,0.2)', marginBottom: 10 }}>
           <Text style={{ fontSize: 12, color: '#f87171', fontWeight: '600', textAlign: 'center' }}>
-            Complete {eligibility.required - eligibility.tripCount} more trip{eligibility.required - eligibility.tripCount !== 1 ? 's' : ''} this week to unlock
+            Complete {eligibility.required - eligibility.tripCount} more trip{eligibility.required - eligibility.tripCount !== 1 ? 's' : ''} this week to unlock coverage
           </Text>
         </View>
-      ) : (
-        <TouchableOpacity activeOpacity={0.85} onPress={onPress} style={{ backgroundColor: '#7c3aed', borderRadius: 12, paddingVertical: 11, alignItems: 'center' }}>
-          <Text style={{ color: '#ffffff', fontWeight: '700', fontSize: 14 }}>Start Protected Trip</Text>
-        </TouchableOpacity>
       )}
+      <TouchableOpacity activeOpacity={0.85} onPress={onPress} style={{ backgroundColor: '#7c3aed', borderRadius: 12, paddingVertical: 11, alignItems: 'center' }}>
+        <Text style={{ color: '#ffffff', fontWeight: '700', fontSize: 14 }}>Start Trip</Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -186,6 +185,21 @@ export default function DashboardScreen() {
   const router = useRouter();
   const [notifOpen, setNotifOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [tripSeconds, setTripSeconds] = useState(0);
+  const tripStartRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!state?.isTripActive) {
+      tripStartRef.current = null;
+      setTripSeconds(0);
+      return;
+    }
+    if (tripStartRef.current === null) tripStartRef.current = Date.now();
+    const interval = setInterval(() => {
+      setTripSeconds(Math.floor((Date.now() - tripStartRef.current!) / 1000));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [state?.isTripActive]);
 
   if (!state) {
     return (
@@ -210,8 +224,9 @@ export default function DashboardScreen() {
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
   const isLocked = !eligibility.eligible && !isTripActive;
 
+  const fmt = (s: number) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+
   const toggleTrip = async () => {
-    if (!eligibility.eligible && !isTripActive) return;
     try {
       if (isTripActive) await completeTrip();
       else await acceptTrip();
@@ -389,9 +404,12 @@ export default function DashboardScreen() {
           <TouchableOpacity
             activeOpacity={0.85}
             onPress={toggleTrip}
-            style={{ marginHorizontal: 16, marginTop: 12, backgroundColor: '#1e1b2e', borderRadius: 14, paddingVertical: 13, alignItems: 'center', borderWidth: 1, borderColor: '#374151' }}
+            style={{ marginHorizontal: 16, marginTop: 12, backgroundColor: '#1e1b2e', borderRadius: 14, paddingVertical: 13, alignItems: 'center', borderWidth: 1, borderColor: '#374151', flexDirection: 'row', justifyContent: 'center', gap: 10 }}
           >
             <Text style={{ color: '#f87171', fontWeight: '700', fontSize: 14 }}>End Trip</Text>
+            <View style={{ backgroundColor: 'rgba(248,113,113,0.12)', borderRadius: 7, paddingHorizontal: 9, paddingVertical: 3, borderWidth: 1, borderColor: 'rgba(248,113,113,0.25)' }}>
+              <Text style={{ color: '#f87171', fontWeight: '700', fontSize: 13, fontVariant: ['tabular-nums'] }}>{fmt(tripSeconds)}</Text>
+            </View>
           </TouchableOpacity>
         )}
 

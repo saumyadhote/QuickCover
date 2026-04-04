@@ -554,6 +554,9 @@ directly in the repository or via the live deployment URLs.
 | Fraud detection (Isolation Forest) | 🟡 Stub | Feature table and 3-tier scoring defined; model training pending real trip data |
 | GenAI Vision Agent | 🟡 Stub | Architecture defined; `process_claim_evidence_with_genai()` stub in server.js |
 | IMD direct API | 🟡 Post-hackathon | Currently using OpenWeatherMap; IMD API has limited programmatic access |
+| **Delivery platform trip verification** | 🟡 Post-hackathon | See note below |
+
+> **Trip legitimacy note:** The current model allows drivers to start and complete trips freely via the app with no external verification. This is intentional for the hackathon demo — the eligibility threshold (25 trips / 7 days) acts as a soft spam deterrent. In production, each trip record must be cross-referenced against a verified trip event from the driver's gig platform (Blinkit, Zepto, Swiggy Instamart) via their partner API or webhook before it counts toward eligibility. Without this integration, a driver could tap "Start Trip / End Trip" repeatedly to satisfy the 25-trip threshold without ever completing a real delivery, making the insurance pool vulnerable to abuse. The Isolation Forest fraud model (Model 2) provides a secondary layer — GPS trace, telematics, and timing anomalies — but platform-level trip verification is the primary control that must be in place before any real payout system goes live.
 
 > **"Every line of code in this repo was written for this hackathon. The mocks are honest about being mocks — and the architecture makes the path to production explicit."**
 
