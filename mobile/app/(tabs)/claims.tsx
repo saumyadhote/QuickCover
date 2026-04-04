@@ -4,6 +4,7 @@ import {
   TextInput, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { useMockData } from '../../context/MockDataContext';
+import { AppLogo } from '../components/AppLogo';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
   CheckCircle2, Clock, Circle, Camera, Image as ImageIcon,
@@ -286,7 +287,8 @@ export default function ClaimsScreen() {
           style={{ paddingTop: 56, paddingBottom: 32, paddingHorizontal: 20 }}
         >
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <View>
+            <View style={{ flex: 1 }}>
+              <AppLogo size={22} style={{ marginBottom: 10 }} />
               <Text style={{ fontSize: 26, fontWeight: '800', color: '#ffffff', marginBottom: 4 }}>Zero-Touch Claims</Text>
               <Text style={{ fontSize: 13, color: '#a78bfa' }}>Most claims are auto-approved.</Text>
             </View>
@@ -384,7 +386,11 @@ export default function ClaimsScreen() {
               </View>
             ) : (
               recentClaims.map((claim, i) => {
-                const meta = TYPE_META[claim.disruptionType ?? ''] ?? { label: claim.disruptionType ?? 'Disruption', icon: '⚠️' };
+                const rawType = claim.disruptionType ?? '';
+                const meta = TYPE_META[rawType] ?? {
+                  label: rawType ? rawType.charAt(0) + rawType.slice(1).toLowerCase() : 'Unknown',
+                  icon: '⚠️',
+                };
                 const date = new Date(claim.timestamp).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
                 const payout = claim.protectedAmount ?? 0;
                 return (

@@ -125,14 +125,14 @@ app.get('/trips/recent', async (req, res) => {
           `SELECT id, status, earnings, "protectedAmount", timestamp, "hoursWorked", "disruptionType"
            FROM trips
            WHERE status = 'disrupted' AND "userId" = $1
-           ORDER BY timestamp DESC LIMIT 10`,
+           ORDER BY timestamp DESC LIMIT 5`,
           [userId]
         )
       : await dbAll(
           `SELECT id, status, earnings, "protectedAmount", timestamp, "hoursWorked", "disruptionType"
            FROM trips
            WHERE status = 'disrupted'
-           ORDER BY timestamp DESC LIMIT 10`,
+           ORDER BY timestamp DESC LIMIT 5`,
           []
         );
     res.json({ trips: rows ?? [] });
