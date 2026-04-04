@@ -387,8 +387,9 @@ export default function ClaimsScreen() {
             ) : (
               recentClaims.map((claim, i) => {
                 const rawType = claim.disruptionType ?? '';
-                const meta = TYPE_META[rawType] ?? {
-                  label: rawType ? rawType.charAt(0) + rawType.slice(1).toLowerCase() : 'Unknown',
+                const normalizedType = rawType.toUpperCase();
+                const meta = TYPE_META[normalizedType] ?? {
+                  label: rawType ? rawType.charAt(0).toUpperCase() + rawType.slice(1).toLowerCase() : 'Unknown',
                   icon: '⚠️',
                 };
                 const date = new Date(claim.timestamp).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
