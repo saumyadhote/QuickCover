@@ -67,6 +67,7 @@ export default function WelcomeScreen() {
   const btn1Y         = useRef(new Animated.Value(18)).current;
   const btn2Opacity   = useRef(new Animated.Value(0)).current;
   const btn2Y         = useRef(new Animated.Value(12)).current;
+  const screenOpacity = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     const ease   = Easing.out(Easing.cubic);
@@ -94,11 +95,20 @@ export default function WelcomeScreen() {
       ).start();
     }, 900);
 
-    return () => clearTimeout(t);
+    const nav = setTimeout(() => {
+      Animated.timing(screenOpacity, {
+        toValue: 0,
+        duration: 400,
+        easing: Easing.in(Easing.cubic),
+        useNativeDriver: true,
+      }).start(() => router.replace('/login-form'));
+    }, 2000);
+
+    return () => { clearTimeout(t); clearTimeout(nav); };
   }, []);
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#0d0d1a' }}>
+    <Animated.View style={{ flex: 1, backgroundColor: '#0d0d1a', opacity: screenOpacity }}>
       <StatusBar style="light" backgroundColor="#0d0d1a" />
 
       <WelcomeBlobs />
@@ -167,6 +177,6 @@ export default function WelcomeScreen() {
           </TouchableOpacity>
         </Animated.View>
       </View>
-    </View>
+    </Animated.View>
   );
 }
