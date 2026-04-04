@@ -60,14 +60,24 @@ router.post('/login', async (req, res) => {
     return res.status(400).json({ error: 'email and password are required' });
   }
 
+  const normalizedEmail = email.trim().toLowerCase();
+
   try {
-    const user = await dbGet('SELECT id, name, email, phone, "driverId", platform, "zoneId", "createdAt", "passwordHash", "passwordhash" FROM users WHERE email = $1', [email]);
+    const user = await dbGet(
+      'SELECT id, name, email, phone, "driverId", platform, "zoneId", "createdAt", "passwordHash" FROM users WHERE LOWER(email) = $1',
+      [normalizedEmail]
+    );
     if (!user) {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 
-    // PostgreSQL returns unquoted column names in lowercase (passwordhash, not passwordHash)
+    // passwordHash column — SQLite returns as-is, PostgreSQL returns lowercase key
     const hash = user.passwordHash || user.passwordhash;
+    if (!hash) {
+      console.error('Login error: passwordHash missing from user row', Object.keys(user));
+      return res.status(500).json({ error: 'Login failed' });
+    }
+
     const valid = await bcrypt.compare(password, hash);
     if (!valid) {
       return res.status(401).json({ error: 'Invalid email or password' });
