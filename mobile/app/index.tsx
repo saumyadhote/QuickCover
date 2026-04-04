@@ -69,7 +69,11 @@ export default function SplashScreen() {
   }, []);
 
   useEffect(() => {
-    if (loading || user) return;
+    if (loading) return;
+    if (user) {
+      router.replace('/(tabs)');
+      return;
+    }
     const timer = setTimeout(fadeToWelcome, 2600);
     return () => clearTimeout(timer);
   }, [loading, user]);
