@@ -3,8 +3,6 @@
 
 > *Submitted to Guidewire DEVTrails 2026: Unicorn Chase*
 
-**[🎥 Watch the Phase 2 End-to-End Demo Video Here](https://youtu.be/ODmFYYMETlQ)**
-
 ---
 
 ## The Problem
