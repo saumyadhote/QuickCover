@@ -19,14 +19,15 @@ const DISRUPTION_TYPES = [
   { id: 'CURFEW', label: 'Curfew', icon: '🚔', maxPayout: '₹700', autoMessage: 'Government-declared curfew blocked all deliveries in my zone', defaultHours: 4 },
 ];
 
-// ── Mock recent claims ───────────────────────────────────────────────────────
-const RECENT_CLAIMS = [
-  { id: 1, type: 'Heavy Rain', icon: '🌧️', status: 'Auto-approved', statusColor: '#16a34a', statusBg: '#dcfce7', amount: 240, route: 'Mumbai → Pune', date: '29 Mar 2026' },
-  { id: 2, type: 'Road Closure', icon: '🚧', status: 'Auto-approved', statusColor: '#16a34a', statusBg: '#dcfce7', amount: 180, route: 'Bangalore → Mysore', date: '22 Mar 2026' },
-  { id: 3, type: 'Flash Flood', icon: '🌊', status: 'Manual-approved', statusColor: '#7c3aed', statusBg: '#ede9fe', amount: 420, route: 'Chennai → Vellore', date: '14 Mar 2026' },
-  { id: 4, type: 'Strike', icon: '✊', status: 'Rejected', statusColor: '#dc2626', statusBg: '#fee2e2', amount: 150, route: 'Delhi → Agra', date: '8 Mar 2026' },
-  { id: 5, type: 'Train Delay', icon: '🚂', status: 'Auto-approved', statusColor: '#16a34a', statusBg: '#dcfce7', amount: 95, route: 'Hyderabad → Vijayawada', date: '1 Mar 2026' },
-];
+const TYPE_META: Record<string, { label: string; icon: string }> = {
+  WEATHER:  { label: 'Heavy Rain',    icon: '🌧️' },
+  TRAFFIC:  { label: 'Road Block',    icon: '🚧' },
+  FLOOD:    { label: 'Flooding',      icon: '🌊' },
+  OUTAGE:   { label: 'Shop Closed',   icon: '🏪' },
+  HEAT:     { label: 'Extreme Heat',  icon: '🌡️' },
+  CURFEW:   { label: 'Curfew',        icon: '🚔' },
+  POLLUTION:{ label: 'Poor Air Quality', icon: '😷' },
+};
 
 // ── Claim Form Sheet ─────────────────────────────────────────────────────────
 function ClaimForm({ onClose, onSubmit }: { onClose: () => void; onSubmit: (type: string, desc: string, hours: number) => void }) {
@@ -223,7 +224,7 @@ function ClaimTimeline({ claimStatus }: { claimStatus: string }) {
 
 // ── Main Screen ──────────────────────────────────────────────────────────────
 export default function ClaimsScreen() {
-  const { state, submitClaim, eligibility } = useMockData();
+  const { state, submitClaim, eligibility, recentClaims } = useMockData();
   const [formOpen, setFormOpen] = useState(false);
   const [ineligiblePopup, setIneligiblePopup] = useState(false);
   const [submittingId, setSubmittingId] = useState<string | null>(null);
@@ -360,9 +361,10 @@ export default function ClaimsScreen() {
 
           {/* Recent claims list */}
           <View style={{ backgroundColor: '#ffffff', borderRadius: 20, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}>
-            {/* List header */}
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 18, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' }}>
-              <Text style={{ fontWeight: '800', fontSize: 15, color: '#0f172a' }}>{RECENT_CLAIMS.length} Recent Claims</Text>
+              <Text style={{ fontWeight: '800', fontSize: 15, color: '#0f172a' }}>
+                {recentClaims.length > 0 ? `${recentClaims.length} Recent Claim${recentClaims.length !== 1 ? 's' : ''}` : 'Recent Claims'}
+              </Text>
               <View style={{ flexDirection: 'row', gap: 10 }}>
                 <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#f1f5f9', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5, gap: 4 }}>
                   <Filter color="#64748b" size={13} />
@@ -375,28 +377,38 @@ export default function ClaimsScreen() {
               </View>
             </View>
 
-            {RECENT_CLAIMS.map((claim, i) => (
-              <View key={claim.id} style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 18, paddingVertical: 14, borderBottomWidth: i < RECENT_CLAIMS.length - 1 ? 1 : 0, borderBottomColor: '#f8fafc' }}>
-                <View style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: '#f5f3ff', alignItems: 'center', justifyContent: 'center', marginRight: 13 }}>
-                  <Text style={{ fontSize: 20 }}>{claim.icon}</Text>
-                </View>
-                <View style={{ flex: 1 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 3 }}>
-                    <Text style={{ fontSize: 14, fontWeight: '700', color: '#0f172a' }}>{claim.type}</Text>
-                    <View style={{ backgroundColor: claim.statusBg, borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2 }}>
-                      <Text style={{ fontSize: 10, fontWeight: '700', color: claim.statusColor }}>• {claim.status}</Text>
+            {recentClaims.length === 0 ? (
+              <View style={{ paddingVertical: 28, alignItems: 'center' }}>
+                <Text style={{ fontSize: 13, color: '#94a3b8', fontWeight: '500' }}>No claims filed yet</Text>
+                <Text style={{ fontSize: 11, color: '#cbd5e1', marginTop: 4 }}>Tap a quick claim chip above to get started</Text>
+              </View>
+            ) : (
+              recentClaims.map((claim, i) => {
+                const meta = TYPE_META[claim.disruptionType ?? ''] ?? { label: claim.disruptionType ?? 'Disruption', icon: '⚠️' };
+                const date = new Date(claim.timestamp).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+                const payout = claim.protectedAmount ?? 0;
+                return (
+                  <View key={claim.id} style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 18, paddingVertical: 14, borderBottomWidth: i < recentClaims.length - 1 ? 1 : 0, borderBottomColor: '#f8fafc' }}>
+                    <View style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: '#f5f3ff', alignItems: 'center', justifyContent: 'center', marginRight: 13 }}>
+                      <Text style={{ fontSize: 20 }}>{meta.icon}</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 3 }}>
+                        <Text style={{ fontSize: 14, fontWeight: '700', color: '#0f172a' }}>{meta.label}</Text>
+                        <View style={{ backgroundColor: '#dcfce7', borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2 }}>
+                          <Text style={{ fontSize: 10, fontWeight: '700', color: '#16a34a' }}>• Auto-approved</Text>
+                        </View>
+                      </View>
+                      <Text style={{ fontSize: 12, color: '#64748b' }}>{claim.hoursWorked ? `${claim.hoursWorked}h lost · ` : ''}{date}</Text>
+                    </View>
+                    <View style={{ alignItems: 'flex-end' }}>
+                      <Text style={{ fontSize: 15, fontWeight: '800', color: '#0f172a' }}>+₹{payout.toLocaleString()}</Text>
+                      <ChevronRight color="#cbd5e1" size={16} style={{ marginTop: 2 }} />
                     </View>
                   </View>
-                  <Text style={{ fontSize: 12, color: '#64748b' }}>{claim.route} · {claim.date}</Text>
-                </View>
-                <View style={{ alignItems: 'flex-end' }}>
-                  <Text style={{ fontSize: 15, fontWeight: '800', color: claim.status === 'Rejected' ? '#dc2626' : '#0f172a' }}>
-                    {claim.status === 'Rejected' ? '' : '+'}₹{claim.amount}
-                  </Text>
-                  <ChevronRight color="#cbd5e1" size={16} style={{ marginTop: 2 }} />
-                </View>
-              </View>
-            ))}
+                );
+              })
+            )}
           </View>
         </View>
       </ScrollView>

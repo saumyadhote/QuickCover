@@ -30,11 +30,22 @@ type Eligibility = {
   required: number;
 };
 
+export type RecentClaim = {
+  id: number;
+  status: string;
+  earnings: number;
+  protectedAmount: number;
+  timestamp: string;
+  hoursWorked: number | null;
+  disruptionType: string | null;
+};
+
 type MockDataContextType = {
   state: AppState;
   loading: boolean;
   backendOnline: boolean;
   eligibility: Eligibility;
+  recentClaims: RecentClaim[];
   acceptTrip: () => Promise<void>;
   completeTrip: () => Promise<void>;
   submitClaim: (type: string, message: string, hoursWorked: number) => Promise<void>;
@@ -61,12 +72,20 @@ export function MockDataProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(false);
   const [backendOnline, setBackendOnline] = useState(false);
   const [eligibility, setEligibility] = useState<Eligibility>(FALLBACK_ELIGIBILITY);
+  const [recentClaims, setRecentClaims] = useState<RecentClaim[]>([]);
   // Track whether we've already warned so we don't spam the console
   const warnedRef = useRef(false);
   const tokenRef = useRef(token);
   useEffect(() => { tokenRef.current = token; }, [token]);
 
   const authHeaders = () => tokenRef.current ? { Authorization: `Bearer ${tokenRef.current}` } : {};
+
+  const fetchRecentClaims = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/trips/recent`, { timeout: 4000, headers: authHeaders() });
+      setRecentClaims(res.data.trips ?? []);
+    } catch { /* silent — list stays stale */ }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -96,6 +115,7 @@ export function MockDataProvider({ children }: { children: React.ReactNode }) {
           }
           setBackendOnline(true);
           warnedRef.current = false;
+          fetchRecentClaims();
         }
       } catch (err: any) {
         if (!cancelled) {
@@ -178,6 +198,7 @@ export function MockDataProvider({ children }: { children: React.ReactNode }) {
         hours_worked: hoursWorked,
       }, { headers: authHeaders() });
       setState(res.data.state);
+      fetchRecentClaims();
     } catch (err: any) {
       // Backend rejected the claim (e.g. ineligible) — revert optimistic state
       const serverMsg = err?.response?.data?.error;
@@ -216,7 +237,7 @@ export function MockDataProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <MockDataContext.Provider value={{ state, loading, backendOnline, eligibility, acceptTrip, completeTrip, submitClaim }}>
+    <MockDataContext.Provider value={{ state, loading, backendOnline, eligibility, recentClaims, acceptTrip, completeTrip, submitClaim }}>
       {children}
     </MockDataContext.Provider>
   );

@@ -117,6 +117,31 @@ app.get('/eligibility', async (req, res) => {
   }
 });
 
+app.get('/trips/recent', async (req, res) => {
+  try {
+    const userId = getUserIdFromRequest(req);
+    const rows = userId
+      ? await dbAll(
+          `SELECT id, status, earnings, "protectedAmount", timestamp, "hoursWorked", "disruptionType"
+           FROM trips
+           WHERE status = 'disrupted' AND "userId" = $1
+           ORDER BY timestamp DESC LIMIT 10`,
+          [userId]
+        )
+      : await dbAll(
+          `SELECT id, status, earnings, "protectedAmount", timestamp, "hoursWorked", "disruptionType"
+           FROM trips
+           WHERE status = 'disrupted'
+           ORDER BY timestamp DESC LIMIT 10`,
+          []
+        );
+    res.json({ trips: rows ?? [] });
+  } catch (error) {
+    console.error('[TRIPS/RECENT] error:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
 app.post('/accept-trip', async (req, res) => {
   try {
     // Optional auth — userId is stored on the policy session for traceability
