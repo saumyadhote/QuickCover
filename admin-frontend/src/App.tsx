@@ -518,11 +518,16 @@ function OverviewTab({
 }) {
   const LOCALES = {
     // disruptionPerMonth: historical parametric trigger frequency (events/month)
-    // claimsPerEvent: riders who file per event (out of ~20-24% of active riders on shift)
+    // claimsPerEvent: riders who file per event (~20-24% of active riders on shift)
     // avgPayout: avg ₹/rider (hours_worked × ₹80/hr, typical 3-4 hr disruption)
-    ZONE_A: { id: 'ZONE_A', name: 'Bengaluru', active: 34210, dailyOrders: 284100, payoutExtrapolation: 1250, feeOffset: 0.8,  disruptionPerMonth: 3.1,  claimsPerEvent: 8125, avgPayout: 320 },
-    ZONE_B: { id: 'ZONE_B', name: 'Mumbai',    active: 41890, dailyOrders: 312050, payoutExtrapolation: 1650, feeOffset: -0.2, disruptionPerMonth: 6.3,  claimsPerEvent: 5636, avgPayout: 330 },
-    ZONE_C: { id: 'ZONE_C', name: 'Delhi NCR', active: 24890, dailyOrders: 213120, payoutExtrapolation: 890,  feeOffset: 0.0,  disruptionPerMonth: 9.6,  claimsPerEvent: 4784, avgPayout: 253 },
+    // avgMonthlyFee: weighted average fee actually collected across the month.
+    //   The live fee fluctuates ₹1.50–₹5.00; this is the risk-distribution mean.
+    //   BLR: mostly calm (Low/Med 70% of time) → ₹2.80 avg
+    //   MUM: moderate variability → ₹3.10 avg
+    //   DEL NCR: frequently elevated AQI/heat → ₹3.60 avg
+    ZONE_A: { id: 'ZONE_A', name: 'Bengaluru', active: 34210, dailyOrders: 284100, payoutExtrapolation: 1250, feeOffset: 0.8,  disruptionPerMonth: 3.1,  claimsPerEvent: 8125, avgPayout: 320, avgMonthlyFee: 2.80 },
+    ZONE_B: { id: 'ZONE_B', name: 'Mumbai',    active: 41890, dailyOrders: 312050, payoutExtrapolation: 1650, feeOffset: -0.2, disruptionPerMonth: 6.3,  claimsPerEvent: 5636, avgPayout: 330, avgMonthlyFee: 3.10 },
+    ZONE_C: { id: 'ZONE_C', name: 'Delhi NCR', active: 24890, dailyOrders: 213120, payoutExtrapolation: 890,  feeOffset: 0.0,  disruptionPerMonth: 9.6,  claimsPerEvent: 4784, avgPayout: 253, avgMonthlyFee: 3.60 },
   };
   const [selectedZone, setSelectedZone] = useState<keyof typeof LOCALES>('ZONE_C');
   const locale = LOCALES[selectedZone];
@@ -543,9 +548,11 @@ function OverviewTab({
 
   // ── Monthly actuarial model ──────────────────────────────────────────────
   // Parametric triggers (rain >15mm/hr, heat >43°C, AQI >300) are rare
-  // high-threshold events — not daily. P&L is computed on a monthly basis
-  // using historical disruption frequency, fully decoupled from demo state.
-  const monthlyGWP         = zoneMicroFee * dailyOrders * 30;
+  // high-threshold events — not daily. P&L uses avgMonthlyFee (the weighted
+  // average fee collected across the month's risk distribution), NOT the live
+  // spot fee which swings ₹1.50–₹5.00 on 15s polling. The live fee drives the
+  // AI Micro-Fee card and the dynamic pricing chart — not the actuarial margin.
+  const monthlyGWP         = locale.avgMonthlyFee * dailyOrders * 30;
   const monthlyClaimsCost  = locale.disruptionPerMonth * locale.claimsPerEvent * locale.avgPayout;
   const netMarginPct       = monthlyGWP > 0
     ? (((monthlyGWP - monthlyClaimsCost) / monthlyGWP) * 100).toFixed(1)
@@ -640,7 +647,7 @@ function OverviewTab({
               <h4 className="text-4xl font-bold text-white tracking-tight">{animGWP.toFixed(2)}<span className="text-2xl font-semibold text-[#adc6ff]/70 ml-0.5">L</span></h4>
               <span className="text-[11px] text-[#4d5f80]">/ month</span>
             </div>
-            <p className="text-[11px] text-[#4d5f80] mt-2">₹{zoneMicroFee.toFixed(2)}/order × {dailyOrders.toLocaleString('en-IN')} × 30 days</p>
+            <p className="text-[11px] text-[#4d5f80] mt-2">₹{locale.avgMonthlyFee.toFixed(2)} avg/order × {dailyOrders.toLocaleString('en-IN')} × 30 days</p>
             <div className="mt-5 h-10">
               <FeeSparkline history={feeHistory} color="#adc6ff" />
             </div>
