@@ -473,10 +473,20 @@ app.post('/trigger-disruption', async (req, res) => {
       await dbRun('UPDATE state SET "isTripActive" = FALSE WHERE id = 1');
 
       setTimeout(async () => {
+        // ── Simulated Payment Gateway (Razorpay mock) ──────────────────────
+        // Generates a mock UPI transfer and logs the transaction ID.
+        // In production this would call Razorpay Payouts API:
+        //   POST https://api.razorpay.com/v1/payouts  { amount, fund_account_id, ... }
+        const txnId = `RZP-MOCK-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+        console.log(`[PAYMENT] Mock UPI transfer initiated — txnId: ${txnId}, amount: ₹${payoutAmount}, userId: ${userId}`);
+        console.log(`[PAYMENT] Transfer complete — txnId: ${txnId} → status: SUCCESS`);
+
         await dbRun(`
           UPDATE state SET "claimStatus" = 'paid'
           WHERE id = 1 AND "claimStatus" = 'approved'
         `);
+
+        console.log(`[PAYMENT] Payout settled — ₹${payoutAmount} credited to userId: ${userId} via ${txnId}`);
       }, 3000);
 
     }, 4000);
@@ -508,6 +518,80 @@ app.post('/reset', async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: 'Database error' });
   }
+});
+
+// ---------------------------------------------------------------------------
+// POST /claim/adjudicate
+//
+// GenAI Vision Adjudication — accepts photo evidence from the mobile app and
+// runs it through a simulated Gemini 1.5 Pro / GPT-4o Vision evaluation.
+//
+// In production this calls:
+//   POST https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent
+// with the image encoded as base64 + a structured prompt asking the model to
+// cross-reference scene content against the claim context (disruption type,
+// zone, timestamp) and validate EXIF metadata.
+//
+// Body: { claimId, disruptionType, zone, timestamp, imageUrl }
+// Returns: { is_authentic_disruption, confidence_score, reason, model, txnRef }
+// ---------------------------------------------------------------------------
+app.post('/claim/adjudicate', async (req, res) => {
+  const { claimId, disruptionType, zone, timestamp, imageUrl } = req.body || {};
+
+  if (!disruptionType) {
+    return res.status(400).json({ error: 'disruptionType is required' });
+  }
+
+  // ── Deterministic confidence scoring (mirrors real model output shape) ──
+  // Real implementation would base64-encode imageUrl, POST to Gemini/GPT-4o,
+  // and parse the structured JSON response for is_authentic_disruption + score.
+  const baseScores: Record<string, number> = {
+    WEATHER:    0.91,
+    FLOOD:      0.88,
+    HEAT:       0.85,
+    POLLUTION:  0.83,
+    OUTAGE:     0.79,
+    TRAFFIC:    0.74,
+    CURFEW:     0.95,
+  };
+
+  const base = baseScores[disruptionType?.toUpperCase()] ?? 0.72;
+  // Add ±0.06 jitter so each call feels live
+  const jitter = (Math.random() - 0.5) * 0.12;
+  const confidence_score = parseFloat(Math.min(0.99, Math.max(0.40, base + jitter)).toFixed(3));
+  const is_authentic_disruption = confidence_score >= 0.75;
+
+  const reasons: Record<string, string> = {
+    WEATHER:   'Scene contains waterlogged road surface consistent with reported rainfall. EXIF geotag matches claim zone. Timestamp within 8-minute window of IMD threshold breach.',
+    FLOOD:     'Image shows submerged infrastructure and stationary vehicles. GPS coordinates verified against flood-affected grid cell. Accelerometer data consistent with stationary device.',
+    HEAT:      'Outdoor scene brightness and shadow angle consistent with midday sun in reported zone. No precipitation. Thermographic inference supports elevated ambient temperature claim.',
+    POLLUTION: 'Visible haze and reduced visibility consistent with CPCB AQI >300. Sky colour spectrum analysis matches PM2.5 concentration range. Location metadata verified.',
+    OUTAGE:    'Closed shutter visible at reported pickup location. No active delivery vehicles in frame. Timestamp matches zone outage window logged by platform webhook.',
+    TRAFFIC:   'Road blockade and stationary traffic visible. Police/barrier presence detected. GPS trace consistent with worker halted at reported location.',
+    CURFEW:    'Empty streets and law enforcement presence visible. Scene matches Section 144 enforcement pattern. Government advisory timestamp aligns with claim.',
+  };
+
+  const reason = is_authentic_disruption
+    ? (reasons[disruptionType?.toUpperCase()] ?? 'Visual evidence consistent with reported disruption type. Metadata validated.')
+    : 'Insufficient visual evidence to confirm disruption. Scene does not match reported conditions. Claim routed to manual analyst queue.';
+
+  const txnRef = `GENAI-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+
+  console.log(`[GENAI] Adjudication request — claimId: ${claimId}, type: ${disruptionType}, zone: ${zone}`);
+  console.log(`[GENAI] Model: gemini-1.5-pro-vision | confidence: ${confidence_score} | authentic: ${is_authentic_disruption} | ref: ${txnRef}`);
+
+  res.json({
+    is_authentic_disruption,
+    confidence_score,
+    reason,
+    model: 'gemini-1.5-pro-vision (simulated)',
+    txnRef,
+    action: confidence_score >= 0.75
+      ? 'payout_released'
+      : confidence_score >= 0.40
+      ? 'escalated_to_analyst'
+      : 'auto_rejected',
+  });
 });
 
 // --- Adversarial Defense & Anti-Spoofing Strategy (see README) ---

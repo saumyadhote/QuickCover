@@ -32,8 +32,11 @@ build/
 .env.*
 !.env.example
 
-# Claude context — contains project internals, keep local only
+# Claude / AI tooling — local only, never commit
 CLAUDE.md
+.claude/
+checklist.md
+
 .env.local
 .env.development.local
 .env.test.local

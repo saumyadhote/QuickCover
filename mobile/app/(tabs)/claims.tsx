@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
-  TextInput, KeyboardAvoidingView, Platform,
+  TextInput, KeyboardAvoidingView, Platform, Image, Alert,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { useMockData } from '../../context/MockDataContext';
 import { AppLogo } from '../components/AppLogo';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -36,10 +37,38 @@ function ClaimForm({ onClose, onSubmit }: { onClose: () => void; onSubmit: (type
   const [showTypePicker, setShowTypePicker] = useState(false);
   const [description, setDescription] = useState('');
   const [hoursWorked, setHoursWorked] = useState('2');
-  const [photoAdded, setPhotoAdded] = useState(false);
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
 
   const parsedHours = Math.min(8, Math.max(1, parseFloat(hoursWorked) || 1));
   const canSubmit = description.trim().length > 10;
+
+  const requestAndLaunchCamera = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission needed', 'Camera access is required to attach evidence.');
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      quality: 0.7,
+    });
+    if (!result.canceled && result.assets[0]) setPhotoUri(result.assets[0].uri);
+  };
+
+  const requestAndLaunchGallery = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission needed', 'Photo library access is required to attach evidence.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      quality: 0.7,
+    });
+    if (!result.canceled && result.assets[0]) setPhotoUri(result.assets[0].uri);
+  };
 
   return (
     <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 100 }}>
@@ -84,16 +113,26 @@ function ClaimForm({ onClose, onSubmit }: { onClose: () => void; onSubmit: (type
             <Text style={{ fontSize: 11, fontWeight: '700', color: '#475569', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.8 }}>
               Evidence <Text style={{ color: '#94a3b8', fontWeight: '400', textTransform: 'none' }}>(optional)</Text>
             </Text>
-            <View style={{ flexDirection: 'row', gap: 10, marginBottom: 16 }}>
-              <TouchableOpacity onPress={() => setPhotoAdded(true)} style={{ flex: 1, borderWidth: 1.5, borderStyle: 'dashed', borderColor: photoAdded ? '#7c3aed' : '#cbd5e1', borderRadius: 14, paddingVertical: 14, alignItems: 'center', backgroundColor: photoAdded ? '#f5f3ff' : '#f8fafc' }}>
-                <Camera color={photoAdded ? '#7c3aed' : '#94a3b8'} size={20} />
-                <Text style={{ fontSize: 11, color: photoAdded ? '#7c3aed' : '#64748b', marginTop: 4, fontWeight: '600' }}>{photoAdded ? 'Added ✓' : 'Take Photo'}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => setPhotoAdded(true)} style={{ flex: 1, borderWidth: 1.5, borderStyle: 'dashed', borderColor: '#cbd5e1', borderRadius: 14, paddingVertical: 14, alignItems: 'center', backgroundColor: '#f8fafc' }}>
-                <ImageIcon color="#94a3b8" size={20} />
-                <Text style={{ fontSize: 11, color: '#64748b', marginTop: 4, fontWeight: '600' }}>Upload Image</Text>
-              </TouchableOpacity>
-            </View>
+            {photoUri ? (
+              <View style={{ marginBottom: 16 }}>
+                <Image source={{ uri: photoUri }} style={{ width: '100%', height: 140, borderRadius: 14, marginBottom: 8 }} resizeMode="cover" />
+                <TouchableOpacity onPress={() => setPhotoUri(null)} style={{ alignSelf: 'flex-end', flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <X color="#94a3b8" size={13} />
+                  <Text style={{ fontSize: 11, color: '#94a3b8', fontWeight: '600' }}>Remove</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={{ flexDirection: 'row', gap: 10, marginBottom: 16 }}>
+                <TouchableOpacity onPress={requestAndLaunchCamera} style={{ flex: 1, borderWidth: 1.5, borderStyle: 'dashed', borderColor: '#cbd5e1', borderRadius: 14, paddingVertical: 14, alignItems: 'center', backgroundColor: '#f8fafc' }}>
+                  <Camera color="#94a3b8" size={20} />
+                  <Text style={{ fontSize: 11, color: '#64748b', marginTop: 4, fontWeight: '600' }}>Take Photo</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={requestAndLaunchGallery} style={{ flex: 1, borderWidth: 1.5, borderStyle: 'dashed', borderColor: '#cbd5e1', borderRadius: 14, paddingVertical: 14, alignItems: 'center', backgroundColor: '#f8fafc' }}>
+                  <ImageIcon color="#94a3b8" size={20} />
+                  <Text style={{ fontSize: 11, color: '#64748b', marginTop: 4, fontWeight: '600' }}>Upload Image</Text>
+                </TouchableOpacity>
+              </View>
+            )}
 
             <View style={{ backgroundColor: '#f5f3ff', borderRadius: 12, padding: 12, marginBottom: 16, borderWidth: 1, borderColor: '#ede9fe' }}>
               <Text style={{ fontSize: 11, color: '#5b21b6', lineHeight: 17 }}>

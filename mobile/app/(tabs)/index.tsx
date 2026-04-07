@@ -101,6 +101,92 @@ function StandbyBanner({
   );
 }
 
+// ── Today's Journey Timeline ─────────────────────────────────────────────────
+// Shows the worker's trip sequence for the current day with earnings per leg.
+// Seeded from the live tripCount so the count stays consistent with the backend.
+function TodayJourneyTimeline({
+  tripCount,
+  isTripActive,
+  weeklyEarnings,
+  weeklyProtected,
+}: {
+  tripCount: number;
+  isTripActive: boolean;
+  weeklyEarnings: number;
+  weeklyProtected: number;
+}) {
+  const visibleTrips = Math.min(isTripActive ? tripCount + 1 : tripCount, 5);
+
+  if (visibleTrips === 0) return null;
+
+  // Deterministic per-trip earnings sliced from weekly total for display only
+  const perTrip = weeklyEarnings > 0 ? Math.floor(weeklyEarnings / Math.max(tripCount, 1)) : 65;
+
+  // Generate display-only timestamps working backwards from now
+  const now = new Date();
+  const entries = Array.from({ length: visibleTrips }, (_, i) => {
+    const isActive = isTripActive && i === visibleTrips - 1;
+    const minsBack = (visibleTrips - 1 - i) * 35 + (isActive ? 0 : 8);
+    const t = new Date(now.getTime() - minsBack * 60000);
+    const hh = String(t.getHours()).padStart(2, '0');
+    const mm = String(t.getMinutes()).padStart(2, '0');
+    return { time: `${hh}:${mm}`, isActive, earn: isActive ? null : perTrip };
+  });
+
+  return (
+    <View style={{
+      backgroundColor: '#ffffff', borderRadius: 20, padding: 18,
+      marginHorizontal: 16, marginTop: 14,
+      shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2,
+    }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <Text style={{ fontWeight: '800', fontSize: 15, color: '#0f172a' }}>Today's Journey</Text>
+        {weeklyProtected > 0 && (
+          <View style={{ backgroundColor: '#f0fdf4', borderRadius: 8, paddingHorizontal: 9, paddingVertical: 4, borderWidth: 1, borderColor: '#bbf7d0' }}>
+            <Text style={{ fontSize: 10, fontWeight: '700', color: '#16a34a' }}>₹{weeklyProtected.toLocaleString()} protected</Text>
+          </View>
+        )}
+      </View>
+
+      {entries.map((e, i) => (
+        <View key={i} style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+          {/* Timeline spine */}
+          <View style={{ width: 32, alignItems: 'center' }}>
+            <View style={{
+              width: 10, height: 10, borderRadius: 5,
+              backgroundColor: e.isActive ? '#7c3aed' : '#a78bfa',
+              marginTop: 4,
+            }} />
+            {i < entries.length - 1 && (
+              <View style={{ width: 2, flex: 1, backgroundColor: '#ede9fe', minHeight: 28, marginVertical: 2 }} />
+            )}
+          </View>
+          {/* Content */}
+          <View style={{
+            flex: 1, flexDirection: 'row', justifyContent: 'space-between',
+            alignItems: 'center', paddingBottom: i < entries.length - 1 ? 12 : 0,
+          }}>
+            <View>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: e.isActive ? '#7c3aed' : '#0f172a' }}>
+                {e.isActive ? 'Trip in progress…' : `Trip #${i + 1} completed`}
+              </Text>
+              <Text style={{ fontSize: 11, color: '#94a3b8', marginTop: 1 }}>{e.time}</Text>
+            </View>
+            {e.earn !== null ? (
+              <Text style={{ fontSize: 13, fontWeight: '800', color: '#0f172a' }}>+₹{e.earn}</Text>
+            ) : (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#7c3aed' }} />
+                <Text style={{ fontSize: 11, fontWeight: '700', color: '#7c3aed' }}>Active</Text>
+              </View>
+            )}
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+}
+
 // ── Today's Trips List ───────────────────────────────────────────────────────
 function TodaysTrips({ tripCount, isTripActive }: { tripCount: number; isTripActive: boolean }) {
   // tripCount from eligibility = completed + disrupted in last 7 days (not just today),
@@ -413,8 +499,16 @@ export default function DashboardScreen() {
           </TouchableOpacity>
         )}
 
+        {/* ── Today's Journey Timeline ── */}
+        <TodayJourneyTimeline
+          tripCount={eligibility.tripCount}
+          isTripActive={isTripActive}
+          weeklyEarnings={weeklyEarnings}
+          weeklyProtected={weeklyProtected}
+        />
+
         {/* ── Today's Trips ── */}
-        <View style={{ marginTop: 20 }}>
+        <View style={{ marginTop: 14 }}>
           <TodaysTrips tripCount={eligibility.tripCount} isTripActive={isTripActive} />
         </View>
 
