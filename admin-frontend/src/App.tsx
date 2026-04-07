@@ -517,9 +517,12 @@ function OverviewTab({
   pushEvent: (ev: OpsEvent) => void;
 }) {
   const LOCALES = {
-    ZONE_A: { id: 'ZONE_A', name: 'Bengaluru', active: 34210, dailyOrders: 284100, payoutExtrapolation: 1250, feeOffset: 0.8 },
-    ZONE_B: { id: 'ZONE_B', name: 'Mumbai', active: 41890, dailyOrders: 312050, payoutExtrapolation: 1650, feeOffset: -0.2 },
-    ZONE_C: { id: 'ZONE_C', name: 'Delhi NCR', active: 24890, dailyOrders: 213120, payoutExtrapolation: 890, feeOffset: 0.0 },
+    // disruptionPerMonth: historical parametric trigger frequency (events/month)
+    // claimsPerEvent: riders who file per event (out of ~20-24% of active riders on shift)
+    // avgPayout: avg ₹/rider (hours_worked × ₹80/hr, typical 3-4 hr disruption)
+    ZONE_A: { id: 'ZONE_A', name: 'Bengaluru', active: 34210, dailyOrders: 284100, payoutExtrapolation: 1250, feeOffset: 0.8,  disruptionPerMonth: 3.1,  claimsPerEvent: 8125, avgPayout: 320 },
+    ZONE_B: { id: 'ZONE_B', name: 'Mumbai',    active: 41890, dailyOrders: 312050, payoutExtrapolation: 1650, feeOffset: -0.2, disruptionPerMonth: 6.3,  claimsPerEvent: 5636, avgPayout: 330 },
+    ZONE_C: { id: 'ZONE_C', name: 'Delhi NCR', active: 24890, dailyOrders: 213120, payoutExtrapolation: 890,  feeOffset: 0.0,  disruptionPerMonth: 9.6,  claimsPerEvent: 4784, avgPayout: 253 },
   };
   const [selectedZone, setSelectedZone] = useState<keyof typeof LOCALES>('ZONE_C');
   const locale = LOCALES[selectedZone];
@@ -537,21 +540,31 @@ function OverviewTab({
 
   const dailyOrders = locale.dailyOrders;
   const zoneMicroFee = Math.max(1.5, state.currentMicroFee + locale.feeOffset);
-  const grossPremium = zoneMicroFee * dailyOrders;
-  const driversPaid = state.weeklyProtected > 0 ? locale.payoutExtrapolation : 0;
-  const claimsPayout = state.weeklyProtected * driversPaid;
-  const netMarginPct = grossPremium > 0
-    ? (((grossPremium - claimsPayout) / grossPremium) * 100).toFixed(1)
-    : '71.2';
 
-  // Animated display values for P&L cards
-  const animGWP = useAnimatedNumber(grossPremium / 100000);
-  const animClaims = useAnimatedNumber(claimsPayout);
+  // ── Monthly actuarial model ──────────────────────────────────────────────
+  // Parametric triggers (rain >15mm/hr, heat >43°C, AQI >300) are rare
+  // high-threshold events — not daily. P&L is computed on a monthly basis
+  // using historical disruption frequency, fully decoupled from demo state.
+  const monthlyGWP         = zoneMicroFee * dailyOrders * 30;
+  const monthlyClaimsCost  = locale.disruptionPerMonth * locale.claimsPerEvent * locale.avgPayout;
+  const netMarginPct       = monthlyGWP > 0
+    ? (((monthlyGWP - monthlyClaimsCost) / monthlyGWP) * 100).toFixed(1)
+    : '78.0';
+  const lossRatioPct       = monthlyGWP > 0
+    ? ((monthlyClaimsCost / monthlyGWP) * 100).toFixed(1)
+    : '22.0';
+
+  // Animated display values (in ₹ Lakh for GWP/claims/surplus)
+  const animGWP    = useAnimatedNumber(monthlyGWP / 100000);
+  const animClaims = useAnimatedNumber(monthlyClaimsCost / 100000);
   const animMargin = useAnimatedNumber(parseFloat(netMarginPct));
-  const animSurplus = useAnimatedNumber(Math.max(0, grossPremium - claimsPayout));
+  const animSurplus = useAnimatedNumber(Math.max(0, monthlyGWP - monthlyClaimsCost) / 100000);
 
-  // Pool health: reduces when claims are paid out relative to pool
-  const poolHealth = Math.min(100, Math.max(60, 100 - (claimsPayout / (grossPremium * 0.01))));
+  // Pool health: loss ratio drives health (22% → ~91%, 52% → ~79%)
+  const poolHealth = Math.min(98, Math.max(60, 100 - parseFloat(lossRatioPct) * 0.38));
+
+  // Live banner still uses demo state for real-time claim activity display
+  const driversPaid = state.weeklyProtected > 0 ? locale.payoutExtrapolation : 0;
   const riskColor = state.currentRiskLevel === 'Low' ? '#4edea3'
     : state.currentRiskLevel === 'Medium' ? '#ffb95f'
     : '#ffb4ab';
@@ -625,8 +638,9 @@ function OverviewTab({
             <div className="flex items-baseline gap-1.5">
               <span className="text-[22px] font-medium text-[#adc6ff]/60">₹</span>
               <h4 className="text-4xl font-bold text-white tracking-tight">{animGWP.toFixed(2)}<span className="text-2xl font-semibold text-[#adc6ff]/70 ml-0.5">L</span></h4>
+              <span className="text-[11px] text-[#4d5f80]">/ month</span>
             </div>
-            <p className="text-[11px] text-[#4d5f80] mt-2">₹{zoneMicroFee.toFixed(2)}/order × {dailyOrders.toLocaleString('en-IN')}</p>
+            <p className="text-[11px] text-[#4d5f80] mt-2">₹{zoneMicroFee.toFixed(2)}/order × {dailyOrders.toLocaleString('en-IN')} × 30 days</p>
             <div className="mt-5 h-10">
               <FeeSparkline history={feeHistory} color="#adc6ff" />
             </div>
@@ -635,18 +649,19 @@ function OverviewTab({
           {/* Claims */}
           <div className={`relative bg-white/[0.015] border border-white/5 p-6 rounded-3xl overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.4)] backdrop-blur-xl group hover:border-[#ffb4ab]/20 transition-all duration-300 ${state.disruption ? 'disruption-active-glow' : ''}`}>
             <div className="absolute inset-0 bg-gradient-to-br from-[#ffb4ab]/[0.02] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-            <div className={`absolute top-0 left-0 right-0 h-[1.5px] bg-gradient-to-r ${claimsPayout > 0 ? 'from-[#ffb4ab]/80 via-[#ff8a7a]/80 to-transparent' : 'from-white/[0.08] to-transparent'}`} />
+            <div className="absolute top-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-[#ffb4ab]/80 via-[#ff8a7a]/80 to-transparent" />
             <div className="flex items-start justify-between mb-4">
               <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#4d5f80]">Claims Payouts</p>
-              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${claimsPayout > 0 ? 'text-[#ffb4ab] bg-[#ffb4ab]/10' : 'text-[#4edea3] bg-[#4edea3]/10'}`}>
-                {claimsPayout > 0 ? 'Active' : 'None'}
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-[#ffb95f] bg-[#ffb95f]/10">
+                Actuarial Est.
               </span>
             </div>
             <div className="flex items-baseline gap-1.5">
               <span className="text-[22px] font-medium text-[#ffb4ab]/60">₹</span>
-              <h4 className="text-4xl font-bold text-white tracking-tight">{Math.round(animClaims).toLocaleString('en-IN')}</h4>
+              <h4 className="text-4xl font-bold text-white tracking-tight">{animClaims.toFixed(2)}<span className="text-2xl font-semibold text-[#ffb4ab]/70 ml-0.5">L</span></h4>
+              <span className="text-[11px] text-[#4d5f80]">/ month</span>
             </div>
-            <p className="text-[11px] text-[#4d5f80] mt-2">{driversPaid > 0 ? `${driversPaid.toLocaleString('en-IN')} drivers paid — ` : ''}Total sums disbursed</p>
+            <p className="text-[11px] text-[#4d5f80] mt-2">{locale.disruptionPerMonth} events/mo · ~{locale.claimsPerEvent.toLocaleString('en-IN')} riders/event</p>
             <div className="mt-5 h-10">
               <svg className="w-full h-full" viewBox="0 0 100 40" preserveAspectRatio="none">
                 <path d="M0 30 L15 32 L30 28 L45 35 L60 33 L75 38 L90 34 L100 36" fill="none" stroke="#ffb4ab44" strokeWidth="2" />
@@ -666,11 +681,11 @@ function OverviewTab({
               <h4 className="text-4xl font-bold text-white tracking-tight">{animMargin.toFixed(1)}</h4>
               <span className="text-2xl font-semibold text-[#4edea3]/70">%</span>
             </div>
-            <p className="text-[11px] text-[#4d5f80] mt-2">Pool surplus ₹{Math.round(animSurplus).toLocaleString('en-IN')}</p>
+            <p className="text-[11px] text-[#4d5f80] mt-2">Monthly surplus ₹{animSurplus.toFixed(2)}L</p>
             <div className="mt-4 h-1.5 w-full bg-white/[0.05] rounded-full overflow-hidden">
               <div className="h-full rounded-full transition-all duration-700" style={{ width: `${Math.min(100, animMargin)}%`, background: 'linear-gradient(90deg, #4edea3, #2dc98e)' }} />
             </div>
-            <p className="text-[10px] text-[#4edea3]/60 mt-1.5">Loss ratio ~{(100 - animMargin).toFixed(1)}%</p>
+            <p className="text-[10px] text-[#4edea3]/60 mt-1.5">Loss ratio ~{lossRatioPct}% · monthly actuarial model</p>
           </div>
 
         </div>
@@ -761,8 +776,8 @@ function OverviewTab({
                 {state.claimStatus === 'approved' && <Banknote size={14} />}
                 {state.claimStatus === 'processing' && <LoaderCircle size={14} className="animate-spin" />}
                 {state.claimStatus === 'processing' && `Disruption Processing — Authenticating ${driversPaid > 0 ? driversPaid.toLocaleString('en-IN') : locale.payoutExtrapolation.toLocaleString('en-IN')} workers…`}
-                {state.claimStatus === 'approved' && `Disruption Approved — ₹${((state.lastPayoutAmount || state.weeklyProtected) * (driversPaid > 0 ? driversPaid : locale.payoutExtrapolation)).toLocaleString('en-IN')} total payout authorised`}
-                {state.claimStatus === 'paid' && `₹${(state.weeklyProtected * driversPaid).toLocaleString('en-IN')} total pool sums transferred to ${driversPaid.toLocaleString('en-IN')} drivers via UPI`}
+                {state.claimStatus === 'approved' && `Disruption Approved — ₹${((state.lastPayoutAmount ?? 0) * (driversPaid > 0 ? driversPaid : locale.payoutExtrapolation)).toLocaleString('en-IN')} total payout authorised`}
+                {state.claimStatus === 'paid' && `Pool disbursement complete — ${(driversPaid > 0 ? driversPaid : locale.payoutExtrapolation).toLocaleString('en-IN')} riders paid via UPI`}
               </p>
             </div>
           )}
@@ -852,42 +867,77 @@ function OverviewTab({
       </div>
 
       {/* Predictive Analytics */}
-      <PredictiveAnalyticsPanel riskLevel={state.currentRiskLevel} />
+      <PredictiveAnalyticsPanel riskLevel={state.currentRiskLevel} zone={selectedZone} disruptionPerMonth={locale.disruptionPerMonth} claimsPerEvent={locale.claimsPerEvent} zoneName={locale.name} />
     </>
   );
 }
 
 // ─────────────────────────────────────────────
 // Predictive Analytics Panel
-// Week-ahead claim volume forecast seeded from current risk level.
-// In production: XGBoost model trained on 90-day rolling trip/weather data.
+// Week-ahead claim volume forecast.
+// Parametric triggers (rain >15mm/hr, heat >43°C, AQI >300) are RARE high-threshold
+// events. Most days have zero claims. Spikes appear only on predicted event days.
+// In production: XGBoost model trained on 90-day rolling trip/weather/AQI data.
 // ─────────────────────────────────────────────
-function PredictiveAnalyticsPanel({ riskLevel }: { riskLevel: string }) {
-  // Deterministic 7-day forecast anchored to current risk signal
+function PredictiveAnalyticsPanel({
+  riskLevel, zone, disruptionPerMonth, claimsPerEvent, zoneName,
+}: {
+  riskLevel: string; zone: string; disruptionPerMonth: number; claimsPerEvent: number; zoneName: string;
+}) {
   const today = new Date();
-  const riskMultiplier = riskLevel === 'Critical' ? 1.6 : riskLevel === 'High' ? 1.3 : riskLevel === 'Medium' ? 1.0 : 0.7;
+  // Risk multiplier nudges event probability slightly on high-risk days
+  const riskMultiplier = riskLevel === 'Critical' ? 1.5 : riskLevel === 'High' ? 1.2 : riskLevel === 'Medium' ? 1.0 : 0.75;
+  // Base daily event probability from historical disruption frequency
+  const baseDailyEventProb = (disruptionPerMonth / 30) * riskMultiplier;
+
+  // Zone character: proportion split across disruption types
+  const typeWeights: Record<string, { weather: number; heat: number; aqi: number; outage: number }> = {
+    ZONE_A: { weather: 0.65, heat: 0.15, aqi: 0.10, outage: 0.10 }, // BLR: monsoon-dominant
+    ZONE_B: { weather: 0.50, heat: 0.10, aqi: 0.30, outage: 0.10 }, // MUM: rain + coastal smog
+    ZONE_C: { weather: 0.20, heat: 0.35, aqi: 0.35, outage: 0.10 }, // DEL NCR: heat + AQI
+  };
+  const tw = typeWeights[zone] ?? typeWeights['ZONE_C'];
+
+  // Deterministic pseudo-random seeded on zone + week number (stable within a week)
+  const weekSeed = Math.floor(today.getTime() / (7 * 24 * 3600 * 1000));
+  const hash = (n: number) => Math.abs(Math.sin(n * 127.1 + weekSeed * 311.7 + zone.charCodeAt(4) * 17.3));
 
   const days = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(today);
     d.setDate(today.getDate() + i + 1);
     const label = d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric' });
-    // Seasonal base: higher Mon/Fri, dip Wed; weekend spike for Q-commerce
-    const dayOfWeek = d.getDay();
-    const dayBase = [1.1, 1.0, 0.85, 0.9, 1.15, 1.35, 1.25][dayOfWeek];
-    const jitter = 0.85 + Math.sin(i * 2.3 + 1.1) * 0.15;
 
-    const weather  = Math.round(18 * riskMultiplier * dayBase * jitter);
-    const heat     = Math.round(8  * riskMultiplier * dayBase * jitter * 0.6);
-    const aqi      = Math.round(6  * riskMultiplier * dayBase * jitter * 0.5);
-    const outage   = Math.round(4  * dayBase * jitter * 0.4);
+    // Seasonal day-of-week modifier (weekend Q-commerce spikes, midweek dip)
+    const dayOfWeek = d.getDay();
+    const dayMod = [1.0, 0.95, 0.85, 0.90, 1.05, 1.30, 1.20][dayOfWeek];
+
+    // Does a parametric trigger event fire on this day?
+    const roll = hash(i * 13 + weekSeed);
+    const eventFires = roll < baseDailyEventProb * dayMod;
+
+    let weather = 0, heat = 0, aqi = 0, outage = 0;
+    if (eventFires) {
+      // Scale = fraction of claimsPerEvent, with ±20% variance
+      const scale = claimsPerEvent * (0.8 + hash(i * 7 + 3) * 0.4);
+      weather = Math.round(scale * tw.weather);
+      heat    = Math.round(scale * tw.heat);
+      aqi     = Math.round(scale * tw.aqi);
+      outage  = Math.round(scale * tw.outage);
+    } else {
+      // Ambient: non-parametric small claims (platform issues, manual reports)
+      const ambient = Math.round(8 + hash(i * 5 + 1) * 22); // 8–30 background claims
+      weather = Math.round(ambient * 0.5);
+      aqi     = Math.round(ambient * 0.3);
+      outage  = Math.round(ambient * 0.2);
+    }
     const total    = weather + heat + aqi + outage;
-    const poolDraw = Math.round(total * 320); // avg ₹320/claim
-    return { label, weather, heat, aqi, outage, total, poolDraw };
+    const poolDraw = Math.round(total * 300); // avg ₹300/claim across all types
+    return { label, weather, heat, aqi, outage, total, poolDraw, isEventDay: eventFires };
   });
 
-  const maxTotal = Math.max(...days.map(d => d.total));
-  const totalWeekClaims = days.reduce((s, d) => s + d.total, 0);
-  const totalPoolDraw   = days.reduce((s, d) => s + d.poolDraw, 0);
+  const maxTotal         = Math.max(...days.map(d => d.total), 1);
+  const totalWeekClaims  = days.reduce((s, d) => s + d.total, 0);
+  const totalPoolDraw    = days.reduce((s, d) => s + d.poolDraw, 0);
 
   const barColors = {
     weather: '#adc6ff',
@@ -911,17 +961,17 @@ function PredictiveAnalyticsPanel({ riskLevel }: { riskLevel: string }) {
             </span>
           </div>
           <p className="text-[10px] text-[#8c909f]">
-            Expected claim volumes by disruption type · anchored to live risk signal ({riskLevel})
+            {zoneName} · {disruptionPerMonth} parametric events/mo avg · most days 0 claims · spikes on trigger days
           </p>
         </div>
         <div className="flex gap-4 text-right">
           <div>
-            <p className="text-[10px] text-[#8c909f] mb-0.5">Est. Claims</p>
-            <p className="text-lg font-bold text-white">{totalWeekClaims}</p>
+            <p className="text-[10px] text-[#8c909f] mb-0.5">7-Day Claims</p>
+            <p className="text-lg font-bold text-white">{totalWeekClaims.toLocaleString('en-IN')}</p>
           </div>
           <div>
             <p className="text-[10px] text-[#8c909f] mb-0.5">Pool Draw</p>
-            <p className="text-lg font-bold text-[#ffb4ab]">₹{(totalPoolDraw / 1000).toFixed(1)}K</p>
+            <p className="text-lg font-bold text-[#ffb4ab]">₹{(totalPoolDraw / 100000).toFixed(2)}L</p>
           </div>
         </div>
       </div>
@@ -930,24 +980,32 @@ function PredictiveAnalyticsPanel({ riskLevel }: { riskLevel: string }) {
       <div className="flex items-end gap-2 h-32 mb-4 relative z-10">
         {days.map((d, i) => (
           <div key={i} className="flex-1 flex flex-col items-center gap-0.5 h-full justify-end group/bar">
-            <p className="text-[9px] font-bold text-[#8c909f] mb-1 tabular-nums">{d.total}</p>
-            <div className="w-full flex flex-col-reverse rounded-sm overflow-hidden" style={{ height: `${Math.max(8, (d.total / maxTotal) * 100)}%` }}>
+            {d.isEventDay && (
+              <p className="text-[8px] font-bold text-[#ffb95f] mb-0.5 tabular-nums">⚡ {d.total.toLocaleString('en-IN')}</p>
+            )}
+            {!d.isEventDay && (
+              <p className="text-[9px] font-bold text-[#424754] mb-1 tabular-nums">{d.total}</p>
+            )}
+            <div
+              className={`w-full flex flex-col-reverse rounded-sm overflow-hidden transition-all duration-500 ${d.isEventDay ? 'ring-1 ring-[#ffb95f]/40' : ''}`}
+              style={{ height: `${Math.max(4, (d.total / maxTotal) * 100)}%` }}
+            >
               {(['outage', 'aqi', 'heat', 'weather'] as const).map(k => (
                 d[k] > 0 && (
                   <div
                     key={k}
-                    title={`${k}: ${d[k]} claims`}
+                    title={`${k}: ${d[k].toLocaleString('en-IN')} claims`}
                     style={{
                       height: `${(d[k] / d.total) * 100}%`,
                       backgroundColor: barColors[k],
-                      opacity: 0.85,
+                      opacity: d.isEventDay ? 0.95 : 0.45,
                       minHeight: 3,
                     }}
                   />
                 )
               ))}
             </div>
-            <p className="text-[9px] text-[#424754] mt-1 text-center leading-tight">{d.label}</p>
+            <p className={`text-[9px] mt-1 text-center leading-tight ${d.isEventDay ? 'text-[#ffb95f]/70 font-semibold' : 'text-[#424754]'}`}>{d.label}</p>
           </div>
         ))}
       </div>
