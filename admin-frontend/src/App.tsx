@@ -33,6 +33,7 @@ type OpsEvent = {
   msg: string;
   tag?: string;
   tagColor?: string;
+  zone?: string;
 };
 
 type ZoneOutage = {
@@ -301,12 +302,17 @@ function LiveOpsFeed({ events }: { events: OpsEvent[] }) {
             style={{ backgroundColor: e.color, boxShadow: `0 0 6px ${e.color}88`, flexShrink: 0 }} />
           <div className="flex-1 min-w-0">
             <p className="text-xs text-[#c2c6d6] leading-snug">{e.msg}</p>
-            <div className="flex items-center gap-2 mt-1">
+            <div className="flex items-center gap-2 mt-1 flex-wrap">
               <span className="text-[10px] font-mono text-[#424754]">{e.time}</span>
               {e.tag && (
                 <span className="text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider"
                   style={{ color: e.tagColor || e.color, backgroundColor: (e.tagColor || e.color) + '18' }}>
                   {e.tag}
+                </span>
+              )}
+              {e.zone && (
+                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider text-[#8c909f] bg-white/[0.04] border border-white/[0.06]">
+                  {e.zone}
                 </span>
               )}
             </div>
@@ -497,17 +503,18 @@ function CronEvalPanel({
 // ─────────────────────────────────────────────
 function OverviewTab({
   state, feeHistory, opsEvents, triggerDisruption, refreshForecast,
-  outages, startOutage, resolveOutage, runCronEval,
+  outages, startOutage, resolveOutage, runCronEval, pushEvent,
 }: {
   state: AppState;
   feeHistory: FeePoint[];
   opsEvents: OpsEvent[];
-  triggerDisruption: (type: string, severity: string, message: string) => Promise<void>;
+  triggerDisruption: (type: string, severity: string, message: string, zoneId: string) => Promise<void>;
   refreshForecast: () => Promise<void>;
   outages: ZoneOutage[];
   startOutage: (zoneId: string) => Promise<void>;
   resolveOutage: (zoneId: string) => Promise<void>;
   runCronEval: () => Promise<{ claims_created: number; breached_zones: { zone_id: string; type: string }[] } | null>;
+  pushEvent: (ev: OpsEvent) => void;
 }) {
   const LOCALES = {
     ZONE_A: { id: 'ZONE_A', name: 'Bengaluru', active: 34210, dailyOrders: 284100, payoutExtrapolation: 1250, feeOffset: 0.8 },
@@ -516,6 +523,17 @@ function OverviewTab({
   };
   const [selectedZone, setSelectedZone] = useState<keyof typeof LOCALES>('ZONE_C');
   const locale = LOCALES[selectedZone];
+
+  // Inject zone-specific feed events whenever the selected zone changes
+  const isFirstRender = useRef(true);
+  useEffect(() => {
+    if (isFirstRender.current) { isFirstRender.current = false; return; }
+    pushEvent(makeEvent('#8c909f', `──── Switched monitoring context to ${selectedZone} · ${LOCALES[selectedZone].name} ────`, 'SYSTEM'));
+    const seeds = ZONE_SEED_EVENTS[selectedZone] ?? [];
+    // Push newest-first so they appear at the top
+    [...seeds].reverse().forEach(ev => pushEvent({ ...ev, id: ++opsEventCounter, time: nowIST() }));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedZone]);
 
   const dailyOrders = locale.dailyOrders;
   const zoneMicroFee = Math.max(1.5, state.currentMicroFee + locale.feeOffset);
@@ -719,6 +737,9 @@ function OverviewTab({
             <div className="flex items-center gap-3">
               <div className="w-2 h-2 bg-[#4edea3] rounded-full animate-pulse" />
               <h3 className="text-sm font-bold uppercase tracking-widest">Live Operations Feed</h3>
+              <span className="px-2 py-0.5 rounded-full bg-[#adc6ff]/10 text-[#adc6ff] text-[9px] font-bold uppercase border border-[#adc6ff]/20 tracking-wider">
+                {selectedZone} · {locale.name}
+              </span>
             </div>
             <span className="text-[10px] font-mono text-[#8c909f]">{opsEvents.length} events</span>
           </div>
@@ -754,18 +775,39 @@ function OverviewTab({
             <div className="flex items-center gap-3">
               <AlertTriangle size={18} className="text-[#ffb95f]" />
               <h3 className="text-sm font-bold uppercase tracking-widest">Disruption Simulator</h3>
+              <span className="px-2 py-0.5 rounded-full bg-[#adc6ff]/10 text-[#adc6ff] text-[9px] font-bold uppercase border border-[#adc6ff]/20 tracking-wider">
+                {selectedZone}
+              </span>
             </div>
             <span className="px-2 py-0.5 rounded-full bg-[#ffb95f]/10 text-[#ffb95f] text-[10px] font-bold uppercase border border-[#ffb95f]/20">Live Scenario</span>
           </div>
           <div className="space-y-3 mb-6">
             {[
-              { type: 'WEATHER', sev: 'HIGH', msg: `Severe waterlogging in ${locale.name}. IMD: 28mm/hr.`, label: 'Flash Flood Warning', sub: `IMD threshold breached · ₹${(450 * locale.payoutExtrapolation).toLocaleString('en-IN')} sum payout`, Icon: Droplets, color: '#adc6ff', btnClass: 'disruption-btn-weather' },
-              { type: 'POLLUTION', sev: 'HIGH', msg: 'AQI crossed 450 in primary delivery grid.', label: 'Severe AQI Spike', sub: `CPCB AQI >450 · ₹${(450 * locale.payoutExtrapolation).toLocaleString('en-IN')} sum payout`, Icon: Wind, color: '#ffb95f', btnClass: 'disruption-btn-pollution' },
-              { type: 'CURFEW', sev: 'CRITICAL', msg: `Unplanned Section 144 grid disruption in ${locale.name}.`, label: 'Civic Disruption', sub: `Section 144 / curfew · ₹${(450 * locale.payoutExtrapolation).toLocaleString('en-IN')} sum payout`, Icon: ShieldCheck, color: '#ffb4ab', btnClass: 'disruption-btn-curfew' },
+              {
+                type: 'WEATHER', sev: 'HIGH',
+                msg: { ZONE_A: `IMD BLR-047: 28mm/hr rainfall in Koramangala — waterlogging on Outer Ring Road.`, ZONE_B: `IMD MUM-012: 31mm/hr coastal rainfall in Bandra — Linking Road waterlogged.`, ZONE_C: `IMD DEL-009: 19mm/hr in Gurugram — NH-48 partially flooded, deliveries halted.` }[selectedZone],
+                label: 'Flash Flood Warning',
+                sub: `IMD threshold breached · ${locale.name} · ₹${(450 * locale.payoutExtrapolation).toLocaleString('en-IN')} total payout`,
+                Icon: Droplets, color: '#adc6ff', btnClass: 'disruption-btn-weather',
+              },
+              {
+                type: 'POLLUTION', sev: 'HIGH',
+                msg: { ZONE_A: `CPCB BLR: AQI 412 in HSR Layout — construction dust + traffic. Unsafe outdoor conditions.`, ZONE_B: `MPCB MUM: AQI 387 in Andheri — sea-salt + vehicular PM2.5. Rider health risk elevated.`, ZONE_C: `CPCB DEL: AQI 478 in Gurugram — severe smog event. Visibility <200m on Sohna Road.` }[selectedZone],
+                label: 'Severe AQI Spike',
+                sub: `CPCB AQI >300 · ${locale.name} · ₹${(450 * locale.payoutExtrapolation).toLocaleString('en-IN')} total payout`,
+                Icon: Wind, color: '#ffb95f', btnClass: 'disruption-btn-pollution',
+              },
+              {
+                type: 'CURFEW', sev: 'CRITICAL',
+                msg: { ZONE_A: `Section 144 imposed — Koramangala / BTM Layout. All non-essential movement prohibited.`, ZONE_B: `Section 144 — Bandra East / Dharavi corridor. Blinkit dark stores locked down.`, ZONE_C: `Section 144 — Gurugram Sector 29 / Cyber City. Platform operations suspended.` }[selectedZone],
+                label: 'Civic Disruption',
+                sub: `Section 144 / curfew · ${locale.name} · ₹${(450 * locale.payoutExtrapolation).toLocaleString('en-IN')} total payout`,
+                Icon: ShieldCheck, color: '#ffb4ab', btnClass: 'disruption-btn-curfew',
+              },
             ].map(evt => (
               <button
                 key={evt.type}
-                onClick={() => triggerDisruption(evt.type, evt.sev, evt.msg)}
+                onClick={() => triggerDisruption(evt.type, evt.sev, evt.msg, selectedZone)}
                 disabled={state.claimStatus === 'processing' || state.claimStatus === 'approved'}
                 className={`w-full bg-white/[0.02] hover:bg-white/[0.05] border border-white/5 p-4 rounded-xl text-left transition-all duration-300 group/btn disabled:opacity-40 disabled:cursor-not-allowed ${evt.btnClass} backdrop-blur-md relative z-10`}
               >
@@ -1496,9 +1538,31 @@ function PartnersTab({ state }: { state: AppState }) {
 // ─────────────────────────────────────────────
 
 let opsEventCounter = 0;
-const makeEvent = (color: string, msg: string, tag?: string, tagColor?: string): OpsEvent => ({
-  id: ++opsEventCounter, time: nowIST(), color, msg, tag, tagColor,
+const makeEvent = (color: string, msg: string, tag?: string, tagColor?: string, zone?: string): OpsEvent => ({
+  id: ++opsEventCounter, time: nowIST(), color, msg, tag, tagColor, zone,
 });
+
+// Zone-specific seed events — reflect real API-driven conditions per geography
+const ZONE_SEED_EVENTS: Record<string, OpsEvent[]> = {
+  ZONE_A: [
+    makeEvent('#4edea3', 'Bengaluru — Blinkit reconciliation: 34,210 active riders in Koramangala / HSR grid.', 'PARTNER', '#4edea3', 'ZONE_A'),
+    makeEvent('#adc6ff', 'IMD Station BLR-047: rainfall 4.2 mm/hr — below 15 mm/hr trigger. Surcharge at floor.', 'WEATHER', '#adc6ff', 'ZONE_A'),
+    makeEvent('#4edea3', 'XGBoost epoch — SW monsoon coefficients recalibrated. AUC 0.83 on BLR validation set.', 'ML', '#4edea3', 'ZONE_A'),
+    makeEvent('#ffb95f', 'Outer Ring Road congestion spike — delivery ETA up 18%. Risk score elevated to 0.34.', 'RISK', '#ffb95f', 'ZONE_A'),
+  ],
+  ZONE_B: [
+    makeEvent('#4edea3', 'Mumbai — Zepto reconciliation: 41,890 active riders in Bandra / Andheri grid.', 'PARTNER', '#4edea3', 'ZONE_B'),
+    makeEvent('#c084fc', 'MPCB AQI reading: PM2.5 142 μg/m³ — estimated CPCB AQI 218. Below 300 trigger.', 'AQI', '#c084fc', 'ZONE_B'),
+    makeEvent('#adc6ff', 'Arabian Sea low-pressure system tracked at 18.9°N — coastal rainfall risk rising to 0.41.', 'WEATHER', '#adc6ff', 'ZONE_B'),
+    makeEvent('#4edea3', 'Mumbai sub-pool Gamma at 94.2% liquidity — highest across all zones.', 'POOL', '#4edea3', 'ZONE_B'),
+  ],
+  ZONE_C: [
+    makeEvent('#4edea3', 'Delhi NCR — Swiggy Instamart reconciliation: 24,890 active riders in Gurugram / Cyber City.', 'PARTNER', '#4edea3', 'ZONE_C'),
+    makeEvent('#ffb95f', 'CPCB Delhi AQI: 287 — approaching 300 trigger. Surcharge elevated to ₹3.20.', 'AQI', '#ffb95f', 'ZONE_C'),
+    makeEvent('#ffb4ab', 'IMD forecast: max temp 44.1°C tomorrow. Heat trigger (>43°C) probability 78%.', 'WEATHER', '#ffb4ab', 'ZONE_C'),
+    makeEvent('#adc6ff', 'XGBoost epoch — NCR winter pollution coefficients applied. Historical volatility +22%.', 'ML', '#adc6ff', 'ZONE_C'),
+  ],
+};
 
 export default function App() {
   const [tab, setTab] = useState<Tab>('overview');
@@ -1519,13 +1583,8 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    // Seed initial ops feed with mock historic entries
-    setOpsEvents([
-      makeEvent('#4edea3', 'Blinkit API handshake successful — 2,401 riders reconciled.', 'PARTNER', '#4edea3'),
-      makeEvent('#adc6ff', 'XGBoost model epoch recalculated — weather coefficients updated for NCR.', 'ML', '#adc6ff'),
-      makeEvent('#ffb95f', 'Heuristic alert: minor liquidity deviation in sub-pool Gamma.', 'RISK', '#ffb95f'),
-      makeEvent('#4edea3', 'Zepto daily reconciliation complete — 89,442 riders synced.', 'PARTNER', '#4edea3'),
-    ]);
+    // Seed with Delhi NCR (default zone) events
+    setOpsEvents([...ZONE_SEED_EVENTS['ZONE_C']]);
   }, []);
 
   useEffect(() => {
@@ -1553,28 +1612,31 @@ export default function App() {
           // Generate ops events from state transitions
           const prev = prevState.current;
 
+          const eventZone = next.disruption?.zone ?? undefined;
+
           if (prev.currentMicroFee !== next.currentMicroFee) {
             const up = next.currentMicroFee > prev.currentMicroFee;
             pushEvent(makeEvent(
               up ? '#ffb95f' : '#4edea3',
               `AI micro-fee ${up ? 'surged' : 'dropped'} ₹${prev.currentMicroFee.toFixed(2)} → ₹${next.currentMicroFee.toFixed(2)} (${next.currentRiskLevel} risk conditions)`,
-              'PRICING', up ? '#ffb95f' : '#4edea3',
+              'PRICING', up ? '#ffb95f' : '#4edea3', eventZone,
             ));
           }
 
           if (prev.claimStatus !== next.claimStatus) {
+            const zoneLabel = eventZone ? ` · ${eventZone}` : '';
             if (next.claimStatus === 'processing') {
-              pushEvent(makeEvent('#ffb95f', `Parametric disruption trigger received — claim auto-filed. AI cross-verification started.`, 'CLAIM', '#ffb95f'));
+              pushEvent(makeEvent('#ffb95f', `Parametric trigger received${zoneLabel} — ${next.disruption?.type ?? 'disruption'} confirmed. AI cross-verification started.`, 'CLAIM', '#ffb95f', eventZone));
             } else if (next.claimStatus === 'approved') {
               const payAmt = next.lastPayoutAmount > 0 ? next.lastPayoutAmount : next.weeklyProtected;
-              pushEvent(makeEvent('#adc6ff', `Isolation Forest fraud score: 0.21 / 1.00 — claim approved. Payout of ₹${payAmt.toLocaleString('en-IN')} authorised.`, 'AI', '#adc6ff'));
+              pushEvent(makeEvent('#adc6ff', `Isolation Forest score: 0.21 / 1.00 — claim approved${zoneLabel}. ₹${payAmt.toLocaleString('en-IN')} payout authorised.`, 'AI', '#adc6ff', eventZone));
             } else if (next.claimStatus === 'paid') {
-              pushEvent(makeEvent('#4edea3', `₹${next.weeklyProtected.toLocaleString('en-IN')} UPI transfer complete. Claim lifecycle closed.`, 'PAID', '#4edea3'));
+              pushEvent(makeEvent('#4edea3', `₹${next.weeklyProtected.toLocaleString('en-IN')} UPI transfer complete${zoneLabel}. Mock txnId: RZP-MOCK-${Date.now().toString(36).toUpperCase()}.`, 'PAID', '#4edea3', eventZone));
             }
           }
 
           if (prev.currentRiskLevel !== next.currentRiskLevel) {
-            pushEvent(makeEvent('#c2c6d6', `Risk level shifted: ${prev.currentRiskLevel} → ${next.currentRiskLevel}. Pricing engine recalibrating.`, 'RISK'));
+            pushEvent(makeEvent('#c2c6d6', `Risk level shifted: ${prev.currentRiskLevel} → ${next.currentRiskLevel}. Pricing engine recalibrating across all zones.`, 'RISK', undefined, eventZone));
           }
 
           prevState.current = next;
@@ -1615,7 +1677,7 @@ export default function App() {
       // Refresh outage list immediately
       const res = await axios.get(`${API_URL}/admin/zone-outages`);
       setOutages(res.data?.active_outages ?? []);
-      pushEvent(makeEvent('#ffb4ab', `Zone outage started — ${zoneId}. Auto-claim fires after 90 min.`, 'OUTAGE', '#ffb4ab'));
+      pushEvent(makeEvent('#ffb4ab', `Zone outage started — ${zoneId}. Auto-claim fires after 90 min.`, 'OUTAGE', '#ffb4ab', zoneId));
     } catch (e) { console.error(e); }
   }, [pushEvent]);
 
@@ -1624,7 +1686,7 @@ export default function App() {
       await axios.post(`${API_URL}/admin/zone-outage`, { zone_id: zoneId, action: 'resolve' });
       const res = await axios.get(`${API_URL}/admin/zone-outages`);
       setOutages(res.data?.active_outages ?? []);
-      pushEvent(makeEvent('#4edea3', `Zone outage resolved — ${zoneId}.`, 'OUTAGE', '#4edea3'));
+      pushEvent(makeEvent('#4edea3', `Zone outage resolved — ${zoneId}.`, 'OUTAGE', '#4edea3', zoneId));
     } catch (e) { console.error(e); }
   }, [pushEvent]);
 
@@ -1645,10 +1707,9 @@ export default function App() {
     }
   }, [pushEvent]);
 
-  const triggerDisruption = useCallback(async (type: string, severity: string, message: string) => {
+  const triggerDisruption = useCallback(async (type: string, severity: string, message: string, zoneId: string) => {
     try {
-      // hours_worked: 4 → ₹320 payout (4 × ₹80/hr); zone defaults to ZONE_A server-side
-      await axios.post(`${API_URL}/trigger-disruption`, { type, zone: 'ZONE_A', severity, message, hours_worked: 4 });
+      await axios.post(`${API_URL}/trigger-disruption`, { type, zone: zoneId, severity, message, hours_worked: 4 });
     } catch (e) { console.error(e); }
   }, []);
 
@@ -1696,6 +1757,7 @@ export default function App() {
           startOutage={startOutage}
           resolveOutage={resolveOutage}
           runCronEval={runCronEval}
+          pushEvent={pushEvent}
         />
       )}
       {tab === 'pricing' && (
