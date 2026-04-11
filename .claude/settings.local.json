@@ -17,7 +17,12 @@
       "mcp__claude_ai_Vercel__list_projects",
       "mcp__claude_ai_Vercel__list_deployments",
       "mcp__claude_ai_Vercel__get_deployment_build_logs",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(npx expo:*)",
+      "mcp__plugin_vercel_vercel__list_teams",
+      "mcp__plugin_vercel_vercel__list_projects",
+      "mcp__plugin_vercel_vercel__get_deployment",
+      "mcp__plugin_vercel_vercel__get_deployment_build_logs"
     ]
   },
   "prefersReducedMotion": false
