@@ -156,6 +156,7 @@ async function initializeDatabase() {
       await client.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS "zoneId" TEXT DEFAULT NULL`);
       await client.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS "disruptionType" TEXT DEFAULT NULL`);
       await client.query(`ALTER TABLE state ADD COLUMN IF NOT EXISTS "lastPayoutAmount" REAL DEFAULT 0`);
+      await client.query(`ALTER TABLE state ADD COLUMN IF NOT EXISTS "lastTxnId" TEXT DEFAULT NULL`);
     } finally {
       client.release();
     }
@@ -186,7 +187,8 @@ async function initializeDatabase() {
       weeklyProtected REAL DEFAULT 0,
       currentMicroFee REAL DEFAULT 2.0,
       currentRiskLevel TEXT DEFAULT 'Low',
-      lastPayoutAmount REAL DEFAULT 0
+      lastPayoutAmount REAL DEFAULT 0,
+      lastTxnId TEXT DEFAULT NULL
     )`);
     sqliteDb.prepare(`INSERT OR IGNORE INTO state (id) VALUES (1)`).run();
     sqliteDb.exec(`CREATE TABLE IF NOT EXISTS trips (
@@ -234,6 +236,8 @@ async function initializeDatabase() {
     try { sqliteDb.exec(`ALTER TABLE trips ADD COLUMN zoneId TEXT DEFAULT NULL`); } catch (_) { /* already exists */ }
     try { sqliteDb.exec(`ALTER TABLE trips ADD COLUMN disruptionType TEXT DEFAULT NULL`); } catch (_) { /* already exists */ }
     try { sqliteDb.exec(`ALTER TABLE state ADD COLUMN lastPayoutAmount REAL DEFAULT 0`); } catch (_) { /* already exists */ }
+    try { sqliteDb.exec(`ALTER TABLE state ADD COLUMN lastTxnId TEXT DEFAULT NULL`); } catch (_) { /* already exists */ }
+    try { sqliteDb.exec(`ALTER TABLE trips ADD COLUMN fraudScore REAL DEFAULT NULL`); } catch (_) { /* already exists */ }
   }
 
   console.log(`Database initialised (${usePostgres ? 'PostgreSQL' : 'SQLite local dev'})`);

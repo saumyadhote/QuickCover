@@ -750,6 +750,107 @@ function OverviewTab({
         </div>
       </section>
 
+      {/* Loss Ratio Gauge + Fraud Shield */}
+      <section className="mb-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        {/* Loss Ratio Gauge */}
+        <div className="bg-white/[0.015] p-6 rounded-3xl border border-white/5 backdrop-blur-2xl shadow-[0_8px_30px_rgb(0,0,0,0.4)] relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-[#ffb95f]/[0.02] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-3xl" />
+          <div className="flex items-center justify-between mb-5 relative z-10">
+            <div className="flex items-center gap-3">
+              <TrendingDown size={18} className="text-[#ffb95f]" />
+              <h3 className="text-sm font-bold uppercase tracking-widest">Loss Ratio</h3>
+            </div>
+            <span className="px-2 py-0.5 rounded-full bg-[#ffb95f]/10 text-[#ffb95f] text-[10px] font-bold uppercase border border-[#ffb95f]/20 tracking-wider">
+              Insurer View
+            </span>
+          </div>
+          {/* SVG Arc Gauge */}
+          <div className="flex items-center justify-center mb-5 relative z-10">
+            <div className="relative w-40 h-24">
+              <svg viewBox="0 0 160 90" className="w-full h-full">
+                {/* Track arc */}
+                <path d="M 10 80 A 70 70 0 0 1 150 80" fill="none" stroke="#1e2235" strokeWidth="14" strokeLinecap="round" />
+                {/* Value arc — clip at 100% */}
+                <path d="M 10 80 A 70 70 0 0 1 150 80" fill="none"
+                  stroke={parseFloat(lossRatioPct) < 40 ? '#4edea3' : parseFloat(lossRatioPct) < 60 ? '#ffb95f' : '#ffb4ab'}
+                  strokeWidth="14" strokeLinecap="round"
+                  strokeDasharray={`${Math.min(parseFloat(lossRatioPct), 100) * 2.198} 219.8`}
+                  style={{ filter: `drop-shadow(0 0 6px ${parseFloat(lossRatioPct) < 40 ? '#4edea388' : parseFloat(lossRatioPct) < 60 ? '#ffb95f88' : '#ffb4ab88'})` }}
+                />
+                {/* Centre label */}
+                <text x="80" y="68" textAnchor="middle" fill="white" fontSize="22" fontWeight="800" fontFamily="monospace">
+                  {lossRatioPct}%
+                </text>
+                <text x="80" y="82" textAnchor="middle" fill="#8c909f" fontSize="8" fontWeight="600" letterSpacing="1">
+                  LOSS RATIO
+                </text>
+              </svg>
+            </div>
+          </div>
+          {/* Breakdown bars */}
+          <div className="space-y-3 relative z-10">
+            {[
+              { label: 'Claims Paid', value: monthlyClaimsCost / 100000, max: monthlyGWP / 100000, color: '#ffb4ab' },
+              { label: 'Premium Pool', value: monthlyGWP / 100000, max: monthlyGWP / 100000, color: '#4edea3' },
+              { label: 'Net Surplus', value: Math.max(0, monthlyGWP - monthlyClaimsCost) / 100000, max: monthlyGWP / 100000, color: '#adc6ff' },
+            ].map(row => (
+              <div key={row.label}>
+                <div className="flex justify-between text-[10px] font-semibold mb-1">
+                  <span className="text-[#8c909f]">{row.label}</span>
+                  <span style={{ color: row.color }}>₹{row.value.toFixed(2)}L</span>
+                </div>
+                <div className="h-1.5 bg-white/[0.05] rounded-full overflow-hidden">
+                  <div className="h-full rounded-full transition-all duration-700"
+                    style={{ width: `${Math.min(100, (row.value / row.max) * 100)}%`, backgroundColor: row.color }} />
+                </div>
+              </div>
+            ))}
+          </div>
+          <p className="text-[9px] text-[#424754] mt-4 relative z-10 text-right">
+            Target: &lt;40% · Industry avg: ~55% · Monthly actuarial model
+          </p>
+        </div>
+
+        {/* Anti-Fraud Shield Summary */}
+        <div className="bg-white/[0.015] p-6 rounded-3xl border border-white/5 backdrop-blur-2xl shadow-[0_8px_30px_rgb(0,0,0,0.4)] relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-[#adc6ff]/[0.02] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-3xl" />
+          <div className="flex items-center justify-between mb-5 relative z-10">
+            <div className="flex items-center gap-3">
+              <ShieldCheck size={18} className="text-[#adc6ff]" />
+              <h3 className="text-sm font-bold uppercase tracking-widest">Anti-Fraud Shield</h3>
+            </div>
+            <span className="px-2 py-0.5 rounded-full bg-[#4edea3]/10 text-[#4edea3] text-[10px] font-bold uppercase border border-[#4edea3]/20">Active</span>
+          </div>
+          <div className="space-y-4 relative z-10">
+            {[
+              { tier: 'Tier 1 · Auto-Approve', range: '0.00 – 0.45', desc: 'Clean GPS, no mock-location flags — instant payout', color: '#4edea3', pct: 76 },
+              { tier: 'Tier 2 · Quarantine', range: '0.46 – 0.70', desc: 'Anomalous signal — photo evidence requested via app', color: '#ffb95f', pct: 17 },
+              { tier: 'Tier 3 · Auto-Reject', range: '0.71 – 1.00', desc: 'GPS teleportation or mock-location confirmed', color: '#ffb4ab', pct: 7 },
+            ].map(row => (
+              <div key={row.tier} className="bg-white/[0.02] rounded-xl border border-white/5 p-4 backdrop-blur-md">
+                <div className="flex items-start justify-between mb-2">
+                  <div>
+                    <p className="text-xs font-bold" style={{ color: row.color }}>{row.tier}</p>
+                    <p className="text-[10px] text-[#8c909f] mt-0.5">{row.desc}</p>
+                  </div>
+                  <span className="text-[10px] font-mono text-[#424754] ml-3 flex-shrink-0">{row.range}</span>
+                </div>
+                <div className="flex items-center gap-3 mt-2">
+                  <div className="flex-1 h-1.5 bg-white/[0.05] rounded-full overflow-hidden">
+                    <div className="h-full rounded-full" style={{ width: `${row.pct}%`, backgroundColor: row.color }} />
+                  </div>
+                  <span className="text-[10px] font-bold text-[#8c909f] w-8 text-right">{row.pct}%</span>
+                </div>
+              </div>
+            ))}
+          </div>
+          <p className="text-[9px] text-[#424754] mt-4 relative z-10">
+            Isolation Forest scoring · GPS physics · OS mock-location detection · Behavioural telemetry
+          </p>
+        </div>
+      </section>
+
       {/* Ops Feed + Disruption Simulator */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
 

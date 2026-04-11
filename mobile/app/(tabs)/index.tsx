@@ -302,7 +302,7 @@ export default function DashboardScreen() {
     );
   }
 
-  const { isTripActive, disruption, claimStatus, weeklyEarnings, weeklyProtected, lastPayoutAmount, currentMicroFee, currentRiskLevel } = state;
+  const { isTripActive, disruption, claimStatus, weeklyEarnings, weeklyProtected, lastPayoutAmount, lastTxnId, currentMicroFee, currentRiskLevel } = state;
   const firstName = user?.name?.split(' ')[0] ?? 'there';
   const initial = user?.name?.[0]?.toUpperCase() ?? '?';
   const today = new Date();
@@ -424,6 +424,14 @@ export default function DashboardScreen() {
                   Protected earnings this week: ₹{weeklyProtected.toLocaleString()}
                 </Text>
               </View>
+
+              {/* Transaction ID */}
+              {lastTxnId && (
+                <View style={{ backgroundColor: 'rgba(0,0,0,0.3)', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 8, marginBottom: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <Text style={{ color: 'rgba(134,239,172,0.6)', fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>Txn ID</Text>
+                  <Text style={{ color: '#4ade80', fontSize: 12, fontWeight: '800', fontVariant: ['tabular-nums'] }}>{lastTxnId}</Text>
+                </View>
+              )}
 
               {/* Details row */}
               <View style={{ flexDirection: 'row', gap: 8 }}>

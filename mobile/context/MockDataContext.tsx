@@ -20,6 +20,7 @@ type AppState = {
   weeklyEarnings: number;
   weeklyProtected: number;
   lastPayoutAmount: number;
+  lastTxnId: string | null;
   currentMicroFee: number;
   currentRiskLevel: 'Low' | 'Medium' | 'High';
 };
@@ -58,6 +59,7 @@ const FALLBACK_STATE: AppState = {
   weeklyEarnings: 3200,
   weeklyProtected: 0,
   lastPayoutAmount: 0,
+  lastTxnId: null,
   currentMicroFee: 2.0,
   currentRiskLevel: 'Low',
 };

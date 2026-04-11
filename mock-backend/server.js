@@ -9,6 +9,7 @@ const {
 } = require('./live_parametric_triggers');
 
 const authRouter = require('./auth');
+const { scoreClaim } = require('./fraud_scoring');
 
 // ---------------------------------------------------------------------------
 // Operational zones — the delivery areas QuickCover actively monitors.
@@ -48,6 +49,7 @@ const formatState = (row) => ({
   weeklyEarnings: row.weeklyEarnings,
   weeklyProtected: row.weeklyProtected,
   lastPayoutAmount: row.lastPayoutAmount || 0,
+  lastTxnId: row.lastTxnId || null,
   currentMicroFee: row.currentMicroFee || 2.0,
   currentRiskLevel: row.currentRiskLevel || 'Low',
 });
@@ -300,6 +302,73 @@ app.post('/trigger-disruption', async (req, res) => {
     }
 
     // -----------------------------------------------------------------------
+    // PART 1: Anti-Spoofing Fraud Scoring (3-Tier System)
+    //
+    // Scores the claim using GPS physics, OS mock-location flags, and
+    // behavioural sanity checks before any payout logic runs.
+    //
+    // Mobile client can pass deviceData + gpsTrace in the request body.
+    // Falls back to clean defaults when not provided (demo mode).
+    // -----------------------------------------------------------------------
+    const { deviceData = {}, gpsTrace = [] } = req.body || {};
+    const fraudResult = scoreClaim({
+      mockLocationEnabled: deviceData.mockLocationEnabled,
+      platform:            deviceData.platform,
+      locationAccuracy:    deviceData.locationAccuracy,
+      gpsCoordinates:      gpsTrace,
+      claimedHours:        parseFloat(hours_worked) || 1,
+      disruptionType:      type || 'WEATHER',
+    });
+
+    console.log(`[FRAUD] Score: ${fraudResult.score} | Tier: ${fraudResult.tier} | Flags: [${fraudResult.flags.join(', ') || 'none'}]`);
+
+    if (fraudResult.tier === 'auto_reject') {
+      // High confidence fraud — log and reject without payout
+      const rejectTime = new Date().toISOString();
+      await dbRun(
+        `INSERT INTO trips (status, earnings, "protectedAmount", timestamp, "hoursWorked", "userId", "disruptionType")
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        ['fraud_rejected', 0, 0, rejectTime, parseFloat(hours_worked) || 1, userId, type || 'WEATHER']
+      );
+      console.log(`[FRAUD] Auto-rejected — userId: ${userId}, score: ${fraudResult.score}, flags: [${fraudResult.flags.join(', ')}]`);
+      return res.status(403).json({
+        error: 'Claim rejected by anti-fraud system.',
+        fraud_score: fraudResult.score,
+        reason: fraudResult.reason,
+        flags: fraudResult.flags,
+      });
+    }
+
+    if (fraudResult.tier === 'quarantine') {
+      // Moderate risk — quarantine; prompt worker for photo evidence
+      const quarantineTime = new Date().toISOString();
+      const quarantinedTrip = await dbRun(
+        `INSERT INTO trips (status, earnings, "protectedAmount", timestamp, "hoursWorked", "userId", "disruptionType")
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        ['pending_review', 0, 0, quarantineTime, parseFloat(hours_worked) || 1, userId, type || 'WEATHER']
+      );
+      await dbRun(`
+        UPDATE state
+        SET "disruptionType" = $1, "disruptionZone" = $2, "disruptionSeverity" = $3,
+            "disruptionMessage" = $4, "disruptionTimestamp" = $5, "claimStatus" = 'processing'
+        WHERE id = 1
+      `, [type || 'WEATHER', zone || 'ZONE_A', 'MEDIUM', 'Claim under review — please submit photo evidence', quarantineTime]);
+      console.log(`[FRAUD] Quarantined — userId: ${userId}, score: ${fraudResult.score}. Requesting photo evidence.`);
+      const quarantineRow = await dbGet('SELECT * FROM state WHERE id = 1');
+      return res.status(202).json({
+        message: 'Claim quarantined for photo evidence review.',
+        claimStatus: 'pending_review',
+        fraud_score: fraudResult.score,
+        reason: fraudResult.reason,
+        action_required: 'Please submit a photo of the disruption via /claim/adjudicate',
+        state: formatState(quarantineRow),
+      });
+    }
+
+    // Tier 1: auto_approve — continue to payout logic below
+    console.log(`[FRAUD] Auto-approved — score: ${fraudResult.score}. Proceeding to payout.`);
+
+    // -----------------------------------------------------------------------
     // Shift-Level Payout Capping — 8-Hour Duplicate Check
     //
     // A single disruption event (e.g. monsoon rain) can persist for many hours,
@@ -477,14 +546,14 @@ app.post('/trigger-disruption', async (req, res) => {
         // Generates a mock UPI transfer and logs the transaction ID.
         // In production this would call Razorpay Payouts API:
         //   POST https://api.razorpay.com/v1/payouts  { amount, fund_account_id, ... }
-        const txnId = `RZP-MOCK-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+        const txnId = `RZP-${Math.floor(10000 + Math.random() * 89999)}`;
         console.log(`[PAYMENT] Mock UPI transfer initiated — txnId: ${txnId}, amount: ₹${payoutAmount}, userId: ${userId}`);
         console.log(`[PAYMENT] Transfer complete — txnId: ${txnId} → status: SUCCESS`);
 
         await dbRun(`
-          UPDATE state SET "claimStatus" = 'paid'
+          UPDATE state SET "claimStatus" = 'paid', "lastTxnId" = $1
           WHERE id = 1 AND "claimStatus" = 'approved'
-        `);
+        `, [txnId]);
 
         console.log(`[PAYMENT] Payout settled — ₹${payoutAmount} credited to userId: ${userId} via ${txnId}`);
       }, 3000);
@@ -508,6 +577,7 @@ app.post('/reset', async (req, res) => {
           "weeklyEarnings" = 3200,
           "weeklyProtected" = 0,
           "lastPayoutAmount" = 0,
+          "lastTxnId" = NULL,
           "currentMicroFee" = 2.0,
           "currentRiskLevel" = 'Low'
       WHERE id = 1
@@ -1026,6 +1096,83 @@ app.post('/cron/evaluate-live-triggers', async (req, res) => {
   } catch (error) {
     console.error('[CRON] evaluate-live-triggers error:', error.message);
     res.status(500).json({ error: 'Cron evaluation failed', detail: error.message });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /admin/analytics
+//
+// Insurer dashboard analytics: loss ratio, payout stats, and 7-day
+// parametric trigger forecast data for the Predictive Analytics panel.
+// ---------------------------------------------------------------------------
+app.get('/admin/analytics', async (req, res) => {
+  try {
+    const sevenDaysAgo  = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+
+    // Total payouts in last 30 days
+    const payoutRow = await dbGet(
+      `SELECT COALESCE(SUM("protectedAmount"), 0) AS total FROM trips
+       WHERE status = 'disrupted' AND timestamp >= $1`,
+      [thirtyDaysAgo]
+    );
+    const totalPayouts30d = parseFloat(payoutRow?.total ?? 0);
+
+    // Claim counts
+    const claimRow = await dbGet(
+      `SELECT COUNT(*) AS cnt FROM trips
+       WHERE status IN ('disrupted', 'fraud_rejected', 'pending_review') AND timestamp >= $1`,
+      [thirtyDaysAgo]
+    );
+    const totalClaims30d = parseInt(claimRow?.cnt ?? claimRow?.count ?? 0, 10);
+
+    // Fraud rejections
+    const fraudRow = await dbGet(
+      `SELECT COUNT(*) AS cnt FROM trips WHERE status = 'fraud_rejected' AND timestamp >= $1`,
+      [thirtyDaysAgo]
+    );
+    const fraudRejections30d = parseInt(fraudRow?.cnt ?? fraudRow?.count ?? 0, 10);
+
+    // Completed trips (premium collected proxy)
+    const tripRow = await dbGet(
+      `SELECT COUNT(*) AS cnt FROM trips WHERE status = 'completed' AND timestamp >= $1`,
+      [thirtyDaysAgo]
+    );
+    const completedTrips30d = parseInt(tripRow?.cnt ?? tripRow?.count ?? 0, 10);
+
+    // Actuarial premium pool estimate: avg fee × completed trips
+    const stateRow = await dbGet('SELECT * FROM state WHERE id = 1');
+    const avgFee = stateRow?.currentMicroFee ?? 2.0;
+    // Each completed trip = ~10 consumer orders avg → estimate premium collected
+    const estimatedPremiumPool = completedTrips30d * 10 * avgFee;
+    const lossRatio = estimatedPremiumPool > 0
+      ? parseFloat(((totalPayouts30d / estimatedPremiumPool) * 100).toFixed(1))
+      : 22.0;
+
+    // Weekly disruption breakdown by type (last 7 days)
+    const weeklyBreakdown = await dbAll(
+      `SELECT "disruptionType", COUNT(*) AS cnt, COALESCE(SUM("protectedAmount"), 0) AS payout
+       FROM trips WHERE status = 'disrupted' AND timestamp >= $1
+       GROUP BY "disruptionType"`,
+      [sevenDaysAgo]
+    );
+
+    res.json({
+      period: '30d',
+      totalPayouts: totalPayouts30d,
+      totalClaims: totalClaims30d,
+      fraudRejections: fraudRejections30d,
+      estimatedPremiumPool,
+      lossRatio,
+      completedTrips: completedTrips30d,
+      weeklyBreakdown: weeklyBreakdown ?? [],
+      currentMicroFee: avgFee,
+      currentRiskLevel: stateRow?.currentRiskLevel ?? 'Low',
+      lastTxnId: stateRow?.lastTxnId ?? null,
+    });
+  } catch (err) {
+    console.error('[ANALYTICS] error:', err.message);
+    res.status(500).json({ error: 'Analytics query failed' });
   }
 });
 
