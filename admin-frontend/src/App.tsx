@@ -531,6 +531,21 @@ function OverviewTab({
   };
   const [selectedZone, setSelectedZone] = useState<keyof typeof LOCALES>('ZONE_C');
   const locale = LOCALES[selectedZone];
+  const [zonePricing, setZonePricing] = useState<ZonePricing | null>(null);
+  const [zoneLoading, setZoneLoading] = useState(false);
+
+  const fetchZonePricing = useCallback(async (zoneId: string) => {
+    setZoneLoading(true);
+    try {
+      const res = await axios.post(`${API_URL}/pricing/zone`, { zone_id: zoneId }, { timeout: 15000 });
+      setZonePricing(res.data);
+    } catch (e) {
+      console.error('Overview zone pricing fetch failed:', e);
+      setZonePricing(null);
+    } finally {
+      setZoneLoading(false);
+    }
+  }, []);
 
   // Inject zone-specific feed events whenever the selected zone changes
   const isFirstRender = useRef(true);
@@ -543,8 +558,14 @@ function OverviewTab({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedZone]);
 
+  useEffect(() => {
+    fetchZonePricing(selectedZone);
+  }, [selectedZone, fetchZonePricing]);
+
   const dailyOrders = locale.dailyOrders;
-  const zoneMicroFee = Math.max(1.5, state.currentMicroFee + locale.feeOffset);
+  const displayFee = zonePricing?.surcharge ?? state.currentMicroFee;
+  const displayRisk = (zonePricing?.riskLevel ?? state.currentRiskLevel) as 'Low' | 'Medium' | 'High' | 'Critical';
+  const zoneMicroFee = displayFee;
 
   // ── Monthly actuarial model ──────────────────────────────────────────────
   // Parametric triggers (rain >15mm/hr, heat >43°C, AQI >300) are rare
@@ -572,14 +593,14 @@ function OverviewTab({
 
   // Live banner still uses demo state for real-time claim activity display
   const driversPaid = state.weeklyProtected > 0 ? locale.payoutExtrapolation : 0;
-  const riskColor = state.currentRiskLevel === 'Low' ? '#4edea3'
-    : state.currentRiskLevel === 'Medium' ? '#ffb95f'
-    : '#ffb4ab';
 
   // Fee delta vs previous reading
-  const prevFeeRaw = feeHistory.length >= 2 ? feeHistory[feeHistory.length - 2].fee : state.currentMicroFee;
-  const prevZoneFee = Math.max(1.5, prevFeeRaw + locale.feeOffset);
+  const prevFeeRaw = feeHistory.length >= 2 ? feeHistory[feeHistory.length - 2].fee : displayFee;
+  const prevZoneFee = prevFeeRaw;
   const feeDelta = zoneMicroFee - prevZoneFee;
+  const riskColor = displayRisk === 'Low' ? '#4edea3'
+    : displayRisk === 'Medium' ? '#ffb95f'
+    : '#ffb4ab';
 
   return (
     <>
@@ -961,7 +982,9 @@ function OverviewTab({
             </div>
             <div className="mt-3 flex items-center justify-between text-xs">
               <span className="text-[#8c909f]">Current micro-fee</span>
-              <span className="font-mono font-bold" style={{ color: riskColor }}>₹{state.currentMicroFee.toFixed(2)} / order</span>
+              <span className="font-mono font-bold" style={{ color: riskColor }}>
+                ₹{displayFee.toFixed(2)} / order{zoneLoading ? ' (syncing)' : ''}
+              </span>
             </div>
             <p className="text-[9px] text-[#424754] mt-1.5 text-right">Auto-updates every 15s</p>
           </div>
