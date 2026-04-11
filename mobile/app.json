@@ -39,7 +39,14 @@
           }
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "QuickCover uses your location to verify the delivery zone for disruption claims and detect GPS anomalies that protect against fraudulent claims.",
+          "locationAlwaysAndWhenInUsePermission": "QuickCover uses your location to verify the delivery zone for disruption claims and detect GPS anomalies that protect against fraudulent claims."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

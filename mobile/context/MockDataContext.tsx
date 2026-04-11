@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { Platform } from 'react-native';
 import axios from 'axios';
+import * as Location from 'expo-location';
 import { API_URL } from '../utils/apiUrl';
 import { useAuth } from './AuthContext';
 
@@ -39,6 +41,14 @@ export type RecentClaim = {
   timestamp: string;
   hoursWorked: number | null;
   disruptionType: string | null;
+};
+
+// One GPS ping captured during a trip. Sent with claims for fraud scoring.
+type GpsPing = {
+  lat: number;
+  lng: number;
+  timestamp: string;
+  accuracy: number;
 };
 
 type MockDataContextType = {
@@ -81,6 +91,72 @@ export function MockDataProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => { tokenRef.current = token; }, [token]);
 
   const authHeaders = () => tokenRef.current ? { Authorization: `Bearer ${tokenRef.current}` } : {};
+
+  // ── GPS tracking ─────────────────────────────────────────────────────────
+  // Permission is requested once on mount. GPS pings are collected while a trip
+  // is active and sent with claim submissions for fraud scoring on the backend.
+  // All GPS paths degrade gracefully: if permission is denied or the platform
+  // doesn't support location, the trace stays empty and the backend uses clean defaults.
+  const [locationPermitted, setLocationPermitted] = useState(false);
+  const gpsTraceRef = useRef<GpsPing[]>([]);
+  const locationSubRef = useRef<Location.LocationSubscription | null>(null);
+
+  // Request foreground location permission once when the provider mounts.
+  // We do this early so the OS dialog appears during normal app startup rather
+  // than mid-claim when the user is under stress.
+  useEffect(() => {
+    Location.requestForegroundPermissionsAsync()
+      .then(({ status }) => {
+        setLocationPermitted(status === 'granted');
+        if (status !== 'granted') {
+          console.log('[GPS] Permission denied — GPS fraud signals will be absent from claims');
+        }
+      })
+      .catch(() => {
+        // requestForegroundPermissionsAsync can reject on some Android builds; silently skip
+      });
+  }, []);
+
+  // Start/stop position watching based on trip state and permission.
+  // Pings are capped at 10 per trace to keep the claim payload small.
+  useEffect(() => {
+    if (!locationPermitted || !state.isTripActive) {
+      // Stop any existing subscription when the trip ends or permission is absent
+      locationSubRef.current?.remove();
+      locationSubRef.current = null;
+      return;
+    }
+
+    // Fresh trace for each new trip
+    gpsTraceRef.current = [];
+
+    Location.watchPositionAsync(
+      {
+        accuracy: Location.Accuracy.Balanced,
+        timeInterval: 30000,   // at most one ping per 30s
+        distanceInterval: 50,  // or every 50m of movement
+      },
+      (position) => {
+        const ping: GpsPing = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+          timestamp: new Date(position.timestamp).toISOString(),
+          accuracy: Math.round(position.coords.accuracy ?? 15),
+        };
+        // Keep last 10 pings — enough for teleportation detection, small payload
+        gpsTraceRef.current = [...gpsTraceRef.current.slice(-9), ping];
+      }
+    ).then(sub => {
+      locationSubRef.current = sub;
+    }).catch(err => {
+      console.log('[GPS] watchPositionAsync failed:', err.message);
+    });
+
+    return () => {
+      locationSubRef.current?.remove();
+      locationSubRef.current = null;
+    };
+  }, [locationPermitted, state.isTripActive]);
 
   const fetchRecentClaims = async () => {
     try {
@@ -177,8 +253,23 @@ export function MockDataProvider({ children }: { children: React.ReactNode }) {
       setState(prev => prev ? { ...prev, isTripActive: true } : prev);
       return;
     }
+
+    // Grab a one-shot GPS fix to send to the backend for zone resolution.
+    // The backend uses lat/lon to pick the correct operational zone for pricing.
+    // Falls back to empty body (backend defaults to ZONE_A) when unavailable.
+    let gpsBody: { lat?: number; lon?: number } = {};
+    if (locationPermitted) {
+      try {
+        const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+        gpsBody = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+        console.log(`[GPS] Trip start position: ${gpsBody.lat?.toFixed(4)}, ${gpsBody.lon?.toFixed(4)}`);
+      } catch {
+        // GPS temporarily unavailable — proceed without coordinates
+      }
+    }
+
     try {
-      const res = await axios.post(`${API_URL}/accept-trip`, {}, { headers: authHeaders() });
+      const res = await axios.post(`${API_URL}/accept-trip`, gpsBody, { headers: authHeaders() });
       setState(res.data.state);
     } catch {
       setState(prev => prev ? { ...prev, isTripActive: true } : prev);
@@ -191,6 +282,24 @@ export function MockDataProvider({ children }: { children: React.ReactNode }) {
     // while the backend processes the claim (4s delay before DB updates)
     setState(prev => prev ? { ...prev, claimStatus: 'processing' } : prev);
     if (!backendOnline) return;
+
+    // Capture the accumulated GPS trace and device metadata for fraud scoring.
+    // The backend scoreClaim() uses these for mock-location detection, teleportation
+    // checks, and behavioural sanity — no GPS = defaults to clean (no penalty).
+    const gpsTrace = [...gpsTraceRef.current]; // snapshot, not a live ref
+    const lastPing = gpsTrace[gpsTrace.length - 1];
+
+    const deviceData = {
+      platform: Platform.OS,          // 'android' | 'ios' | 'web'
+      mockLocationEnabled: false,      // not detectable from JS; native layer would set this
+      locationAccuracy: lastPing?.accuracy ?? 15,
+    };
+
+    console.log(
+      `[GPS] Claim submitted — trace length: ${gpsTrace.length}, ` +
+      `last accuracy: ${deviceData.locationAccuracy}m, platform: ${deviceData.platform}`
+    );
+
     try {
       const res = await axios.post(`${API_URL}/trigger-disruption`, {
         type,
@@ -198,6 +307,8 @@ export function MockDataProvider({ children }: { children: React.ReactNode }) {
         severity: 'HIGH',
         message,
         hours_worked: hoursWorked,
+        deviceData,
+        gpsTrace,
       }, { headers: authHeaders() });
       setState(res.data.state);
       fetchRecentClaims();

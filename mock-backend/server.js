@@ -10,6 +10,7 @@ const {
 
 const authRouter = require('./auth');
 const { scoreClaim } = require('./fraud_scoring');
+const { adjudicateClaimEvidence, detectProvider } = require('./genai_adjudication');
 
 // ---------------------------------------------------------------------------
 // Operational zones — the delivery areas QuickCover actively monitors.
@@ -594,74 +595,52 @@ app.post('/reset', async (req, res) => {
 // POST /claim/adjudicate
 //
 // GenAI Vision Adjudication — accepts photo evidence from the mobile app and
-// runs it through a simulated Gemini 1.5 Pro / GPT-4o Vision evaluation.
+// runs it through the configured VLM provider (OpenAI GPT-4o or Gemini 1.5 Pro).
+// Falls back to deterministic simulation when no API key is present (demo mode).
 //
-// In production this calls:
-//   POST https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent
-// with the image encoded as base64 + a structured prompt asking the model to
-// cross-reference scene content against the claim context (disruption type,
-// zone, timestamp) and validate EXIF metadata.
+// Provider is selected by genai_adjudication.js based on env vars:
+//   GENAI_PROVIDER, GEMINI_API_KEY / GEMINI_MODEL, OPENAI_API_KEY / OPENAI_MODEL
 //
-// Body: { claimId, disruptionType, zone, timestamp, imageUrl }
-// Returns: { is_authentic_disruption, confidence_score, reason, model, txnRef }
+// Body: {
+//   claimId,          string   — trip/claim ID for audit logging
+//   disruptionType,   string   — 'WEATHER' | 'FLOOD' | 'HEAT' | etc.
+//   zone,             string   — 'ZONE_A' | 'ZONE_B' | 'ZONE_C'
+//   timestamp,        string   — ISO claim timestamp
+//   imageUrl,         string?  — publicly accessible http(s) URL of evidence photo
+//   gpsLat,           number?  — worker's last known latitude
+//   gpsLng,           number?  — worker's last known longitude
+//   weatherSnapshot,  object?  — { rainfall_mm_hr, temp_celsius } from live API
+// }
+// Returns: { is_authentic_disruption, confidence_score, reason, model, txnRef, action }
 // ---------------------------------------------------------------------------
 app.post('/claim/adjudicate', async (req, res) => {
-  const { claimId, disruptionType, zone, timestamp, imageUrl } = req.body || {};
+  const {
+    claimId,
+    disruptionType,
+    zone,
+    timestamp,
+    imageUrl,
+    gpsLat,
+    gpsLng,
+    weatherSnapshot,
+  } = req.body || {};
 
   if (!disruptionType) {
     return res.status(400).json({ error: 'disruptionType is required' });
   }
 
-  // ── Deterministic confidence scoring (mirrors real model output shape) ──
-  // Real implementation would base64-encode imageUrl, POST to Gemini/GPT-4o,
-  // and parse the structured JSON response for is_authentic_disruption + score.
-  const baseScores: Record<string, number> = {
-    WEATHER:    0.91,
-    FLOOD:      0.88,
-    HEAT:       0.85,
-    POLLUTION:  0.83,
-    OUTAGE:     0.79,
-    TRAFFIC:    0.74,
-    CURFEW:     0.95,
-  };
-
-  const base = baseScores[disruptionType?.toUpperCase()] ?? 0.72;
-  // Add ±0.06 jitter so each call feels live
-  const jitter = (Math.random() - 0.5) * 0.12;
-  const confidence_score = parseFloat(Math.min(0.99, Math.max(0.40, base + jitter)).toFixed(3));
-  const is_authentic_disruption = confidence_score >= 0.75;
-
-  const reasons: Record<string, string> = {
-    WEATHER:   'Scene contains waterlogged road surface consistent with reported rainfall. EXIF geotag matches claim zone. Timestamp within 8-minute window of IMD threshold breach.',
-    FLOOD:     'Image shows submerged infrastructure and stationary vehicles. GPS coordinates verified against flood-affected grid cell. Accelerometer data consistent with stationary device.',
-    HEAT:      'Outdoor scene brightness and shadow angle consistent with midday sun in reported zone. No precipitation. Thermographic inference supports elevated ambient temperature claim.',
-    POLLUTION: 'Visible haze and reduced visibility consistent with CPCB AQI >300. Sky colour spectrum analysis matches PM2.5 concentration range. Location metadata verified.',
-    OUTAGE:    'Closed shutter visible at reported pickup location. No active delivery vehicles in frame. Timestamp matches zone outage window logged by platform webhook.',
-    TRAFFIC:   'Road blockade and stationary traffic visible. Police/barrier presence detected. GPS trace consistent with worker halted at reported location.',
-    CURFEW:    'Empty streets and law enforcement presence visible. Scene matches Section 144 enforcement pattern. Government advisory timestamp aligns with claim.',
-  };
-
-  const reason = is_authentic_disruption
-    ? (reasons[disruptionType?.toUpperCase()] ?? 'Visual evidence consistent with reported disruption type. Metadata validated.')
-    : 'Insufficient visual evidence to confirm disruption. Scene does not match reported conditions. Claim routed to manual analyst queue.';
-
-  const txnRef = `GENAI-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
-
   console.log(`[GENAI] Adjudication request — claimId: ${claimId}, type: ${disruptionType}, zone: ${zone}`);
-  console.log(`[GENAI] Model: gemini-1.5-pro-vision | confidence: ${confidence_score} | authentic: ${is_authentic_disruption} | ref: ${txnRef}`);
 
-  res.json({
-    is_authentic_disruption,
-    confidence_score,
-    reason,
-    model: 'gemini-1.5-pro-vision (simulated)',
-    txnRef,
-    action: confidence_score >= 0.75
-      ? 'payout_released'
-      : confidence_score >= 0.40
-      ? 'escalated_to_analyst'
-      : 'auto_rejected',
+  const result = await adjudicateClaimEvidence(imageUrl || null, {
+    disruption_type: disruptionType,
+    zone: zone || 'ZONE_A',
+    timestamp: timestamp || new Date().toISOString(),
+    gps_lat: gpsLat ?? null,
+    gps_lng: gpsLng ?? null,
+    weather_snapshot: weatherSnapshot ?? null,
   });
+
+  res.json(result);
 });
 
 // --- Adversarial Defense & Anti-Spoofing Strategy (see README) ---
@@ -746,11 +725,15 @@ async function quarantine_claim(claimId, reason) {
  *   confidence_score < 0.40  → escalate to human analyst queue
  */
 async function process_claim_evidence_with_genai(image_url, claim_context) {
-  // TODO: Call OpenAI Vision API or Gemini 1.5 Pro with image_url + claim_context prompt
-  // TODO: Parse structured JSON response for is_authentic_disruption + confidence_score
-  // TODO: Integrate with quarantine_claim() — high confidence clears quarantine, low escalates
-  console.log(`[STUB] process_claim_evidence_with_genai — image: ${image_url}, zone: ${claim_context?.zone}`);
-  return { is_authentic_disruption: false, confidence_score: 0, reason: 'stub — not yet implemented' };
+  // Delegates to genai_adjudication.js which selects the real provider (Gemini/OpenAI)
+  // or falls back to deterministic simulation when no key is configured.
+  return adjudicateClaimEvidence(image_url, {
+    disruption_type: claim_context.disruption_type,
+    zone:            claim_context.zone,
+    timestamp:       claim_context.timestamp,
+    gps_lat:         claim_context.gps_lat ?? null,
+    gps_lng:         claim_context.gps_lng ?? null,
+  });
 }
 
 // ------------------------------------------------------------------
