@@ -264,7 +264,7 @@ function ClaimTimeline({ claimStatus }: { claimStatus: string }) {
 
 // ── Main Screen ──────────────────────────────────────────────────────────────
 export default function ClaimsScreen() {
-  const { state, submitClaim, eligibility, recentClaims } = useMockData();
+  const { state, submitClaim, eligibility, recentClaims, stats } = useMockData();
   const [formOpen, setFormOpen] = useState(false);
   const [ineligiblePopup, setIneligiblePopup] = useState(false);
   const [submittingId, setSubmittingId] = useState<string | null>(null);
@@ -282,9 +282,8 @@ export default function ClaimsScreen() {
 
   const showInitial = isEmptyState || returnToInitial;
 
-  // This month mock total
-  const thisMonthTotal = 935;
-  const paidCount = 4;
+  const thisMonthTotal = stats.monthly.totalPaid;
+  const paidCount = stats.monthly.claimCount;
 
   const handleSubmit = async (type: string, desc: string, hours: number) => {
     setFormOpen(false);

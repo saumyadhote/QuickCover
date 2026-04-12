@@ -9,12 +9,15 @@ import {
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
-const RECENT_PAYOUTS = [
-  { icon: '🌧️', label: 'Heavy Rain', trip: '#8842', date: '29 Mar', amount: 240, method: 'Wallet' },
-  { icon: '🚧', label: 'Road Closure', trip: '#8801', date: '22 Mar', amount: 180, method: 'Bank' },
-  { icon: '🌊', label: 'Flash Flood', trip: '#8773', date: '14 Mar', amount: 420, method: 'Bank' },
-  { icon: '🚂', label: 'Train Delay', trip: '#8740', date: '1 Mar', amount: 65, method: 'Wallet' },
-];
+const DISRUPTION_META: Record<string, { icon: string; label: string }> = {
+  WEATHER:   { icon: '🌧️', label: 'Heavy Rain' },
+  FLOOD:     { icon: '🌊', label: 'Flooding' },
+  HEAT:      { icon: '🌡️', label: 'Extreme Heat' },
+  POLLUTION: { icon: '😷', label: 'Poor Air Quality' },
+  OUTAGE:    { icon: '🏪', label: 'Shop Closed' },
+  TRAFFIC:   { icon: '🚧', label: 'Road Block' },
+  CURFEW:    { icon: '🚔', label: 'Curfew' },
+};
 
 const PAYOUT_METHODS = [
   { icon: <Wallet color="#7c3aed" size={20} />, bg: '#f5f3ff', label: 'In-app Wallet', sub: 'Balance: ₹435', isPrimary: true },
@@ -24,7 +27,7 @@ const PAYOUT_METHODS = [
 
 export default function ProfileScreen() {
   const { user, logout } = useAuth();
-  const { state, eligibility } = useMockData();
+  const { state, eligibility, stats } = useMockData();
   const router = useRouter();
   const [claimNotifications, setClaimNotifications] = useState(true);
 
@@ -33,11 +36,11 @@ export default function ProfileScreen() {
     ? user.platform.charAt(0).toUpperCase() + user.platform.slice(1) + ' Partner'
     : 'Partner';
 
-  const totalEarned = state?.weeklyEarnings ?? 0;
-  const claimsFiled = 12;
-  const approved = 11;
-  const successRate = Math.round((approved / claimsFiled) * 100);
-  const avgPayout = '<3m';
+  const totalEarned   = state?.weeklyEarnings ?? 0;
+  const claimsFiled   = stats.allTime.claimsFiled;
+  const approved      = stats.allTime.claimsApproved;
+  const successRate   = stats.allTime.approvalRate;
+  const avgPayout     = stats.allTime.avgPayout > 0 ? `₹${stats.allTime.avgPayout}` : '—';
 
   const handleSignOut = async () => {
     await logout();
@@ -182,20 +185,30 @@ export default function ProfileScreen() {
                 <Text style={{ fontSize: 13, color: '#7c3aed', fontWeight: '700' }}>View all</Text>
               </TouchableOpacity>
             </View>
-            {RECENT_PAYOUTS.map((payout, i) => (
-              <View key={i} style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 18, paddingVertical: 12, borderBottomWidth: i < RECENT_PAYOUTS.length - 1 ? 1 : 0, borderBottomColor: '#f8fafc' }}>
-                <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#f5f3ff', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
-                  <Text style={{ fontSize: 18 }}>{payout.icon}</Text>
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#0f172a' }}>{payout.label} · Trip {payout.trip}</Text>
-                  <Text style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>
-                    {payout.date} · via {payout.method === 'Wallet' ? '💜' : '🏦'} {payout.method}
-                  </Text>
-                </View>
-                <Text style={{ fontSize: 15, fontWeight: '800', color: '#16a34a' }}>+₹{payout.amount}</Text>
+            {stats.recent.length === 0 ? (
+              <View style={{ paddingVertical: 24, alignItems: 'center' }}>
+                <Text style={{ fontSize: 13, color: '#94a3b8', fontWeight: '500' }}>No payouts yet</Text>
+                <Text style={{ fontSize: 11, color: '#cbd5e1', marginTop: 4 }}>Approved claims will appear here</Text>
               </View>
-            ))}
+            ) : stats.recent.map((payout, i) => {
+              const type = (payout.disruptionType ?? '').toUpperCase();
+              const meta = DISRUPTION_META[type] ?? { icon: '⚡', label: type || 'Disruption' };
+              const date = new Date(payout.timestamp).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+              return (
+                <View key={payout.id} style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 18, paddingVertical: 12, borderBottomWidth: i < stats.recent.length - 1 ? 1 : 0, borderBottomColor: '#f8fafc' }}>
+                  <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#f5f3ff', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+                    <Text style={{ fontSize: 18 }}>{meta.icon}</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: '#0f172a' }}>
+                      {meta.label}{payout.hoursWorked ? ` · ${payout.hoursWorked}h` : ''}
+                    </Text>
+                    <Text style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>{date} · Auto-approved</Text>
+                  </View>
+                  <Text style={{ fontSize: 15, fontWeight: '800', color: '#16a34a' }}>+₹{payout.protectedAmount.toLocaleString()}</Text>
+                </View>
+              );
+            })}
           </View>
 
           {/* ── Notifications & Privacy ── */}

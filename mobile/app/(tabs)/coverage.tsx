@@ -21,14 +21,14 @@ const HOW_CLAIMS_WORK = [
 ];
 
 export default function CoverageScreen() {
-  const { state } = useMockData();
+  const { state, stats } = useMockData();
   const router = useRouter();
   const [expandedEvent, setExpandedEvent] = useState<number | null>(null);
   const [showAll, setShowAll] = useState(false);
 
-  const activeCovers = 3;
-  const totalPaid = 5000;
-  const remaining = 3165;
+  const activeCovers = COVERED_EVENTS.length;
+  const totalPaid = stats.allTime.totalPaid;
+  const remaining = stats.allTime.annualRemaining;
 
   const visibleEvents = showAll ? COVERED_EVENTS : COVERED_EVENTS.slice(0, 3);
 

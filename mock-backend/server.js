@@ -1159,6 +1159,125 @@ app.get('/admin/analytics', async (req, res) => {
   }
 });
 
+// ---------------------------------------------------------------------------
+// GET /stats
+//
+// Per-user aggregated claim statistics for the mobile app.
+// Replaces hardcoded values in the Claims, Coverage, and Profile screens.
+//
+// Returns:
+//   monthly  — current calendar month (trips with status = 'disrupted')
+//   allTime  — lifetime totals
+//   recent   — last 5 disrupted trips (same shape as /trips/recent)
+//
+// Scoped to the authenticated userId when a JWT is present; falls back to
+// global totals for unauthenticated / demo requests.
+// ---------------------------------------------------------------------------
+app.get('/stats', async (req, res) => {
+  try {
+    const userId = getUserIdFromRequest(req);
+
+    // Month boundaries in ISO format (server UTC)
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+
+    const userFilter  = userId ? `AND "userId" = ${userId}` : '';
+
+    // Monthly paid claims
+    const monthlyRow = await dbGet(
+      `SELECT
+         COUNT(*)                          AS claim_count,
+         COALESCE(SUM("protectedAmount"),0) AS total_paid
+       FROM trips
+       WHERE status = 'disrupted'
+         AND timestamp >= $1
+         ${userId ? 'AND "userId" = $2' : ''}`,
+      userId ? [monthStart, userId] : [monthStart]
+    );
+
+    // All-time paid claims
+    const allTimeRow = await dbGet(
+      `SELECT
+         COUNT(*)                          AS claim_count,
+         COALESCE(SUM("protectedAmount"),0) AS total_paid,
+         COALESCE(AVG("protectedAmount"),0) AS avg_payout
+       FROM trips
+       WHERE status = 'disrupted'
+         ${userId ? 'AND "userId" = $1' : ''}`,
+      userId ? [userId] : []
+    );
+
+    // All-time filed (disrupted + pending_review + fraud_rejected)
+    const filedRow = await dbGet(
+      `SELECT COUNT(*) AS filed_count
+       FROM trips
+       WHERE status IN ('disrupted', 'pending_review', 'fraud_rejected')
+         ${userId ? 'AND "userId" = $1' : ''}`,
+      userId ? [userId] : []
+    );
+
+    // Recent paid claims (last 5) for the profile payouts list
+    const recentRows = await dbAll(
+      `SELECT id, "disruptionType", "protectedAmount", "hoursWorked", timestamp
+       FROM trips
+       WHERE status = 'disrupted'
+         ${userId ? 'AND "userId" = $1' : ''}
+       ORDER BY timestamp DESC LIMIT 5`,
+      userId ? [userId] : []
+    );
+
+    const monthly = {
+      claimCount: parseInt(monthlyRow?.claim_count ?? 0, 10),
+      totalPaid:  Math.round(parseFloat(monthlyRow?.total_paid ?? 0)),
+    };
+
+    const allTimeFiled    = parseInt(filedRow?.filed_count ?? 0, 10);
+    const allTimeApproved = parseInt(allTimeRow?.claim_count ?? 0, 10);
+    const allTimeTotalPaid = Math.round(parseFloat(allTimeRow?.total_paid ?? 0));
+    const allTimeAvgPayout = Math.round(parseFloat(allTimeRow?.avg_payout ?? 0));
+
+    // Annual coverage cap: ₹8,165 (matching README financial model)
+    const ANNUAL_CAP = 8165;
+    const yearStart = new Date(now.getFullYear(), 0, 1).toISOString();
+    const yearlyRow = await dbGet(
+      `SELECT COALESCE(SUM("protectedAmount"),0) AS year_paid
+       FROM trips
+       WHERE status = 'disrupted' AND timestamp >= $1
+         ${userId ? 'AND "userId" = $2' : ''}`,
+      userId ? [yearStart, userId] : [yearStart]
+    );
+    const yearPaid = Math.round(parseFloat(yearlyRow?.year_paid ?? 0));
+    const annualRemaining = Math.max(0, ANNUAL_CAP - yearPaid);
+
+    res.json({
+      monthly: {
+        claimCount: monthly.claimCount,
+        totalPaid:  monthly.totalPaid,
+      },
+      allTime: {
+        claimsFiled:    allTimeFiled,
+        claimsApproved: allTimeApproved,
+        totalPaid:      allTimeTotalPaid,
+        avgPayout:      allTimeAvgPayout,
+        approvalRate:   allTimeFiled > 0
+          ? Math.round((allTimeApproved / allTimeFiled) * 100)
+          : 100,
+        annualRemaining,
+      },
+      recent: (recentRows ?? []).map(r => ({
+        id:             r.id,
+        disruptionType: r.disruptionType,
+        protectedAmount: r.protectedAmount,
+        hoursWorked:    r.hoursWorked,
+        timestamp:      r.timestamp,
+      })),
+    });
+  } catch (error) {
+    console.error('[STATS] error:', error);
+    res.status(500).json({ error: 'Stats query failed' });
+  }
+});
+
 const PORT = process.env.PORT || 4000;
 
 // Start server only after DB is ready

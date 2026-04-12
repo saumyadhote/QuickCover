@@ -43,6 +43,28 @@ export type RecentClaim = {
   disruptionType: string | null;
 };
 
+export type AppStats = {
+  monthly: {
+    claimCount: number;
+    totalPaid: number;
+  };
+  allTime: {
+    claimsFiled: number;
+    claimsApproved: number;
+    totalPaid: number;
+    avgPayout: number;
+    approvalRate: number;
+    annualRemaining: number;
+  };
+  recent: Array<{
+    id: number;
+    disruptionType: string | null;
+    protectedAmount: number;
+    hoursWorked: number | null;
+    timestamp: string;
+  }>;
+};
+
 // One GPS ping captured during a trip. Sent with claims for fraud scoring.
 type GpsPing = {
   lat: number;
@@ -57,6 +79,7 @@ type MockDataContextType = {
   backendOnline: boolean;
   eligibility: Eligibility;
   recentClaims: RecentClaim[];
+  stats: AppStats;
   acceptTrip: () => Promise<void>;
   completeTrip: () => Promise<void>;
   submitClaim: (type: string, message: string, hoursWorked: number) => Promise<void>;
@@ -78,6 +101,12 @@ const MockDataContext = createContext<MockDataContextType | null>(null);
 
 const FALLBACK_ELIGIBILITY: Eligibility = { eligible: false, tripCount: 0, required: 25 };
 
+const FALLBACK_STATS: AppStats = {
+  monthly:  { claimCount: 0, totalPaid: 0 },
+  allTime:  { claimsFiled: 0, claimsApproved: 0, totalPaid: 0, avgPayout: 0, approvalRate: 100, annualRemaining: 8165 },
+  recent:   [],
+};
+
 export function MockDataProvider({ children }: { children: React.ReactNode }) {
   const { token } = useAuth();
   const [state, setState] = useState<AppState>(FALLBACK_STATE);
@@ -85,6 +114,7 @@ export function MockDataProvider({ children }: { children: React.ReactNode }) {
   const [backendOnline, setBackendOnline] = useState(false);
   const [eligibility, setEligibility] = useState<Eligibility>(FALLBACK_ELIGIBILITY);
   const [recentClaims, setRecentClaims] = useState<RecentClaim[]>([]);
+  const [stats, setStats] = useState<AppStats>(FALLBACK_STATS);
   // Track whether we've already warned so we don't spam the console
   const warnedRef = useRef(false);
   const tokenRef = useRef(token);
@@ -165,6 +195,13 @@ export function MockDataProvider({ children }: { children: React.ReactNode }) {
     } catch { /* silent — list stays stale */ }
   };
 
+  const fetchStats = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/stats`, { timeout: 4000, headers: authHeaders() });
+      setStats(res.data);
+    } catch { /* silent — stats stay at fallback */ }
+  };
+
   useEffect(() => {
     let cancelled = false;
     let retryCount = 0;
@@ -194,6 +231,7 @@ export function MockDataProvider({ children }: { children: React.ReactNode }) {
           setBackendOnline(true);
           warnedRef.current = false;
           fetchRecentClaims();
+          fetchStats();
         }
       } catch (err: any) {
         if (!cancelled) {
@@ -312,6 +350,7 @@ export function MockDataProvider({ children }: { children: React.ReactNode }) {
       }, { headers: authHeaders() });
       setState(res.data.state);
       fetchRecentClaims();
+      fetchStats();
     } catch (err: any) {
       // Backend rejected the claim (e.g. ineligible) — revert optimistic state
       const serverMsg = err?.response?.data?.error;
@@ -350,7 +389,7 @@ export function MockDataProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <MockDataContext.Provider value={{ state, loading, backendOnline, eligibility, recentClaims, acceptTrip, completeTrip, submitClaim }}>
+    <MockDataContext.Provider value={{ state, loading, backendOnline, eligibility, recentClaims, stats, acceptTrip, completeTrip, submitClaim }}>
       {children}
     </MockDataContext.Provider>
   );
