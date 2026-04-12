@@ -26,7 +26,8 @@
       "Bash(node -e \"require\\('./genai_adjudication'\\); console.log\\('genai_adjudication.js loads OK'\\)\")",
       "Bash(npm install:*)",
       "Bash(node -e ':*)",
-      "Bash(grep -rn \"const.*=.*[0-9]\\\\{3,\\\\}\\\\|weeklyEarnings.*3200\\\\|hardcoded\\\\|mock\" --include=\"*.tsx\" --include=\"*.ts\" app/)"
+      "Bash(grep -rn \"const.*=.*[0-9]\\\\{3,\\\\}\\\\|weeklyEarnings.*3200\\\\|hardcoded\\\\|mock\" --include=\"*.tsx\" --include=\"*.ts\" app/)",
+      "Bash(npx expo-doctor:*)"
     ]
   },
   "prefersReducedMotion": false
