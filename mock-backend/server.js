@@ -94,9 +94,28 @@ const formatState = (row) => ({
 
 app.get('/status', async (req, res) => {
   try {
-    console.log('✅ /status endpoint hit from:', req.ip);
-    const row = await dbGet('SELECT * FROM state WHERE id = 1');
-    res.json(formatState(row));
+    const userId = getUserIdFromRequest(req);
+    const stateRow = await dbGet('SELECT * FROM state WHERE id = 1');
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
+    // Calculate real aggregate stats for the authenticated user
+    const stats = userId 
+      ? await dbGet(
+          `SELECT 
+            COUNT(*) as total_trips,
+            SUM(earnings) as total_earnings,
+            SUM("protectedAmount") as total_protected
+           FROM trips 
+           WHERE "userId" = $1 AND timestamp >= $2 AND (status = 'completed' OR status = 'disrupted' OR status = 'paid' OR status = 'coverage_honored')`,
+          [userId, sevenDaysAgo]
+        )
+      : { total_trips: 0, total_earnings: 3200, total_protected: 0 }; // Fallback for unauthenticated
+
+    const formatted = formatState(stateRow);
+    formatted.weeklyEarnings = stats.total_earnings || 0;
+    formatted.weeklyProtected = stats.total_protected || 0;
+
+    res.json(formatted);
   } catch (error) {
     console.error('❌ /status error:', error);
     res.status(500).json({ error: 'Database error' });
@@ -267,9 +286,10 @@ app.post('/complete-trip', async (req, res) => {
     const userId = getUserIdFromRequest(req);
     const now = new Date().toISOString();
 
+    const TRIP_EARNING = 70; // Fixed realistic earning per Blinkit trip (Base + Incentives)
     await dbRun(
       `INSERT INTO trips (status, earnings, "protectedAmount", timestamp, "userId") VALUES ($1, $2, $3, $4, $5)`,
-      ['completed', Math.floor(Math.random() * 50) + 20, 0, now, userId]
+      ['completed', TRIP_EARNING, 0, now, userId]
     );
 
     await dbRun(`

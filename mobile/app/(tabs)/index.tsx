@@ -119,8 +119,8 @@ function TodayJourneyTimeline({
 
   if (visibleTrips === 0) return null;
 
-  // Deterministic per-trip earnings sliced from weekly total for display only
-  const perTrip = weeklyEarnings > 0 ? Math.floor(weeklyEarnings / Math.max(tripCount, 1)) : 65;
+  // Fixed realistic per-trip earnings (matching Blinkit average payout)
+  const perTrip = 70;
 
   // Generate display-only timestamps working backwards from now
   const now = new Date();

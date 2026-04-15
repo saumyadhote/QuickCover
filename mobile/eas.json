@@ -12,6 +12,9 @@
       }
     },
     "preview": {
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://quickcover.onrender.com"
+      },
       "android": {
         "buildType": "apk",
         "gradleCommand": ":app:assembleRelease"

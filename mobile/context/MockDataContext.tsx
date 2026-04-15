@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 import { API_URL } from '../utils/apiUrl';
 import { useAuth } from './AuthContext';
@@ -119,6 +120,22 @@ export function MockDataProvider({ children }: { children: React.ReactNode }) {
   const warnedRef = useRef(false);
   const tokenRef = useRef(token);
   useEffect(() => { tokenRef.current = token; }, [token]);
+
+  // ── Network Resilience Interceptors ───────────────────────────────────────
+  useEffect(() => {
+    const defaultTimeout = axios.defaults.timeout;
+    const interceptor = axios.interceptors.response.use(
+      response => response,
+      async error => {
+        if (error.code === 'ECONNABORTED' || error.message?.includes('Network Error')) {
+          console.warn('[Network] Connection dropped! Triggering offline queue persistence.');
+          // You can dispatch a global UI toast here if needed
+        }
+        return Promise.reject(error);
+      }
+    );
+    return () => axios.interceptors.response.eject(interceptor);
+  }, []);
 
   const authHeaders = () => tokenRef.current ? { Authorization: `Bearer ${tokenRef.current}` } : {};
 
@@ -319,8 +336,7 @@ export function MockDataProvider({ children }: { children: React.ReactNode }) {
     // Optimistically show timeline immediately — prevents flash back to empty state
     // while the backend processes the claim (4s delay before DB updates)
     setState(prev => prev ? { ...prev, claimStatus: 'processing' } : prev);
-    if (!backendOnline) return;
-
+    
     // Capture the accumulated GPS trace and device metadata for fraud scoring.
     // The backend scoreClaim() uses these for mock-location detection, teleportation
     // checks, and behavioural sanity — no GPS = defaults to clean (no penalty).
@@ -328,10 +344,28 @@ export function MockDataProvider({ children }: { children: React.ReactNode }) {
     const lastPing = gpsTrace[gpsTrace.length - 1];
 
     const deviceData = {
-      platform: Platform.OS,          // 'android' | 'ios' | 'web'
-      mockLocationEnabled: false,      // not detectable from JS; native layer would set this
+      platform: Platform.OS,
+      mockLocationEnabled: false,
       locationAccuracy: lastPing?.accuracy ?? 15,
     };
+
+    const claimPayload = {
+      type,
+      zone: 'ZONE_A',
+      severity: 'HIGH',
+      message,
+      hours_worked: hoursWorked,
+      deviceData,
+      gpsTrace,
+    };
+
+    if (!backendOnline) {
+       console.log('[MockDataContext] Offline mode: Queuing claim directly to AsyncStorage');
+       const existingQueueStr = await AsyncStorage.getItem('@offline_claims');
+       const existingQueue = existingQueueStr ? JSON.parse(existingQueueStr) : [];
+       await AsyncStorage.setItem('@offline_claims', JSON.stringify([...existingQueue, claimPayload]));
+       return;
+    }
 
     console.log(
       `[GPS] Claim submitted — trace length: ${gpsTrace.length}, ` +
@@ -339,23 +373,22 @@ export function MockDataProvider({ children }: { children: React.ReactNode }) {
     );
 
     try {
-      const res = await axios.post(`${API_URL}/trigger-disruption`, {
-        type,
-        zone: 'ZONE_A',
-        severity: 'HIGH',
-        message,
-        hours_worked: hoursWorked,
-        deviceData,
-        gpsTrace,
-      }, { headers: authHeaders() });
+      const res = await axios.post(`${API_URL}/trigger-disruption`, claimPayload, { headers: authHeaders() });
       setState(res.data.state);
       fetchRecentClaims();
       fetchStats();
     } catch (err: any) {
-      // Backend rejected the claim (e.g. ineligible) — revert optimistic state
-      const serverMsg = err?.response?.data?.error;
-      console.warn('[submitClaim] rejected:', serverMsg);
-      setState(prev => prev ? { ...prev, claimStatus: 'none' } : prev);
+      if (err.code === 'ECONNABORTED' || err.message?.includes('Network Error')) {
+        console.warn('[MockDataContext] Timeout during claim submission, queueing to AsyncStorage.');
+        const existingQueueStr = await AsyncStorage.getItem('@offline_claims');
+        const existingQueue = existingQueueStr ? JSON.parse(existingQueueStr) : [];
+        await AsyncStorage.setItem('@offline_claims', JSON.stringify([...existingQueue, claimPayload]));
+      } else {
+        // Backend rejected the claim (e.g. ineligible)
+        const serverMsg = err?.response?.data?.error;
+        console.warn('[submitClaim] rejected:', serverMsg);
+        setState(prev => prev ? { ...prev, claimStatus: 'none' } : prev);
+      }
     }
   };
 
