@@ -64,6 +64,27 @@ function scoreGpsAnomalies(gpsCoordinates) {
     return { score, flags };
   }
 
+  // Entropy check: calculate shannon entropy of coordinates to detect unnaturally static/repeating mock patterns
+  const coordCounts = {};
+  gpsCoordinates.forEach(p => {
+    if (!p.lat || !p.lng) return;
+    const key = `${p.lat.toFixed(6)},${p.lng.toFixed(6)}`;
+    coordCounts[key] = (coordCounts[key] || 0) + 1;
+  });
+  
+  const totalPoints = gpsCoordinates.length;
+  let entropy = 0;
+  for (const count of Object.values(coordCounts)) {
+    const prob = count / totalPoints;
+    entropy -= prob * Math.log2(prob);
+  }
+
+  // A very low entropy (< 0.5) over multiple points means the points are heavily clustered or repeated exactly (Mock provider holding position)
+  if (totalPoints >= 5 && entropy < 0.5) {
+    score += 0.35;
+    flags.push(`LOW_GPS_ENTROPY_${entropy.toFixed(2)}`);
+  }
+
   // Teleportation check: speed between consecutive pings
   for (let i = 1; i < gpsCoordinates.length; i++) {
     const prev = gpsCoordinates[i - 1];
@@ -85,13 +106,7 @@ function scoreGpsAnomalies(gpsCoordinates) {
     }
   }
 
-  // Static coordinate check: all pings identical = Fake GPS app holding position
-  const allSameLat = gpsCoordinates.every(p => p.lat === gpsCoordinates[0].lat);
-  const allSameLng = gpsCoordinates.every(p => p.lng === gpsCoordinates[0].lng);
-  if (allSameLat && allSameLng && gpsCoordinates.length >= 3) {
-    score += 0.35;
-    flags.push('STATIC_GPS_FROZEN_COORDINATES');
-  }
+  // Note: Static coordinate check is now superseded by the entropy check.
 
   return { score, flags };
 }

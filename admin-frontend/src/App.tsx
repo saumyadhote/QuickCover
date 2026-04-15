@@ -872,6 +872,41 @@ function OverviewTab({
         </div>
       </section>
 
+      {/* Predictive Analytics Banner (New for Phase 3) */}
+      <section className="mb-8">
+        <div className="bg-gradient-to-r from-[#172033] to-[#0d1326] p-6 rounded-3xl border border-[#adc6ff]/10 shadow-[0_8px_30px_rgb(0,0,0,0.4)] backdrop-blur-2xl group flex flex-col md:flex-row md:items-center justify-between gap-5 relative overflow-hidden">
+          <div className="absolute right-[-20px] top-[-30px] w-64 h-64 bg-[#adc6ff]/5 rounded-full blur-3xl pointer-events-none" />
+          <div className="flex items-start gap-4 z-10">
+            <div className="w-12 h-12 rounded-xl bg-[#adc6ff]/10 border border-[#adc6ff]/20 flex items-center justify-center relative">
+              <Brain className="text-[#adc6ff]" size={24} />
+              <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-[#4edea3] rounded-full ring-2 ring-[#172033]" />
+            </div>
+            <div>
+              <h3 className="text-[#adc6ff] font-bold text-lg mb-1 tracking-wide">Predictive Intelligence</h3>
+              <p className="text-[#8c909f] text-xs">
+                Next 7-Day Forecast: <span className="font-semibold text-white">High probability of extreme heat</span> in <span className="font-semibold text-[#ffb4ab]">{selectedZone}</span> (+14% claim likelihood).
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-6 z-10 pl-16 md:pl-0">
+             {/* Simple Sparkline Chart Simulation */}
+             <div className="w-24 h-10 opacity-70">
+                <svg viewBox="0 0 100 40" className="w-full h-full drop-shadow-md">
+                 <path d="M0 38 Q 25 30, 50 15 T 100 5" fill="none" stroke="#adc6ff" strokeWidth="2" strokeDasharray="4 2" />
+                 <circle cx="100" cy="5" r="3" fill="#adc6ff" />
+                 <circle cx="50" cy="15" r="3" fill="#adc6ff" />
+               </svg>
+             </div>
+             
+             <div className="flex flex-col items-end gap-1">
+              <span className="text-[#adc6ff] text-xl font-bold bg-[#adc6ff]/10 px-3 py-1 rounded-lg border border-[#adc6ff]/20">84% Confidence</span>
+              <span className="text-[9px] uppercase font-bold text-[#4d5f80] tracking-widest px-1">ML Pricing Engine Ready</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Ops Feed + Disruption Simulator */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
 

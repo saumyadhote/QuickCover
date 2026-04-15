@@ -25,6 +25,7 @@
 'use strict';
 
 const axios = require('axios');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 // ── Provider Detection ────────────────────────────────────────────────────────
 
@@ -202,37 +203,37 @@ async function callOpenAI(imageUrl, claimContext) {
 
 async function callGemini(imageUrl, claimContext) {
   const apiKey = process.env.GEMINI_API_KEY;
-  const model  = process.env.GEMINI_MODEL || 'gemini-1.5-pro';
+  const modelName = process.env.GEMINI_MODEL || 'gemini-1.5-pro';
 
   const hasRemoteImage = Boolean(imageUrl && imageUrl.startsWith('http'));
   const prompt = buildAdjudicationPrompt({ ...claimContext, image_present: hasRemoteImage });
 
-  // Build parts array — vision first, then the prompt
+  const genAI = new GoogleGenerativeAI(apiKey);
+  const model = genAI.getGenerativeModel({ model: modelName, generationConfig: { responseMimeType: 'application/json' } });
+
   const parts = [];
+  parts.push(prompt);
+
   if (hasRemoteImage) {
-    // Gemini 1.5 Pro accepts image URLs via fileData (publicly accessible only)
-    parts.push({ fileData: { mimeType: 'image/jpeg', fileUri: imageUrl } });
-  }
-  parts.push({ text: prompt });
-
-  const response = await axios.post(
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-    {
-      contents: [{ role: 'user', parts }],
-      generationConfig: {
-        temperature: 0.1,
-        maxOutputTokens: 256,
-        responseMimeType: 'application/json',
-      },
-    },
-    {
-      headers: { 'Content-Type': 'application/json' },
-      timeout: 15000,
+    try {
+      const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
+      const base64String = Buffer.from(response.data, 'binary').toString('base64');
+      const mimeType = response.headers['content-type'] || 'image/jpeg';
+      parts.push({
+        inlineData: {
+          data: base64String,
+          mimeType
+        }
+      });
+    } catch (e) {
+      console.error('[GENAI] Failed to fetch image for Gemini inlineData:', e.message);
+      // Fallback to text only if image fetch fails
     }
-  );
+  }
 
-  const raw = response.data.candidates?.[0]?.content?.parts?.[0]?.text ?? '{}';
-  return parseModelResponse(raw, model);
+  const result = await model.generateContent(parts);
+  const raw = result.response.text();
+  return parseModelResponse(raw, modelName);
 }
 
 // ── Mock Fallback ─────────────────────────────────────────────────────────────

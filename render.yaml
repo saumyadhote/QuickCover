@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: quickcover-backend
+    env: node
+    buildCommand: "cd mock-backend && npm install && node train_model.js"
+    startCommand: "cd mock-backend && npm start"
+    envVars:
+      - key: PORT
+        value: 4000
+      - key: NODE_ENV
+        value: production
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: WEATHER_API_KEY
+        sync: false
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false

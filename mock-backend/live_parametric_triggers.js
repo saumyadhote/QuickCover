@@ -16,8 +16,28 @@
  */
 
 const axios = require('axios');
+const fs = require('fs');
+const path = require('path');
+const { RandomForestRegression } = require('ml-random-forest');
 
 const OWM_BASE = 'https://api.openweathermap.org/data/2.5';
+
+// ---------------------------------------------------------------------------
+// Load Pre-Trained ML Model (XGBoost/RF equivalent)
+// ---------------------------------------------------------------------------
+let pricingModel = null;
+try {
+  const modelPath = path.join(__dirname, 'pricing_model.json');
+  if (fs.existsSync(modelPath)) {
+    const rawData = fs.readFileSync(modelPath, 'utf8');
+    pricingModel = RandomForestRegression.load(JSON.parse(rawData));
+    console.log('[ML] Pricing model loaded successfully.');
+  } else {
+    console.warn('[ML] pricing_model.json not found. Run train_model.js first.');
+  }
+} catch (err) {
+  console.error('[ML] Failed to load pricing model:', err);
+}
 
 // ---------------------------------------------------------------------------
 // Task 1 — Real Weather & Temperature
@@ -243,44 +263,55 @@ async function calculate_live_dynamic_surcharge(zone_lat, zone_lon) {
   const { rainfall_mm_hr, temp_celsius } = weatherResult.raw;
   const { estimated_cpcb_aqi }           = aqiResult.raw;
 
-  // --- Risk score components (each 0–1) ---
+  // --- ML Model Inference ---
+  let surcharge, riskScore;
+  const hour = new Date().getHours();
+  // Assume a base active driver count of 2200 for the zone (mocked feature)
+  const drivers = 2200;
 
-  // Rain: 0mm/hr = 0, 15mm/hr = 0.5 (trigger), 40mm/hr = 1.0
-  const rain_score = Math.min(rainfall_mm_hr / 40, 1.0);
-
-  // Heat: below 30°C = 0, 43°C = trigger (0.6), 50°C = 1.0
-  const heat_score = temp_celsius < 30 ? 0 : Math.min((temp_celsius - 30) / 20, 1.0);
-
-  // AQI: 0 = 0, 300 = trigger (0.6), 500 = 1.0
-  const aqi_score = Math.min(estimated_cpcb_aqi / 500, 1.0);
-
-  // Weighted composite: rain is most disruptive for Q-commerce, heat next, AQI last
-  const riskScore = parseFloat(
-    (rain_score * 0.55 + heat_score * 0.30 + aqi_score * 0.15).toFixed(4)
-  );
-
-  // Map risk score to ₹ surcharge and label
-  let surcharge, riskLevel;
-  if (riskScore <= 0.30) {
-    surcharge = parseFloat((1.50 + riskScore * (2.00 - 1.50) / 0.30).toFixed(2));
-    riskLevel = 'Low';
-  } else if (riskScore <= 0.60) {
-    surcharge = parseFloat((2.00 + (riskScore - 0.30) * (3.50 - 2.00) / 0.30).toFixed(2));
-    riskLevel = 'Medium';
-  } else if (riskScore <= 0.80) {
-    surcharge = parseFloat((3.50 + (riskScore - 0.60) * (4.50 - 3.50) / 0.20).toFixed(2));
-    riskLevel = 'High';
+  if (pricingModel) {
+    // Features: [rainfall_mm, temp_celsius, aqi_index, active_driver_count, hour_of_day]
+    try {
+      const prediction = pricingModel.predict([[rainfall_mm_hr, temp_celsius, estimated_cpcb_aqi, drivers, hour]]);
+      surcharge = parseFloat(prediction[0].toFixed(2));
+      // Reverse-engineer a nominal risk score from the ML surcharge for UI mapping
+      riskScore = Math.max(0, Math.min(1, (surcharge - 1.50) / 3.50));
+      console.log(`[ML] Pricing Inference: ₹${surcharge} (from model)`);
+    } catch (err) {
+      console.error('[ML] Prediction failed, falling back to rule-based:', err);
+      // Fallback
+      surcharge = 2.0;
+      riskScore = 0.2;
+    }
   } else {
-    surcharge = parseFloat((4.50 + (riskScore - 0.80) * (5.00 - 4.50) / 0.20).toFixed(2));
-    riskLevel = 'Critical';
+    // Fallback if model not loaded
+    const rain_score = Math.min(rainfall_mm_hr / 40, 1.0);
+    const heat_score = temp_celsius < 30 ? 0 : Math.min((temp_celsius - 30) / 20, 1.0);
+    const aqi_score = Math.min(estimated_cpcb_aqi / 500, 1.0);
+    riskScore = parseFloat((rain_score * 0.55 + heat_score * 0.30 + aqi_score * 0.15).toFixed(4));
+    
+    if (riskScore <= 0.30) {
+      surcharge = parseFloat((1.50 + riskScore * (2.00 - 1.50) / 0.30).toFixed(2));
+    } else if (riskScore <= 0.60) {
+      surcharge = parseFloat((2.00 + (riskScore - 0.30) * (3.50 - 2.00) / 0.30).toFixed(2));
+    } else if (riskScore <= 0.80) {
+      surcharge = parseFloat((3.50 + (riskScore - 0.60) * (4.50 - 3.50) / 0.20).toFixed(2));
+    } else {
+      surcharge = parseFloat((4.50 + (riskScore - 0.80) * (5.00 - 4.50) / 0.20).toFixed(2));
+    }
   }
 
-  // Cap at ₹5.00 (hard ceiling from README)
-  surcharge = Math.min(surcharge, 5.00);
+  // Determine Risk Level string for UI
+  let riskLevel;
+  if (riskScore <= 0.30) riskLevel = 'Low';
+  else if (riskScore <= 0.60) riskLevel = 'Medium';
+  else if (riskScore <= 0.80) riskLevel = 'High';
+  else riskLevel = 'Critical';
 
-  // Add small environmental jitter so the fee evolves naturally between API poll
-  // intervals — real conditions (wind gusts, AQI micro-spikes) shift moment to moment.
-  // ±0.04 keeps it within the current risk band without distorting the signal.
+  // Cap at ₹5.00
+  surcharge = Math.min(Math.max(surcharge, 1.50), 5.00);
+
+  // Add small environmental jitter
   const jitter = parseFloat(((Math.random() - 0.5) * 0.08).toFixed(2));
   surcharge = parseFloat(Math.min(5.00, Math.max(1.50, surcharge + jitter)).toFixed(2));
 
