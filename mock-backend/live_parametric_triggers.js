@@ -269,6 +269,11 @@ async function calculate_live_dynamic_surcharge(zone_lat, zone_lon) {
   // Assume a base active driver count of 2200 for the zone (mocked feature)
   const drivers = 2200;
 
+  // --- Intermediate Scores for Logging & Rule-based Fallback ---
+  const rain_score = Math.min(rainfall_mm_hr / 40, 1.0);
+  const heat_score = temp_celsius < 30 ? 0 : Math.min((temp_celsius - 30) / 20, 1.0);
+  const aqi_score  = Math.min(estimated_cpcb_aqi / 500, 1.0);
+
   if (pricingModel) {
     // Features: [rainfall_mm, temp_celsius, aqi_index, active_driver_count, hour_of_day]
     try {
@@ -285,9 +290,6 @@ async function calculate_live_dynamic_surcharge(zone_lat, zone_lon) {
     }
   } else {
     // Fallback if model not loaded
-    const rain_score = Math.min(rainfall_mm_hr / 40, 1.0);
-    const heat_score = temp_celsius < 30 ? 0 : Math.min((temp_celsius - 30) / 20, 1.0);
-    const aqi_score = Math.min(estimated_cpcb_aqi / 500, 1.0);
     riskScore = parseFloat((rain_score * 0.55 + heat_score * 0.30 + aqi_score * 0.15).toFixed(4));
     
     if (riskScore <= 0.30) {
@@ -316,7 +318,7 @@ async function calculate_live_dynamic_surcharge(zone_lat, zone_lon) {
   surcharge = parseFloat(Math.min(5.00, Math.max(1.50, surcharge + jitter)).toFixed(2));
 
   console.log(
-    `[PRICING] riskScore=${riskScore} (rain=${rain_score.toFixed(2)}, heat=${heat_score.toFixed(2)}, aqi=${aqi_score.toFixed(2)})` +
+    `[PRICING] riskScore=${riskScore.toFixed(3)} (rain=${rain_score.toFixed(2)}, heat=${heat_score.toFixed(2)}, aqi=${aqi_score.toFixed(2)})` +
     ` → ₹${surcharge} [${riskLevel}]`
   );
 
