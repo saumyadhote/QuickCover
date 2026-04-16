@@ -873,7 +873,6 @@ function OverviewTab({
                const tot = Math.max(1, analytics?.totalClaims ?? 100);
                const fr  = analytics?.fraudRejections ?? 7;
                const quar = Math.round(tot * 0.17); // simple synthetic quarantine rate
-               const auto = Math.max(0, tot - fr - quar);
                
                const frPct = Math.round((fr / tot) * 100);
                const quarPct = Math.round((quar / tot) * 100);
