@@ -5,6 +5,18 @@
 
 ---
 
+## Demo Video
+
+> 📹 **[5-Minute Demo — Add link here]**
+
+---
+
+## Pitch Deck
+
+> 📄 **[Pitch Deck PDF — Add link here]**
+
+---
+
 ## The Problem
 
 India's 15 million+ gig delivery workers power the Q-commerce economy — but have zero financial
@@ -538,7 +550,7 @@ directly in the repository or via the live deployment URLs.
 |---|---|---|
 | **Phase 1 — Foundation** | Core data model, auth, trip lifecycle | PostgreSQL/SQLite dual-mode schema; JWT auth (register/login/me); `/accept-trip`, `/complete-trip`, `/status` REST API; React Native app with Home + Claims + Coverage + Profile tabs; MockDataContext polling live backend |
 | **Phase 2 — Intelligence** | Live APIs, financial safeguards, admin tools | Live OpenWeatherMap weather + AQI triggers; per-zone dynamic pricing; `policy_sessions` table; `zone_outages` table + 4th parametric trigger; zero-touch `runTriggerEvaluation()` with auto-claims; 8-hour shift-level payout cap; admin Zone Outage Manager + Cron Eval panels; per-zone Pricing Engine dropdown; `CoverageHonoredCard` mobile UI |
-| **Phase 3 — Polish & Deploy** | Cloud deployment, UX, documentation | Render + Vercel live deployments; eligibility gate (25 trips/7 days); per-user zone selection; quick-claim chips; payout card; anti-spoofing strategy; FINANCIAL_MODEL.md; PHASE2_CHANGES.md |
+| **Phase 3 — Soar** | AI/ML integrations, fraud, GenAI, payments | Random Forest ML pricing model (`pricing_model.json`); Isolation Forest 3-tier GPS anti-spoofing (`fraud_scoring.js`); Gemini 1.5 Flash GenAI vision adjudication (`genai_adjudication.js`); Razorpay live Orders API payout with real txn ID; Admin Loss Ratio gauge + Predictive Analytics chart; mobile photo upload claim evidence; FINANCIAL_MODEL.md |
 
 ### What Is Live vs. Mocked
 
@@ -554,9 +566,9 @@ directly in the repository or via the live deployment URLs.
 | Zero-touch claims | ✅ Live | `runTriggerEvaluation()` auto-creates claims for active workers in breached zones |
 | Policy sessions | ✅ Live | Per-trip coverage records in `policy_sessions` table |
 | Shift-level payout cap | ✅ Live | 8-hour dedup check prevents double-payout for same disruption type |
-| UPI payout | 🟡 Mocked | Razorpay designed; payout simulation only (4s delay → approved → paid) |
-| Fraud detection (Isolation Forest) | 🟡 Stub | Feature table and 3-tier scoring defined; model training pending real trip data |
-| GenAI Vision Agent | 🟡 Stub | Architecture defined; `process_claim_evidence_with_genai()` stub in server.js |
+| UPI payout (Razorpay) | ✅ Live | Razorpay Orders API called on every approved claim; real transaction ID returned and displayed in app |
+| Fraud detection (GPS anti-spoofing) | ✅ Live | 3-tier scoring in `fraud_scoring.js`: GPS velocity, coordinate entropy, OS mock-location flag → auto-approve / quarantine / auto-reject |
+| GenAI Vision adjudication | ✅ Live | Gemini 1.5 Flash via `/claim/adjudicate`; confidence ≥ 0.75 auto-approves and triggers Razorpay payout |
 | IMD direct API | 🟡 Post-hackathon | Currently using OpenWeatherMap; IMD API has limited programmatic access |
 | **Delivery platform trip verification** | 🟡 Post-hackathon | See note below |
 
