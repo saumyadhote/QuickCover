@@ -730,82 +730,15 @@ app.post('/claim/adjudicate', async (req, res) => {
   res.json(result);
 });
 
-// --- Adversarial Defense & Anti-Spoofing Strategy (see README) ---
-
-/**
- * [STUB] Pillar 2: OS-Level Mock Location Detection
- * TODO: Implement as part of "Adversarial Defense & Anti-Spoofing Strategy" (see README).
- *
- * Checks device metadata for active mock location providers (e.g. Fake GPS apps).
- * On Android: reads LocationManager.isProviderEnabled('test') flag sent from mobile client.
- * On iOS: flags suspiciously perfect accuracy (exactly 0m error — impossible on real hardware).
- *
- * @param {Object}  deviceData
- * @param {boolean} deviceData.mockLocationEnabled - Android mock location provider active
- * @param {string}  deviceData.platform            - 'android' | 'ios'
- * @param {number}  deviceData.locationAccuracy    - GPS accuracy in metres
- * @returns {{ isSpoofed: boolean, confidence: number, reason: string }}
- */
-function detect_os_mock_location(deviceData) {
-  // TODO: Implement OS mock location detection logic
-  return { isSpoofed: false, confidence: 0, reason: 'stub — not yet implemented' };
-}
-
-/**
- * [STUB] Pillar 2: Telematics & Behavioral Anomaly Detection
- * TODO: Implement as part of "Adversarial Defense & Anti-Spoofing Strategy" (see README).
- *
- * Cross-references accelerometer/gyroscope readings against GPS path to verify the worker
- * is physically navigating a route (bumps, turns, stops). Also detects "teleportation" —
- * GPS jumps that exceed physically possible movement speed between consecutive pings.
- *
- * @param {Object}   sensorData
- * @param {number[]} sensorData.accelerometer - [x, y, z] m/s² over sampling window
- * @param {number[]} sensorData.gyroscope     - [x, y, z] rad/s over sampling window
- * @param {Object[]} gpsData                  - Array of { lat, lng, timestamp } pings
- * @returns {{ anomalyDetected: boolean, anomalyType: string|null, riskScore: number }}
- */
-function analyze_telematics_anomalies(sensorData, gpsData) {
-  // TODO: Implement telematics anomaly analysis
-  return { anomalyDetected: false, anomalyType: null, riskScore: 0 };
-}
-
-
-
-/**
- * [STUB] Model 3 - Agentic GenAI: Vision-Language Model for Automated Adjudication
- * TODO: Implement as part of "Adversarial Defense & Anti-Spoofing Strategy" (see README).
- *
- * Sends a quarantined claim's photo evidence to a Vision-Language Model (GPT-4o or
- * Gemini 1.5 Pro) for automated adjudication. The model parses scene content (flooded
- * streets, police barricades, shuttered stores), cross-references it against the claim
- * context, and validates EXIF metadata (geotag, capture timestamp) against the worker's
- * last known GPS coordinate.
- *
- * @param {string} image_url     - URL of the timestamped photo submitted by the worker
- * @param {Object} claim_context - Claim details for cross-referencing against the photo
- * @param {string} claim_context.disruption_type  - e.g. 'WEATHER', 'OUTAGE', 'CURFEW'
- * @param {string} claim_context.zone             - Disruption zone (e.g. 'ZONE_A')
- * @param {string} claim_context.timestamp        - ISO timestamp of the filed claim
- * @param {number} claim_context.gps_lat          - Worker's last known latitude
- * @param {number} claim_context.gps_lng          - Worker's last known longitude
- * @returns {Promise<{ is_authentic_disruption: boolean, confidence_score: number, reason: string }>}
- *   confidence_score >= 0.75 → auto-release payout
- *   confidence_score < 0.40  → escalate to human analyst queue
- */
-async function process_claim_evidence_with_genai(image_url, claim_context) {
-  // Delegates to genai_adjudication.js which selects the real provider (Gemini/OpenAI)
-  // or falls back to deterministic simulation when no key is configured.
-  return adjudicateClaimEvidence(image_url, {
-    disruption_type: claim_context.disruption_type,
-    zone:            claim_context.zone,
-    timestamp:       claim_context.timestamp,
-    gps_lat:         claim_context.gps_lat ?? null,
-    gps_lng:         claim_context.gps_lng ?? null,
-  });
-}
-
-// ------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// Anti-Spoofing & GenAI Note:
+//   OS mock-location detection, GPS physics (velocity + entropy), behavioural
+//   checks, and the 3-tier Isolation Forest scoring are all fully implemented
+//   in fraud_scoring.js and called via scoreClaim() above.
+//
+//   GenAI Vision adjudication (GPT-4o / Gemini 1.5 Pro) is fully implemented
+//   in genai_adjudication.js and served via POST /claim/adjudicate above.
+// ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------
 // ML Pricing Engine — live when WEATHER_API_KEY is set, mock fallback otherwise

@@ -27,7 +27,18 @@
       "Bash(npm install:*)",
       "Bash(node -e ':*)",
       "Bash(grep -rn \"const.*=.*[0-9]\\\\{3,\\\\}\\\\|weeklyEarnings.*3200\\\\|hardcoded\\\\|mock\" --include=\"*.tsx\" --include=\"*.ts\" app/)",
-      "Bash(npx expo-doctor:*)"
+      "Bash(npx expo-doctor:*)",
+      "Bash(eas build *)",
+      "Bash(wsl --status)",
+      "Bash(wsl bash *)",
+      "Bash(cmd /c \"gradlew.bat assembleRelease\")",
+      "Bash(./gradlew assembleRelease *)",
+      "Bash(echo sdk.dir=C:\\\\\\\\Users\\\\\\\\Tarun\\\\\\\\AppData\\\\\\\\Local\\\\\\\\Android\\\\\\\\Sdk *)",
+      "Bash(./gradlew assembleDebug)",
+      "Bash(./gradlew assembleDebug --console=plain)",
+      "Bash(./gradlew assembleDebug --stacktrace)",
+      "Bash(find *)",
+      "Bash(keytool *)"
     ]
   },
   "prefersReducedMotion": false
