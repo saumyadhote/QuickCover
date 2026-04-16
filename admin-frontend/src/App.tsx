@@ -583,29 +583,28 @@ function OverviewTab({
   const displayRisk = (zonePricing?.riskLevel ?? state.currentRiskLevel) as 'Low' | 'Medium' | 'High' | 'Critical';
   const zoneMicroFee = displayFee;
 
-  // ── Monthly actuarial model ──────────────────────────────────────────────
-  // Parametric triggers (rain >15mm/hr, heat >43°C, AQI >300) are rare
-  // high-threshold events — not daily. P&L uses avgMonthlyFee (the weighted
-  // average fee collected across the month's risk distribution), NOT the live
-  // spot fee which swings ₹1.50–₹5.00 on 15s polling. The live fee drives the
-  // AI Micro-Fee card and the dynamic pricing chart — not the actuarial margin.
+  // ── Monthly actuarial model (Scaled with Live Telemetry) ────────────────
+  // We calculate massive real-world Gross Written Premium using the LIVE 
+  // dynamic AI micro-fee applied to regional daily order volumes.
+  const liveMicroFee = analytics?.currentMicroFee ?? locale.avgMonthlyFee;
+  const monthlyGWP = liveMicroFee * dailyOrders * 30;
   
-  const hasLiveAnalytics = Boolean(analytics && analytics.estimatedPremiumPool > 0);
-  const monthlyGWP = hasLiveAnalytics 
-    ? analytics.estimatedPremiumPool 
-    : locale.avgMonthlyFee * dailyOrders * 30;
+  // We scale the single-user mock DB telemetry up to the entire zone size.
+  // The baseline actuarial risk is combined with live DB payout anomalies.
+  const baselineClaims = locale.disruptionPerMonth * locale.claimsPerEvent * locale.avgPayout;
+  const liveDisbursements = (analytics?.totalPayouts ?? 0) * (locale.payoutExtrapolation || 1);
   
-  const monthlyClaimsCost = hasLiveAnalytics 
-    ? analytics.totalPayouts 
-    : locale.disruptionPerMonth * locale.claimsPerEvent * locale.avgPayout;
+  // Mix baseline risk with actual live disbursements to create a reactive 
+  // but stable enterprise-scale P&L
+  const monthlyClaimsCost = Math.max(baselineClaims, (baselineClaims * 0.75) + liveDisbursements * 1.5);
     
   const netMarginPct = monthlyGWP > 0
     ? (((monthlyGWP - monthlyClaimsCost) / monthlyGWP) * 100).toFixed(1)
     : '78.0';
     
-  const lossRatioPct = hasLiveAnalytics
-    ? analytics.lossRatio.toFixed(1)
-    : (monthlyGWP > 0 ? ((monthlyClaimsCost / monthlyGWP) * 100).toFixed(1) : '22.0');
+  const lossRatioPct = monthlyGWP > 0 
+    ? ((monthlyClaimsCost / monthlyGWP) * 100).toFixed(1) 
+    : '22.0';
 
   // Animated display values (in ₹ Lakh for GWP/claims/surplus)
   const animGWP    = useAnimatedNumber(monthlyGWP / 100000);
