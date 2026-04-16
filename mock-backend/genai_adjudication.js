@@ -13,7 +13,7 @@
  *
  * Required env vars per provider:
  *   OpenAI:  OPENAI_API_KEY  (required), OPENAI_MODEL  (default: 'gpt-4o')
- *   Gemini:  GEMINI_API_KEY  (required), GEMINI_MODEL  (default: 'gemini-2.0-flash')
+ *   Gemini:  GEMINI_API_KEY  (required), GEMINI_MODEL  (default: 'gemini-1.5-flash')
  *
  * Image URL note:
  *   Both providers require a publicly accessible http/https URL. The mobile
@@ -207,7 +207,7 @@ async function callOpenAI(imageUrl, claimContext) {
 
 async function callGemini(imageUrl, claimContext) {
   const apiKey = process.env.GEMINI_API_KEY;
-  const modelName = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
+  const modelName = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
 
   const hasRemoteImage = Boolean((imageUrl && imageUrl.startsWith('http')) || claimContext.imageBase64);
   const prompt = buildAdjudicationPrompt({ ...claimContext, image_present: hasRemoteImage });
