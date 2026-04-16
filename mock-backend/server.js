@@ -286,7 +286,8 @@ app.post('/complete-trip', async (req, res) => {
     const userId = getUserIdFromRequest(req);
     const now = new Date().toISOString();
 
-    const TRIP_EARNING = 70; // Fixed realistic earning per Blinkit trip (Base + Incentives)
+    // Fixed realistic random earning per Blinkit trip (Base + Incentives + Distance)
+    const TRIP_EARNING = Math.floor(Math.random() * (95 - 45 + 1)) + 45; 
     await dbRun(
       `INSERT INTO trips (status, earnings, "protectedAmount", timestamp, "userId") VALUES ($1, $2, $3, $4, $5)`,
       ['completed', TRIP_EARNING, 0, now, userId]
@@ -1393,9 +1394,10 @@ async function seedDemoAccount() {
         // Spread trips across the last 6 days so they look organic
         const hoursAgo = Math.floor((i / needed) * 6 * 24);
         const ts = new Date(Date.now() - hoursAgo * 60 * 60 * 1000).toISOString();
+        const seedEarning = Math.floor(Math.random() * (90 - 50 + 1)) + 50;
         await dbRun(
           `INSERT INTO trips (status, earnings, "protectedAmount", timestamp, "userId") VALUES ($1, $2, $3, $4, $5)`,
-          ['completed', 450, 0, ts, user.id]
+          ['completed', seedEarning, 0, ts, user.id]
         );
       }
       console.log(`✅ Demo account: seeded ${needed} recent trips (total ≥ 25 in last 7 days)`);

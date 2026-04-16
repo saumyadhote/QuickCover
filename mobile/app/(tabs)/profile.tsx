@@ -32,6 +32,9 @@ export default function ProfileScreen() {
   const [claimNotifications, setClaimNotifications] = useState(true);
 
   const initial = user?.name?.[0]?.toUpperCase() ?? '?';
+  const displayPhone = user?.phone ? user.phone.replace(/^(?:\+?91\s*)+/, '+91 ') : '—';
+  const isDemo = user?.email === 'demo@quickcover.in';
+  const methodsToDisplay = isDemo ? PAYOUT_METHODS : [];
   const platformLabel = user?.platform
     ? user.platform.charAt(0).toUpperCase() + user.platform.slice(1) + ' Partner'
     : 'Partner';
@@ -73,7 +76,7 @@ export default function ProfileScreen() {
               </View>
               <View>
                 <Text style={{ fontSize: 20, fontWeight: '800', color: '#ffffff', marginBottom: 3 }}>{user?.name ?? '—'}</Text>
-                <Text style={{ fontSize: 12, color: '#94a3b8', marginBottom: 5 }}>{user?.email ?? '—'} · +91 {user?.phone ?? '—'}</Text>
+                <Text style={{ fontSize: 12, color: '#94a3b8', marginBottom: 5 }}>{user?.email ?? '—'} · {displayPhone}</Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                   <View style={{ backgroundColor: 'rgba(74,222,128,0.15)', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1, borderColor: 'rgba(74,222,128,0.25)' }}>
                     <Text style={{ fontSize: 10, fontWeight: '800', color: '#4ade80' }}>{platformLabel}</Text>
@@ -147,29 +150,41 @@ export default function ProfileScreen() {
 
           {/* ── Payout Settings ── */}
           <View style={{ backgroundColor: '#ffffff', borderRadius: 20, overflow: 'hidden', marginBottom: 14, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}>
-            <View style={{ paddingHorizontal: 18, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' }}>
-              <Text style={{ fontWeight: '800', fontSize: 15, color: '#0f172a' }}>Payout Settings</Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 18, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' }}>
+              <View>
+                <Text style={{ fontWeight: '800', fontSize: 15, color: '#0f172a' }}>Payout Settings</Text>
+                <Text style={{ fontSize: 11, color: '#16a34a', fontWeight: '700', marginTop: 2 }}>✓ Razorpay Live Active</Text>
+              </View>
             </View>
-            {PAYOUT_METHODS.map((method, i) => (
-              <TouchableOpacity key={i} style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 18, paddingVertical: 14, borderBottomWidth: i < PAYOUT_METHODS.length - 1 ? 1 : 0, borderBottomColor: '#f8fafc' }}>
-                <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: method.bg, alignItems: 'center', justifyContent: 'center', marginRight: 13 }}>
-                  {method.icon}
-                </View>
-                <View style={{ flex: 1 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
-                    <Text style={{ fontSize: 14, fontWeight: '700', color: '#0f172a' }}>{method.label}</Text>
-                    {method.isPrimary && (
-                      <View style={{ backgroundColor: '#7c3aed', borderRadius: 5, paddingHorizontal: 6, paddingVertical: 2 }}>
-                        <Text style={{ fontSize: 9, fontWeight: '800', color: '#ffffff' }}>PRIMARY</Text>
-                      </View>
-                    )}
+            
+            {methodsToDisplay.length === 0 ? (
+              <View style={{ paddingVertical: 24, paddingHorizontal: 18, alignItems: 'center' }}>
+                <Text style={{ fontSize: 13, color: '#94a3b8', fontWeight: '500' }}>No payout methods added</Text>
+                <Text style={{ fontSize: 11, color: '#cbd5e1', marginTop: 4, textAlign: 'center' }}>Add a bank account or UPI ID to receive automatic claim payouts instantly.</Text>
+              </View>
+            ) : (
+              methodsToDisplay.map((method, i) => (
+                <TouchableOpacity key={i} style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 18, paddingVertical: 14, borderBottomWidth: i < methodsToDisplay.length - 1 ? 1 : 0, borderBottomColor: '#f8fafc' }}>
+                  <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: method.bg, alignItems: 'center', justifyContent: 'center', marginRight: 13 }}>
+                    {method.icon}
                   </View>
-                  <Text style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>{method.sub}</Text>
-                </View>
-                <ChevronRight color="#cbd5e1" size={18} />
-              </TouchableOpacity>
-            ))}
-            <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 18, paddingVertical: 14 }}>
+                  <View style={{ flex: 1 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
+                      <Text style={{ fontSize: 14, fontWeight: '700', color: '#0f172a' }}>{method.label}</Text>
+                      {method.isPrimary && (
+                        <View style={{ backgroundColor: '#7c3aed', borderRadius: 5, paddingHorizontal: 6, paddingVertical: 2 }}>
+                          <Text style={{ fontSize: 9, fontWeight: '800', color: '#ffffff' }}>PRIMARY</Text>
+                        </View>
+                      )}
+                    </View>
+                    <Text style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>{method.sub}</Text>
+                  </View>
+                  <ChevronRight color="#cbd5e1" size={18} />
+                </TouchableOpacity>
+              ))
+            )}
+            
+            <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 18, paddingVertical: 14, borderTopWidth: methodsToDisplay.length > 0 ? 1 : 0, borderTopColor: '#f1f5f9' }}>
               <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: '#f8fafc', alignItems: 'center', justifyContent: 'center', marginRight: 13, borderWidth: 1.5, borderStyle: 'dashed', borderColor: '#cbd5e1' }}>
                 <Plus color="#94a3b8" size={18} />
               </View>

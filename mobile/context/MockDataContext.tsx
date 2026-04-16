@@ -303,32 +303,34 @@ export function MockDataProvider({ children }: { children: React.ReactNode }) {
 
   // ---- acceptTrip -------------------------------------------------------
   const acceptTrip = async () => {
-    if (!backendOnline) {
-      // Offline: mutate local state so the UI still responds
-      setState(prev => prev ? { ...prev, isTripActive: true } : prev);
-      return;
-    }
+    // Optimistic update for immediate UI response
+    setState(prev => prev ? { ...prev, isTripActive: true } : prev);
 
-    // Grab a one-shot GPS fix to send to the backend for zone resolution.
-    // The backend uses lat/lon to pick the correct operational zone for pricing.
-    // Falls back to empty body (backend defaults to ZONE_A) when unavailable.
-    let gpsBody: { lat?: number; lon?: number } = {};
-    if (locationPermitted) {
-      try {
-        const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-        gpsBody = { lat: pos.coords.latitude, lon: pos.coords.longitude };
-        console.log(`[GPS] Trip start position: ${gpsBody.lat?.toFixed(4)}, ${gpsBody.lon?.toFixed(4)}`);
-      } catch {
-        // GPS temporarily unavailable — proceed without coordinates
+    if (!backendOnline) return;
+
+    // Fire and forget the GPS & network calls so we don't block the button
+    (async () => {
+      let gpsBody: { lat?: number; lon?: number } = {};
+      if (locationPermitted) {
+        try {
+          // getLastKnown resolves instantly; if null, fallback to getCurrent
+          const pos = await Location.getLastKnownPositionAsync() || await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+          if (pos) {
+            gpsBody = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+            console.log(`[GPS] Trip start position: ${gpsBody.lat?.toFixed(4)}, ${gpsBody.lon?.toFixed(4)}`);
+          }
+        } catch {
+          // Proceed without exact coordinates if GPS is disabled/fetching fails
+        }
       }
-    }
 
-    try {
-      const res = await axios.post(`${API_URL}/accept-trip`, gpsBody, { headers: authHeaders() });
-      setState(res.data.state);
-    } catch {
-      setState(prev => prev ? { ...prev, isTripActive: true } : prev);
-    }
+      try {
+        const res = await axios.post(`${API_URL}/accept-trip`, gpsBody, { headers: authHeaders() });
+        setState(res.data.state);
+      } catch {
+        // It failed, but we already updated optimistically above to keep UI smooth
+      }
+    })();
   };
 
   // ---- submitClaim -------------------------------------------------------
@@ -394,31 +396,33 @@ export function MockDataProvider({ children }: { children: React.ReactNode }) {
 
   // ---- completeTrip -----------------------------------------------------
   const completeTrip = async () => {
-    if (!backendOnline) {
-      setState(prev =>
-        prev
-          ? {
-              ...prev,
-              isTripActive: false,
-              weeklyEarnings: prev.weeklyEarnings + 45,
-              weeklyProtected: prev.weeklyProtected + prev.weeklyEarnings * 0.1,
-            }
-          : prev
-      );
-      return;
-    }
-    try {
-      const headers = authHeaders();
-      const res = await axios.post(`${API_URL}/complete-trip`, {}, { headers });
-      setState(res.data.state);
-      // Refresh eligibility — trip count just increased
-      const eligRes = await axios.get(`${API_URL}/eligibility`, { timeout: 4000, headers });
-      setEligibility(eligRes.data);
-    } catch {
-      setState(prev =>
-        prev ? { ...prev, isTripActive: false } : prev
-      );
-    }
+    // Optimistic update for immediate UI response
+    setState(prev =>
+      prev
+        ? {
+            ...prev,
+            isTripActive: false,
+            weeklyEarnings: prev.weeklyEarnings + 45,
+            weeklyProtected: prev.weeklyProtected + prev.weeklyEarnings * 0.1,
+          }
+        : prev
+    );
+
+    if (!backendOnline) return;
+
+    // Fire and forget the network calls
+    (async () => {
+      try {
+        const headers = authHeaders();
+        const res = await axios.post(`${API_URL}/complete-trip`, {}, { headers });
+        setState(res.data.state);
+        // Refresh eligibility silently in the background
+        const eligRes = await axios.get(`${API_URL}/eligibility`, { timeout: 4000, headers });
+        setEligibility(eligRes.data);
+      } catch {
+        // It failed, but optimistic UI handled it
+      }
+    })();
   };
 
   return (

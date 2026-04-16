@@ -32,8 +32,9 @@ function ActiveTripCard({ claimStatus, weeklyProtected, weeklyEarnings, lastPayo
           <MapPin color="#f87171" size={14} />
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 15, fontWeight: '700', color: '#a78bfa', marginBottom: 10 }}>Pickup location</Text>
-          <Text style={{ fontSize: 15, fontWeight: '700', color: '#f87171' }}>Delivery in progress…</Text>
+          <Text style={{ fontSize: 15, fontWeight: '700', color: '#a78bfa', marginBottom: 4 }} numberOfLines={1} ellipsizeMode="tail">Pickup location</Text>
+          <Text style={{ fontSize: 13, fontWeight: '600', color: '#94a3b8', marginBottom: 10 }} numberOfLines={1}>Bengaluru Hub #4</Text>
+          <Text style={{ fontSize: 15, fontWeight: '700', color: '#f87171' }} numberOfLines={1}>Delivery in progress…</Text>
         </View>
       </View>
 
@@ -130,7 +131,9 @@ function TodayJourneyTimeline({
     const t = new Date(now.getTime() - minsBack * 60000);
     const hh = String(t.getHours()).padStart(2, '0');
     const mm = String(t.getMinutes()).padStart(2, '0');
-    return { time: `${hh}:${mm}`, isActive, earn: isActive ? null : perTrip };
+    // Pseudorandom realistic earning per trip based on index for variety
+    const variedEarn = 50 + ((i * 17) % 45) + (i % 2 === 0 ? 5 : 0);
+    return { time: `${hh}:${mm}`, isActive, earn: isActive ? null : variedEarn };
   });
 
   return (
@@ -372,13 +375,13 @@ export default function DashboardScreen() {
           {(() => {
             const riskColor = currentRiskLevel === 'Low' ? '#4ade80' : currentRiskLevel === 'High' ? '#f87171' : '#fbbf24';
             return (
-              <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 7, alignSelf: 'flex-start' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 6, alignSelf: 'flex-start', maxWidth: '85%', flexWrap: 'wrap' }}>
                 <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: riskColor, marginRight: 7 }} />
-                <Text style={{ fontSize: 12, color: '#c4b5fd', fontWeight: '600' }}>
-                  Consumer surcharge: <Text style={{ color: '#ffffff', fontWeight: '800' }}>₹{currentMicroFee.toFixed(2)}/order</Text>
+                <Text style={{ fontSize: 11, color: '#c4b5fd', fontWeight: '600', marginRight: 6 }} numberOfLines={1}>
+                  Surcharge: <Text style={{ color: '#ffffff', fontWeight: '800' }}>₹{currentMicroFee.toFixed(2)}</Text>
                 </Text>
-                <View style={{ marginLeft: 8, backgroundColor: riskColor, borderRadius: 5, paddingHorizontal: 6, paddingVertical: 2 }}>
-                  <Text style={{ color: '#0f0a1e', fontSize: 10, fontWeight: '800' }}>{currentRiskLevel.toUpperCase()}</Text>
+                <View style={{ backgroundColor: riskColor, borderRadius: 5, paddingHorizontal: 6, paddingVertical: 2 }}>
+                  <Text style={{ color: '#0f0a1e', fontSize: 9, fontWeight: '800' }}>{currentRiskLevel.toUpperCase()}</Text>
                 </View>
               </View>
             );
@@ -408,7 +411,7 @@ export default function DashboardScreen() {
                   </View>
                   <View>
                     <Text style={{ color: '#4ade80', fontWeight: '800', fontSize: 13, letterSpacing: 0.5 }}>PAYOUT CREDITED</Text>
-                    <Text style={{ color: 'rgba(134,239,172,0.7)', fontSize: 11, marginTop: 1 }}>Auto-settled via UPI</Text>
+                    <Text style={{ color: 'rgba(134,239,172,0.7)', fontSize: 11, marginTop: 1 }}>Processed by Razorpay LIVE API</Text>
                   </View>
                 </View>
                 <View style={{ backgroundColor: 'rgba(74,222,128,0.2)', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, borderWidth: 1, borderColor: 'rgba(74,222,128,0.3)' }}>
@@ -524,9 +527,9 @@ export default function DashboardScreen() {
         <View style={{ marginHorizontal: 16, marginTop: 14, backgroundColor: '#ffffff', borderRadius: 20, padding: 18, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}>
           <Text style={{ fontWeight: '700', fontSize: 16, color: '#0f172a', marginBottom: 14 }}>Weekly Summary</Text>
           <View style={{ flexDirection: 'row', gap: 10 }}>
-            <View style={{ flex: 1, backgroundColor: '#f5f3ff', borderRadius: 14, padding: 14, alignItems: 'center' }}>
-              <Text style={{ fontSize: 18, fontWeight: '800', color: '#7c3aed' }}>₹{weeklyEarnings.toLocaleString()}</Text>
-              <Text style={{ fontSize: 11, color: '#7c3aed', marginTop: 3, fontWeight: '600' }}>Earned</Text>
+            <View style={{ flex: 1, backgroundColor: '#f5f3ff', borderRadius: 14, padding: 10, alignItems: 'center', justifyContent: 'center' }}>
+              <Text style={{ fontSize: 16, fontWeight: '800', color: '#7c3aed' }} numberOfLines={1} adjustsFontSizeToFit>₹{weeklyEarnings.toLocaleString()}</Text>
+              <Text style={{ fontSize: 10, color: '#7c3aed', marginTop: 3, fontWeight: '600' }}>Earned</Text>
             </View>
             <View style={{ flex: 1, backgroundColor: weeklyProtected > 0 ? '#f0fdf4' : '#f8fafc', borderRadius: 14, padding: 14, alignItems: 'center' }}>
               <Text style={{ fontSize: 18, fontWeight: '800', color: weeklyProtected > 0 ? '#16a34a' : '#94a3b8' }}>
@@ -546,7 +549,7 @@ export default function DashboardScreen() {
       {profileOpen && (
         <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 100 }}>
           <TouchableOpacity activeOpacity={1} onPress={() => setProfileOpen(false)} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)' }} />
-          <View style={{ position: 'absolute', top: 108, left: 16, right: 80, backgroundColor: '#ffffff', borderRadius: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.18, shadowRadius: 24, elevation: 12, overflow: 'hidden' }}>
+          <View style={{ position: 'absolute', top: 108, left: 16, right: 16, maxWidth: 320, backgroundColor: '#ffffff', borderRadius: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.18, shadowRadius: 24, elevation: 12, overflow: 'hidden' }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' }}>
               <Text style={{ fontWeight: '700', fontSize: 15, color: '#0f172a' }}>My Account</Text>
               <TouchableOpacity onPress={() => setProfileOpen(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>

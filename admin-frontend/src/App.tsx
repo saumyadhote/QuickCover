@@ -653,7 +653,7 @@ function OverviewTab({
             ))}
           </div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
 
           {/* GWP */}
           <div className="relative bg-white/[0.015] border border-white/5 p-6 rounded-3xl overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.4)] backdrop-blur-xl group hover:border-[#adc6ff]/20 transition-all duration-300">

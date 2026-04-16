@@ -29,12 +29,12 @@ function ShieldIcon({ size = 28 }: { size?: number }) {
  * "Quick" purple + "Co" dark + shield icon + "er" dark, all in Georgia.
  * size controls approximate font size (height).
  */
-export function AppLogo({ size = 32 }: { size?: number }) {
+export function AppLogo({ size = 32, style }: { size?: number; style?: any }) {
   const fontSize = size;
   const shieldSize = Math.round(size * 1.1);
 
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+    <View style={[{ flexDirection: 'row', alignItems: 'center' }, style]}>
       <Text style={{ fontSize, fontWeight: '800', color: '#a855f7', fontFamily: 'Georgia, serif', lineHeight: fontSize * 1.25 }}>
         Quick
       </Text>

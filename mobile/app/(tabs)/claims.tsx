@@ -437,11 +437,11 @@ export default function ClaimsScreen() {
                     <View style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: '#f5f3ff', alignItems: 'center', justifyContent: 'center', marginRight: 13 }}>
                       <Text style={{ fontSize: 20 }}>{meta.icon}</Text>
                     </View>
-                    <View style={{ flex: 1 }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 3 }}>
+                    <View style={{ flex: 1, paddingRight: 8 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 3, flexWrap: 'wrap' }}>
                         <Text style={{ fontSize: 14, fontWeight: '700', color: '#0f172a' }}>{meta.label}</Text>
-                        <View style={{ backgroundColor: '#dcfce7', borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2 }}>
-                          <Text style={{ fontSize: 10, fontWeight: '700', color: '#16a34a' }}>• Auto-approved</Text>
+                        <View style={{ backgroundColor: '#dcfce7', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 }}>
+                          <Text style={{ fontSize: 9, fontWeight: '800', color: '#16a34a' }}>AUTO-APPROVED</Text>
                         </View>
                       </View>
                       <Text style={{ fontSize: 12, color: '#64748b' }}>{claim.hoursWorked ? `${claim.hoursWorked}h lost · ` : ''}{date}</Text>
