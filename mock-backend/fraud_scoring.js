@@ -73,19 +73,20 @@ function scoreGpsAnomalies(gpsCoordinates) {
   });
   
   const totalPoints = gpsCoordinates.length;
-  let entropy = 0;
+  let gps_coordinate_entropy = 0;
   for (const count of Object.values(coordCounts)) {
     const prob = count / totalPoints;
-    entropy -= prob * Math.log2(prob);
+    gps_coordinate_entropy -= prob * Math.log2(prob);
   }
 
   // A very low entropy (< 0.5) over multiple points means the points are heavily clustered or repeated exactly (Mock provider holding position)
-  if (totalPoints >= 5 && entropy < 0.5) {
+  if (totalPoints >= 5 && gps_coordinate_entropy < 0.5) {
     score += 0.35;
-    flags.push(`LOW_GPS_ENTROPY_${entropy.toFixed(2)}`);
+    flags.push(`LOW_GPS_ENTROPY_${gps_coordinate_entropy.toFixed(2)}`);
   }
 
   // Teleportation check: speed between consecutive pings
+  let gps_velocity_kmh_max = 0;
   for (let i = 1; i < gpsCoordinates.length; i++) {
     const prev = gpsCoordinates[i - 1];
     const curr = gpsCoordinates[i];
@@ -96,19 +97,21 @@ function scoreGpsAnomalies(gpsCoordinates) {
 
     const distKm = haversineKm(prev.lat, prev.lng, curr.lat, curr.lng);
     const speedKmh = (distKm / dtMs) * 3_600_000;
+    
+    if (speedKmh > gps_velocity_kmh_max) {
+      gps_velocity_kmh_max = speedKmh;
+    }
 
     // Delivery bikes physically cannot exceed ~80 km/h in Indian urban traffic;
     // >150 km/h between pings = impossible = GPS spoofer jumping coordinates.
     if (speedKmh > 150) {
       score += 0.45;
       flags.push(`TELEPORTATION_${Math.round(speedKmh)}KMH`);
-      break; // one clear teleport is enough evidence
+      // We don't break here so we can still calculate true max velocity
     }
   }
 
-  // Note: Static coordinate check is now superseded by the entropy check.
-
-  return { score, flags };
+  return { score, flags, telemetry: { gps_velocity_kmh_max, gps_coordinate_entropy } };
 }
 
 // ── Pillar 3: Behavioural Sanity Checks ──────────────────────────────────────
@@ -178,7 +181,7 @@ function scoreClaim(opts = {}) {
     reason = `High fraud score ${score} — auto-rejected. Evidence: ${allFlags.join(', ')}.`;
   }
 
-  return { score, tier, flags: allFlags, reason };
+  return { score, tier, flags: allFlags, reason, telemetry: p2.telemetry };
 }
 
 module.exports = { scoreClaim };

@@ -32,12 +32,13 @@ const TYPE_META: Record<string, { label: string; icon: string }> = {
 };
 
 // ── Claim Form Sheet ─────────────────────────────────────────────────────────
-function ClaimForm({ onClose, onSubmit }: { onClose: () => void; onSubmit: (type: string, desc: string, hours: number) => void }) {
+function ClaimForm({ onClose, onSubmit }: { onClose: () => void; onSubmit: (type: string, desc: string, hours: number, base64?: string) => void }) {
   const [selectedType, setSelectedType] = useState(DISRUPTION_TYPES[0]);
   const [showTypePicker, setShowTypePicker] = useState(false);
   const [description, setDescription] = useState('');
   const [hoursWorked, setHoursWorked] = useState('2');
   const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const [imageBase64, setImageBase64] = useState<string | null>(null);
 
   const parsedHours = Math.min(8, Math.max(1, parseFloat(hoursWorked) || 1));
   const canSubmit = description.trim().length > 10;
@@ -52,8 +53,12 @@ function ClaimForm({ onClose, onSubmit }: { onClose: () => void; onSubmit: (type
       mediaTypes: ['images'],
       allowsEditing: true,
       quality: 0.7,
+      base64: true,
     });
-    if (!result.canceled && result.assets[0]) setPhotoUri(result.assets[0].uri);
+    if (!result.canceled && result.assets[0]) {
+      setPhotoUri(result.assets[0].uri);
+      setImageBase64(result.assets[0].base64 || null);
+    }
   };
 
   const requestAndLaunchGallery = async () => {
@@ -66,8 +71,12 @@ function ClaimForm({ onClose, onSubmit }: { onClose: () => void; onSubmit: (type
       mediaTypes: ['images'],
       allowsEditing: true,
       quality: 0.7,
+      base64: true,
     });
-    if (!result.canceled && result.assets[0]) setPhotoUri(result.assets[0].uri);
+    if (!result.canceled && result.assets[0]) {
+      setPhotoUri(result.assets[0].uri);
+      setImageBase64(result.assets[0].base64 || null);
+    }
   };
 
   return (
@@ -116,7 +125,7 @@ function ClaimForm({ onClose, onSubmit }: { onClose: () => void; onSubmit: (type
             {photoUri ? (
               <View style={{ marginBottom: 16 }}>
                 <Image source={{ uri: photoUri }} style={{ width: '100%', height: 140, borderRadius: 14, marginBottom: 8 }} resizeMode="cover" />
-                <TouchableOpacity onPress={() => setPhotoUri(null)} style={{ alignSelf: 'flex-end', flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <TouchableOpacity onPress={() => { setPhotoUri(null); setImageBase64(null); }} style={{ alignSelf: 'flex-end', flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                   <X color="#94a3b8" size={13} />
                   <Text style={{ fontSize: 11, color: '#94a3b8', fontWeight: '600' }}>Remove</Text>
                 </TouchableOpacity>
@@ -141,7 +150,7 @@ function ClaimForm({ onClose, onSubmit }: { onClose: () => void; onSubmit: (type
               </Text>
             </View>
 
-            <TouchableOpacity onPress={() => canSubmit && onSubmit(selectedType.id, description, parsedHours)} disabled={!canSubmit} style={{ borderRadius: 16, overflow: 'hidden', marginBottom: 4 }}>
+            <TouchableOpacity onPress={() => canSubmit && onSubmit(selectedType.id, description, parsedHours, imageBase64 || undefined)} disabled={!canSubmit} style={{ borderRadius: 16, overflow: 'hidden', marginBottom: 4 }}>
               <LinearGradient colors={canSubmit ? ['#7c3aed', '#6d28d9'] : ['#cbd5e1', '#cbd5e1']} style={{ paddingVertical: 15, alignItems: 'center' }}>
                 <Text style={{ color: canSubmit ? '#ffffff' : '#94a3b8', fontWeight: '800', fontSize: 15 }}>Submit Claim</Text>
               </LinearGradient>
@@ -229,7 +238,7 @@ function CoverageHonoredCard({ disruptionType }: { disruptionType?: string }) {
 }
 
 // ── Claim Status Timeline ────────────────────────────────────────────────────
-function ClaimTimeline({ claimStatus }: { claimStatus: string }) {
+function ClaimTimeline({ claimStatus, lastTxnId }: { claimStatus: string; lastTxnId?: string | null }) {
   const isClaimSubmitted = claimStatus !== 'none';
   const isVerifying = claimStatus === 'processing' || claimStatus === 'approved' || claimStatus === 'paid';
   const isPayoutProcessing = claimStatus === 'approved' || claimStatus === 'paid';
@@ -243,7 +252,7 @@ function ClaimTimeline({ claimStatus }: { claimStatus: string }) {
         { label: 'Claim submitted', sub: 'Your claim is in the review queue', done: isVerifying, active: isClaimSubmitted && !isVerifying },
         { label: 'AI verification', sub: 'Automated cross-check in progress', done: isPayoutProcessing, active: isVerifying && !isPayoutProcessing },
         { label: 'Payout processing', sub: 'Approved — payment being sent', done: isPayoutCompleted, active: isPayoutProcessing && !isPayoutCompleted },
-        { label: 'Payout completed', sub: 'Funds credited to your wallet', done: isPayoutCompleted, active: false },
+        { label: 'Payout completed', sub: lastTxnId ? `Funds credited (Txn: ${lastTxnId})` : 'Funds credited to your wallet', done: isPayoutCompleted, active: false },
       ].map((step, i, arr) => (
         <View key={i} style={{ flexDirection: 'row', position: 'relative' }}>
           {i < arr.length - 1 && (
@@ -285,9 +294,9 @@ export default function ClaimsScreen() {
   const thisMonthTotal = stats.monthly.totalPaid;
   const paidCount = stats.monthly.claimCount;
 
-  const handleSubmit = async (type: string, desc: string, hours: number) => {
+  const handleSubmit = async (type: string, desc: string, hours: number, base64?: string) => {
     setFormOpen(false);
-    await submitClaim(type, desc, hours);
+    await submitClaim(type, desc, hours, base64);
   };
 
   // Zero-touch: submit immediately from the chip, no form
@@ -385,7 +394,7 @@ export default function ClaimsScreen() {
 
           {/* Active claim timeline — shown for processing / approved / paid */}
           {!showInitial && !isCoverageHonored && (
-            <ClaimTimeline claimStatus={state?.claimStatus ?? 'none'} />
+            <ClaimTimeline claimStatus={state?.claimStatus ?? 'none'} lastTxnId={state?.lastTxnId} />
           )}
 
           {/* File another after payout or after coverage honored */}

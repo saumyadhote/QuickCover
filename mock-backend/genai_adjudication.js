@@ -167,13 +167,17 @@ async function callOpenAI(imageUrl, claimContext) {
   const apiKey = process.env.OPENAI_API_KEY;
   const model  = process.env.OPENAI_MODEL || 'gpt-4o';
 
-  const hasRemoteImage = Boolean(imageUrl && imageUrl.startsWith('http'));
+  const hasRemoteImage = Boolean((imageUrl && imageUrl.startsWith('http')) || claimContext.imageBase64);
   const prompt = buildAdjudicationPrompt({ ...claimContext, image_present: hasRemoteImage });
 
   // Build user message content — image first, then prompt text
   const userContent = [];
   if (hasRemoteImage) {
-    userContent.push({ type: 'image_url', image_url: { url: imageUrl, detail: 'low' } });
+    if (claimContext.imageBase64) {
+      userContent.push({ type: 'image_url', image_url: { url: `data:image/jpeg;base64,${claimContext.imageBase64}`, detail: 'low' } });
+    } else {
+      userContent.push({ type: 'image_url', image_url: { url: imageUrl, detail: 'low' } });
+    }
   }
   userContent.push({ type: 'text', text: prompt });
 
@@ -205,7 +209,7 @@ async function callGemini(imageUrl, claimContext) {
   const apiKey = process.env.GEMINI_API_KEY;
   const modelName = process.env.GEMINI_MODEL || 'gemini-1.5-pro';
 
-  const hasRemoteImage = Boolean(imageUrl && imageUrl.startsWith('http'));
+  const hasRemoteImage = Boolean((imageUrl && imageUrl.startsWith('http')) || claimContext.imageBase64);
   const prompt = buildAdjudicationPrompt({ ...claimContext, image_present: hasRemoteImage });
 
   const genAI = new GoogleGenerativeAI(apiKey);
@@ -215,19 +219,28 @@ async function callGemini(imageUrl, claimContext) {
   parts.push(prompt);
 
   if (hasRemoteImage) {
-    try {
-      const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
-      const base64String = Buffer.from(response.data, 'binary').toString('base64');
-      const mimeType = response.headers['content-type'] || 'image/jpeg';
+    if (claimContext.imageBase64) {
       parts.push({
         inlineData: {
-          data: base64String,
-          mimeType
+          data: claimContext.imageBase64,
+          mimeType: 'image/jpeg'
         }
       });
-    } catch (e) {
-      console.error('[GENAI] Failed to fetch image for Gemini inlineData:', e.message);
-      // Fallback to text only if image fetch fails
+    } else {
+      try {
+        const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
+        const base64String = Buffer.from(response.data, 'binary').toString('base64');
+        const mimeType = response.headers['content-type'] || 'image/jpeg';
+        parts.push({
+          inlineData: {
+            data: base64String,
+            mimeType
+          }
+        });
+      } catch (e) {
+        console.error('[GENAI] Failed to fetch image for Gemini inlineData:', e.message);
+        // Fallback to text only if image fetch fails
+      }
     }
   }
 

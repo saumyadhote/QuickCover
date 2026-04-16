@@ -533,6 +533,22 @@ function OverviewTab({
   const locale = LOCALES[selectedZone];
   const [zonePricing, setZonePricing] = useState<ZonePricing | null>(null);
   const [zoneLoading, setZoneLoading] = useState(false);
+  const [analytics, setAnalytics] = useState<any>(null);
+
+  useEffect(() => {
+    let active = true;
+    const fetchAnalytics = async () => {
+      try {
+        const res = await axios.get(`${API_URL}/admin/analytics`);
+        if (active) setAnalytics(res.data);
+      } catch (e) {
+        console.error('Analytics fetch failed:', e);
+      }
+    };
+    fetchAnalytics();
+    const interval = setInterval(fetchAnalytics, 15000);
+    return () => { active = false; clearInterval(interval); };
+  }, []);
 
   const fetchZonePricing = useCallback(async (zoneId: string) => {
     setZoneLoading(true);
@@ -573,14 +589,23 @@ function OverviewTab({
   // average fee collected across the month's risk distribution), NOT the live
   // spot fee which swings ₹1.50–₹5.00 on 15s polling. The live fee drives the
   // AI Micro-Fee card and the dynamic pricing chart — not the actuarial margin.
-  const monthlyGWP         = locale.avgMonthlyFee * dailyOrders * 30;
-  const monthlyClaimsCost  = locale.disruptionPerMonth * locale.claimsPerEvent * locale.avgPayout;
-  const netMarginPct       = monthlyGWP > 0
+  
+  const hasLiveAnalytics = Boolean(analytics && analytics.estimatedPremiumPool > 0);
+  const monthlyGWP = hasLiveAnalytics 
+    ? analytics.estimatedPremiumPool 
+    : locale.avgMonthlyFee * dailyOrders * 30;
+  
+  const monthlyClaimsCost = hasLiveAnalytics 
+    ? analytics.totalPayouts 
+    : locale.disruptionPerMonth * locale.claimsPerEvent * locale.avgPayout;
+    
+  const netMarginPct = monthlyGWP > 0
     ? (((monthlyGWP - monthlyClaimsCost) / monthlyGWP) * 100).toFixed(1)
     : '78.0';
-  const lossRatioPct       = monthlyGWP > 0
-    ? ((monthlyClaimsCost / monthlyGWP) * 100).toFixed(1)
-    : '22.0';
+    
+  const lossRatioPct = hasLiveAnalytics
+    ? analytics.lossRatio.toFixed(1)
+    : (monthlyGWP > 0 ? ((monthlyClaimsCost / monthlyGWP) * 100).toFixed(1) : '22.0');
 
   // Animated display values (in ₹ Lakh for GWP/claims/surplus)
   const animGWP    = useAnimatedNumber(monthlyGWP / 100000);
@@ -844,11 +869,22 @@ function OverviewTab({
             <span className="px-2 py-0.5 rounded-full bg-[#4edea3]/10 text-[#4edea3] text-[10px] font-bold uppercase border border-[#4edea3]/20">Active</span>
           </div>
           <div className="space-y-4 relative z-10">
-            {[
-              { tier: 'Tier 1 · Auto-Approve', range: '0.00 – 0.45', desc: 'Clean GPS, no mock-location flags — instant payout', color: '#4edea3', pct: 76 },
-              { tier: 'Tier 2 · Quarantine', range: '0.46 – 0.70', desc: 'Anomalous signal — photo evidence requested via app', color: '#ffb95f', pct: 17 },
-              { tier: 'Tier 3 · Auto-Reject', range: '0.71 – 1.00', desc: 'GPS teleportation or mock-location confirmed', color: '#ffb4ab', pct: 7 },
-            ].map(row => (
+            {(() => {
+               const tot = Math.max(1, analytics?.totalClaims ?? 100);
+               const fr  = analytics?.fraudRejections ?? 7;
+               const quar = Math.round(tot * 0.17); // simple synthetic quarantine rate
+               const auto = Math.max(0, tot - fr - quar);
+               
+               const frPct = Math.round((fr / tot) * 100);
+               const quarPct = Math.round((quar / tot) * 100);
+               const autoPct = Math.max(0, 100 - frPct - quarPct);
+               
+               return [
+                 { tier: 'Tier 1 · Auto-Approve', range: '0.00 – 0.45', desc: 'Clean GPS, no mock-location flags — instant payout', color: '#4edea3', pct: autoPct },
+                 { tier: 'Tier 2 · Quarantine', range: '0.46 – 0.70', desc: 'Anomalous signal — photo evidence requested via app', color: '#ffb95f', pct: quarPct },
+                 { tier: 'Tier 3 · Auto-Reject', range: '0.71 – 1.00', desc: 'GPS teleportation or mock-location confirmed', color: '#ffb4ab', pct: frPct },
+               ];
+            })().map(row => (
               <div key={row.tier} className="bg-white/[0.02] rounded-xl border border-white/5 p-4 backdrop-blur-md">
                 <div className="flex items-start justify-between mb-2">
                   <div>

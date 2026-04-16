@@ -672,6 +672,7 @@ app.post('/claim/adjudicate', async (req, res) => {
     zone,
     timestamp,
     imageUrl,
+    imageBase64,
     gpsLat,
     gpsLng,
     weatherSnapshot,
@@ -690,6 +691,7 @@ app.post('/claim/adjudicate', async (req, res) => {
     gps_lat: gpsLat ?? null,
     gps_lng: gpsLng ?? null,
     weather_snapshot: weatherSnapshot ?? null,
+    imageBase64: imageBase64 ?? null,
   });
 
   if (result.action === 'payout_released' || result.is_authentic_disruption) {
@@ -768,25 +770,7 @@ function analyze_telematics_anomalies(sensorData, gpsData) {
   return { anomalyDetected: false, anomalyType: null, riskScore: 0 };
 }
 
-/**
- * [STUB] Pillar 3: Quarantine & Deferred Payout Workflow
- * TODO: Implement as part of "Adversarial Defense & Anti-Spoofing Strategy" (see README).
- *
- * Instead of auto-denying a flagged claim, places it in "Pending Review". The mobile app
- * will prompt the worker for a timestamped photo (flooded street, closed store) once their
- * network stabilises. Prevents false negatives from legitimate network drops during storms.
- *
- * @param {string|number} claimId - Trip/claim ID to quarantine
- * @param {string}        reason  - Reason logged internally for fraud analyst review queue
- * @returns {Promise<{ success: boolean, newStatus: string }>}
- */
-async function quarantine_claim(claimId, reason) {
-  // TODO: UPDATE trips SET status = 'pending_review' WHERE id = claimId
-  // TODO: Emit push notification to worker once network stabilises
-  // TODO: Log reason to fraud analyst review queue
-  console.log(`[STUB] quarantine_claim — claimId: ${claimId}, reason: ${reason}`);
-  return { success: false, newStatus: 'pending_review' };
-}
+
 
 /**
  * [STUB] Model 3 - Agentic GenAI: Vision-Language Model for Automated Adjudication
@@ -828,47 +812,15 @@ async function process_claim_evidence_with_genai(image_url, claim_context) {
 // ---------------------------------------------------------------------------
 
 /**
- * Fallback mock forecast used when no API key is configured.
- * Preserves the original behaviour so the demo still works without a key.
- */
-const runMockForecast = async () => {
-  const conditions = ['Clear Skies', 'Light Rain', 'Heavy Traffic Jam', 'Monsoon Alert', 'High AQI (Smog)'];
-  const selectedCondition = conditions[Math.floor(Math.random() * conditions.length)];
-
-  let riskLevel = 'Low';
-  let baseFee   = 2.0;
-
-  if (selectedCondition === 'Clear Skies') {
-    riskLevel = 'Low';
-    baseFee = 1.5 + Math.random() * 0.5;
-  } else if (selectedCondition === 'Light Rain' || selectedCondition === 'Heavy Traffic Jam') {
-    riskLevel = 'Medium';
-    baseFee = 2.2 + Math.random() * 0.8;
-  } else {
-    riskLevel = 'High';
-    baseFee = 3.2 + Math.random() * 0.8;
-  }
-
-  return { surcharge: parseFloat(baseFee.toFixed(2)), riskLevel };
-};
-
-/**
  * Master forecast runner.
- * Uses live API data when WEATHER_API_KEY is present; falls back to mock otherwise.
  * Always targets ZONE_A (Bengaluru) as the primary pricing signal for the global state.
  */
 const runForecast = async () => {
   try {
-    let surcharge, riskLevel;
-
-    if (process.env.WEATHER_API_KEY) {
-      const primary = OPERATIONAL_ZONES[0];
-      const pricing = await calculate_live_dynamic_surcharge(primary.lat, primary.lon);
-      surcharge  = pricing.surcharge;
-      riskLevel  = pricing.riskLevel;
-    } else {
-      ({ surcharge, riskLevel } = await runMockForecast());
-    }
+    const primary = OPERATIONAL_ZONES[0];
+    const pricing = await calculate_live_dynamic_surcharge(primary.lat, primary.lon);
+    const surcharge = pricing.surcharge;
+    const riskLevel = pricing.riskLevel;
 
     await dbRun(`
       UPDATE state
@@ -912,20 +864,6 @@ app.post('/pricing/zone', async (req, res) => {
     });
   }
 
-  if (!process.env.WEATHER_API_KEY) {
-    // No API key — return a mock reading so the dashboard stays usable
-    const { surcharge, riskLevel } = await runMockForecast();
-    return res.json({
-      zone_id: zone.id,
-      zone_label: zone.label,
-      surcharge,
-      riskLevel,
-      riskScore: null,
-      drivers: null,
-      source: 'mock',
-    });
-  }
-
   try {
     const pricing = await calculate_live_dynamic_surcharge(zone.lat, zone.lon);
     console.log(`[PRICING/ZONE] ${zone.id} (${zone.label}) → ₹${pricing.surcharge} [${pricing.riskLevel}]`);
@@ -936,7 +874,7 @@ app.post('/pricing/zone', async (req, res) => {
       riskLevel: pricing.riskLevel,
       riskScore: pricing.riskScore,
       drivers: pricing.drivers,   // { rainfall_mm_hr, temp_celsius, cpcb_aqi }
-      source: 'live',
+      source: process.env.WEATHER_API_KEY ? 'live' : 'mock-fallback',
     });
   } catch (err) {
     console.error('[PRICING/ZONE] error:', err.message);

@@ -83,7 +83,7 @@ type MockDataContextType = {
   stats: AppStats;
   acceptTrip: () => Promise<void>;
   completeTrip: () => Promise<void>;
-  submitClaim: (type: string, message: string, hoursWorked: number) => Promise<void>;
+  submitClaim: (type: string, message: string, hoursWorked: number, imageBase64?: string) => Promise<void>;
 };
 
 const FALLBACK_STATE: AppState = {
@@ -334,7 +334,7 @@ export function MockDataProvider({ children }: { children: React.ReactNode }) {
   };
 
   // ---- submitClaim -------------------------------------------------------
-  const submitClaim = async (type: string, message: string, hoursWorked: number) => {
+  const submitClaim = async (type: string, message: string, hoursWorked: number, imageBase64?: string) => {
     // Optimistically show timeline immediately — prevents flash back to empty state
     // while the backend processes the claim (4s delay before DB updates)
     setState(prev => prev ? { ...prev, claimStatus: 'processing' } : prev);
@@ -375,8 +375,47 @@ export function MockDataProvider({ children }: { children: React.ReactNode }) {
     );
 
     try {
-      const res = await axios.post(`${API_URL}/trigger-disruption`, claimPayload, { headers: authHeaders() });
-      setState(res.data.state);
+      // Validate string base64 existence
+      const hasImage = Boolean(imageBase64 && imageBase64.length > 100);
+      
+      const res = await axios.post(`${API_URL}/trigger-disruption`, claimPayload, { headers: authHeaders(), validateStatus: (status) => status < 500 });
+      
+      if (res.status === 202) {
+        // Quarantined — Auto-trigger GenAI Vision Adjudication if we have an image
+        console.log('[MockDataContext] Claim quarantined (202). Processing GenAI auto-adjudication...');
+        
+        setState(res.data.state); // optimistic review state
+        
+        if (hasImage) {
+           try {
+             const adjudicateRes = await axios.post(`${API_URL}/claim/adjudicate`, {
+               claimId: `local-${Date.now()}`,
+               disruptionType: type,
+               zone: 'ZONE_A',
+               timestamp: new Date().toISOString(),
+               imageBase64: imageBase64,
+               gpsLat: lastPing?.lat,
+               gpsLng: lastPing?.lng,
+             }, { headers: authHeaders() });
+             
+             // Update state after GenAI result (success or reject)
+             if (adjudicateRes.data && adjudicateRes.data.payment_status === 'success') {
+                console.log(`[MockDataContext] GenAI Approved. Payout: ₹${adjudicateRes.data.payoutAmount}`);
+                // The backend updates global state returning paid claim, but we do a fast query just in case
+                const statusRes = await axios.get(`${API_URL}/status`, { timeout: 4000, headers: authHeaders() });
+                setState(statusRes.data);
+                fetchRecentClaims();
+                fetchStats();
+                return;
+             }
+           } catch (adjErr) {
+             console.error('[MockDataContext] Auto-adjudication failed:', adjErr);
+           }
+        }
+      } else {
+        setState(res.data.state);
+      }
+      
       fetchRecentClaims();
       fetchStats();
     } catch (err: any) {
