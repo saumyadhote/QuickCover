@@ -7,13 +7,13 @@
 
 ## Demo Video
 
-> 📹 **[5-Minute Demo — Add link here]**
+> 📹 **[INSERT LINK TO 5-MINUTE DEMOJAM VIDEO HERE]**
 
 ---
 
-## Pitch Deck
+### Pitch Deck
 
-> 📄 **[Pitch Deck PDF — Add link here]**
+> 📄 **[INSERT LINK TO PHASE 3 PITCH DECK PDF HERE]**
 
 ---
 
@@ -508,9 +508,10 @@ A pre-seeded account is available on the live Vercel deployment for immediate ac
 
 | Field | Value |
 |---|---|
+| **Name** | Arjun Kumar |
 | **Email** | `demo@quickcover.in` |
 | **Password** | `demo1234` |
-| **Driver ID** | `DEMO-2024-00001` |
+| **Driver ID** | `BLK-2024-12847` |
 | **Platform** | Blinkit |
 
 > Alternatively, create your own account via Sign Up — Driver IDs can be auto-generated on the signup form.
@@ -538,6 +539,24 @@ npm install
 npm run dev
 ```
 
+### 📱 Android APK Deployment
+
+A pre-built release APK is available for direct sideloading — no Android Studio or Expo required.
+
+**Download (EAS Build — latest):**
+> 📦 **https://expo.dev/artifacts/eas/nMtCrhJbTe5wNmoH49oe5J.apk**
+
+**GitHub Releases (permanent link):**
+> 📦 **[INSERT GITHUB RELEASES APK LINK HERE]**
+
+**Installation steps:**
+1. Download the `.apk` to an Android device (Android 10+)
+2. Enable **Install from unknown sources** in Settings → Security
+3. Open the downloaded file and tap **Install**
+4. Launch **QuickCover** and log in with the demo credentials above
+
+> The APK connects to the live Render backend (`https://quickcover.onrender.com`) — no local setup needed. Demo account is pre-seeded with 25 trips and full eligibility.
+
 ---
 
 ## 📅 Development Timeline
@@ -550,7 +569,7 @@ directly in the repository or via the live deployment URLs.
 |---|---|---|
 | **Phase 1 — Foundation** | Core data model, auth, trip lifecycle | PostgreSQL/SQLite dual-mode schema; JWT auth (register/login/me); `/accept-trip`, `/complete-trip`, `/status` REST API; React Native app with Home + Claims + Coverage + Profile tabs; MockDataContext polling live backend |
 | **Phase 2 — Intelligence** | Live APIs, financial safeguards, admin tools | Live OpenWeatherMap weather + AQI triggers; per-zone dynamic pricing; `policy_sessions` table; `zone_outages` table + 4th parametric trigger; zero-touch `runTriggerEvaluation()` with auto-claims; 8-hour shift-level payout cap; admin Zone Outage Manager + Cron Eval panels; per-zone Pricing Engine dropdown; `CoverageHonoredCard` mobile UI |
-| **Phase 3 — Soar** | AI/ML integrations, fraud, GenAI, payments | Random Forest ML pricing model (`pricing_model.json`); Isolation Forest 3-tier GPS anti-spoofing (`fraud_scoring.js`); Gemini 1.5 Flash GenAI vision adjudication (`genai_adjudication.js`); Razorpay live Orders API payout with real txn ID; Admin Loss Ratio gauge + Predictive Analytics chart; mobile photo upload claim evidence; FINANCIAL_MODEL.md |
+| **Phase 3 — Soar ✅ COMPLETE** | AI/ML integrations, fraud, GenAI, payments | Random Forest ML pricing model (`pricing_model.json`); Isolation Forest 3-tier GPS anti-spoofing (`fraud_scoring.js`); Gemini 1.5 Flash GenAI vision adjudication (`genai_adjudication.js`); Razorpay live Orders API payout with real txn ID; Admin Loss Ratio gauge + Predictive Analytics chart; mobile photo upload claim evidence; FINANCIAL_MODEL.md; Android APK (EAS build) |
 
 ### What Is Live vs. Mocked
 
@@ -583,7 +602,9 @@ directly in the repository or via the live deployment URLs.
 | Service | Platform | URL |
 |---|---|---|
 | Backend API | Render | https://quickcover.onrender.com |
+| Mobile App (Web) | Vercel | https://quick-cover-865h.vercel.app |
 | Admin Dashboard | Vercel | https://quick-cover-neon.vercel.app |
+| Android APK | EAS Build | https://expo.dev/artifacts/eas/nMtCrhJbTe5wNmoH49oe5J.apk |
 | Database | Supabase | PostgreSQL (pooler, ap-northeast-2) |
 
 ---
