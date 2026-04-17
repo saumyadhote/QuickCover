@@ -38,7 +38,9 @@
       "Bash(./gradlew assembleDebug --console=plain)",
       "Bash(./gradlew assembleDebug --stacktrace)",
       "Bash(find *)",
-      "Bash(keytool *)"
+      "Bash(keytool *)",
+      "Bash(subst Q: \"C:\\\\Users\\\\Tarun\\\\Documents\\\\quickcover1\\\\QuickCover\\\\mobile\\\\android\")",
+      "Bash(powershell *)"
     ]
   },
   "prefersReducedMotion": false

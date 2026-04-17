@@ -461,19 +461,25 @@ export default function DashboardScreen() {
         )}
 
         {/* ── Disruption Alert ── */}
-        {disruption && claimStatus === 'none' && (
-          <TouchableOpacity activeOpacity={0.9} onPress={() => router.push('/(tabs)/claims')} style={{ marginHorizontal: 16, marginTop: 12 }}>
-            <View style={{ backgroundColor: '#fef2f2', borderRadius: 16, padding: 14, borderWidth: 1, borderColor: '#fecaca', flexDirection: 'row', alignItems: 'center' }}>
+        {disruption && (
+          <TouchableOpacity activeOpacity={0.9} onPress={() => claimStatus === 'none' && router.push('/(tabs)/claims')} style={{ marginHorizontal: 16, marginTop: 12 }}>
+            <View style={{ backgroundColor: '#fef2f2', borderRadius: 16, padding: 14, borderWidth: 1, borderColor: '#dc2626', flexDirection: 'row', alignItems: 'center' }}>
               <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#fee2e2', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
                 <AlertTriangle color="#dc2626" size={17} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ color: '#7f1d1d', fontWeight: '700', fontSize: 13 }}>Disruption in your zone</Text>
-                <Text style={{ color: '#b91c1c', fontSize: 12, marginTop: 1 }} numberOfLines={2}>{disruption.message}</Text>
+                <Text style={{ color: '#7f1d1d', fontWeight: '800', fontSize: 13, textTransform: 'uppercase', letterSpacing: 0.5 }}>Disruption Triggered</Text>
+                <Text style={{ color: '#b91c1c', fontSize: 12, marginTop: 2, fontWeight: '500' }} numberOfLines={2}>{disruption.message}</Text>
               </View>
-              <View style={{ backgroundColor: '#dc2626', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 }}>
-                <Text style={{ color: '#ffffff', fontWeight: '700', fontSize: 12 }}>Claim →</Text>
-              </View>
+              {claimStatus === 'none' ? (
+                <View style={{ backgroundColor: '#dc2626', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 }}>
+                  <Text style={{ color: '#ffffff', fontWeight: '700', fontSize: 12 }}>Claim →</Text>
+                </View>
+              ) : (
+                <View style={{ backgroundColor: 'transparent', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, borderWidth: 1, borderColor: '#fca5a5' }}>
+                  <Text style={{ color: '#dc2626', fontWeight: '800', fontSize: 10, textTransform: 'uppercase' }}>Active</Text>
+                </View>
+              )}
             </View>
           </TouchableOpacity>
         )}
