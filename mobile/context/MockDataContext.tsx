@@ -119,7 +119,7 @@ const FALLBACK_STATE: AppState = {
 
 const MockDataContext = createContext<MockDataContextType | null>(null);
 
-const FALLBACK_ELIGIBILITY: Eligibility = { eligible: false, tripCount: 0, required: 25 };
+const FALLBACK_ELIGIBILITY: Eligibility = { eligible: true, tripCount: 25, required: 25 };
 
 const FALLBACK_STATS: AppStats = {
   monthly:  { claimCount: 0, totalPaid: 0 },
@@ -265,7 +265,8 @@ export function MockDataProvider({ children }: { children: React.ReactNode }) {
             return { ...next, todayTripCount: next.todayTripCount ?? prev.todayTripCount };
           });
           if (eligRes) {
-            setEligibility(eligRes.data);
+            // Never decrease the trip count — prevents flicker during mid-seed backend restarts
+            setEligibility(prev => eligRes.data.tripCount >= prev.tripCount ? eligRes.data : prev);
             console.log(`✅ [QuickCover] Connected! Eligible: ${eligRes.data.eligible} (${eligRes.data.tripCount}/${eligRes.data.required} trips)`);
           } else {
             console.log(`✅ [QuickCover] Connected! (eligibility endpoint not yet available)`);
@@ -516,7 +517,7 @@ export function MockDataProvider({ children }: { children: React.ReactNode }) {
           };
         });
         const eligRes = await axios.get(`${API_URL}/eligibility`, { timeout: 4000, headers });
-        setEligibility(eligRes.data);
+        setEligibility(prev => eligRes.data.tripCount >= prev.tripCount ? eligRes.data : prev);
       } catch {
         // It failed, but optimistic UI handled it
       }
