@@ -172,6 +172,7 @@ export function MockDataProvider({ children }: { children: React.ReactNode }) {
   // We do this early so the OS dialog appears during normal app startup rather
   // than mid-claim when the user is under stress.
   useEffect(() => {
+    if (Platform.OS === 'web') return; // expo-location not supported on web
     Location.requestForegroundPermissionsAsync()
       .then(({ status }) => {
         setLocationPermitted(status === 'granted');
@@ -187,9 +188,10 @@ export function MockDataProvider({ children }: { children: React.ReactNode }) {
   // Start/stop position watching based on trip state and permission.
   // Pings are capped at 10 per trace to keep the claim payload small.
   useEffect(() => {
+    if (Platform.OS === 'web') return; // expo-location subscription.remove() crashes on web
     if (!locationPermitted || !state.isTripActive) {
       // Stop any existing subscription when the trip ends or permission is absent
-      locationSubRef.current?.remove();
+      try { locationSubRef.current?.remove(); } catch { /* suppress web/emulator quirks */ }
       locationSubRef.current = null;
       return;
     }
@@ -220,7 +222,7 @@ export function MockDataProvider({ children }: { children: React.ReactNode }) {
     });
 
     return () => {
-      locationSubRef.current?.remove();
+      try { locationSubRef.current?.remove(); } catch { /* suppress web/emulator quirks */ }
       locationSubRef.current = null;
     };
   }, [locationPermitted, state.isTripActive]);
@@ -337,7 +339,7 @@ export function MockDataProvider({ children }: { children: React.ReactNode }) {
     // Fire and forget the GPS & network calls so we don't block the button
     (async () => {
       let gpsBody: { lat?: number; lon?: number } = {};
-      if (locationPermitted) {
+      if (locationPermitted && Platform.OS !== 'web') {
         try {
           // getLastKnown resolves instantly; if null, fallback to getCurrent
           const pos = await Location.getLastKnownPositionAsync() || await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
