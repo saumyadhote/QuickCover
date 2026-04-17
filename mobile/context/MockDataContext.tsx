@@ -26,6 +26,8 @@ type AppState = {
   lastTxnId: string | null;
   currentMicroFee: number;
   currentRiskLevel: 'Low' | 'Medium' | 'High';
+  // Trips completed today (since midnight UTC) — drives Today's Journey timeline
+  todayTripCount: number;
 };
 
 type Eligibility = {
@@ -74,6 +76,21 @@ type GpsPing = {
   accuracy: number;
 };
 
+export type VerificationResult = {
+  fraudScore: number;
+  fraudTier: string;
+  fraudFlags: string[];
+  gpsSignals: number;
+  genAI: {
+    confidence: number;
+    authentic: boolean;
+    reason: string;
+    model: string;
+    txnRef: string;
+    action: string;
+  } | null;
+};
+
 type MockDataContextType = {
   state: AppState;
   loading: boolean;
@@ -81,6 +98,7 @@ type MockDataContextType = {
   eligibility: Eligibility;
   recentClaims: RecentClaim[];
   stats: AppStats;
+  verificationResult: VerificationResult | null;
   acceptTrip: () => Promise<void>;
   completeTrip: () => Promise<void>;
   submitClaim: (type: string, message: string, hoursWorked: number, imageBase64?: string) => Promise<void>;
@@ -96,6 +114,7 @@ const FALLBACK_STATE: AppState = {
   lastTxnId: null,
   currentMicroFee: 2.0,
   currentRiskLevel: 'Low',
+  todayTripCount: 5, // mock seed — real count comes from backend once deployed
 };
 
 const MockDataContext = createContext<MockDataContextType | null>(null);
@@ -116,6 +135,7 @@ export function MockDataProvider({ children }: { children: React.ReactNode }) {
   const [eligibility, setEligibility] = useState<Eligibility>(FALLBACK_ELIGIBILITY);
   const [recentClaims, setRecentClaims] = useState<RecentClaim[]>([]);
   const [stats, setStats] = useState<AppStats>(FALLBACK_STATS);
+  const [verificationResult, setVerificationResult] = useState<VerificationResult | null>(null);
   // Track whether we've already warned so we don't spam the console
   const warnedRef = useRef(false);
   const tokenRef = useRef(token);
@@ -237,7 +257,10 @@ export function MockDataProvider({ children }: { children: React.ReactNode }) {
           // fast-poll handles updates during processing/approved
           setState(prev => {
             const inFlight = prev.claimStatus === 'processing' || prev.claimStatus === 'approved';
-            return inFlight ? prev : statusRes.data;
+            if (inFlight) return prev;
+            const next: AppState = statusRes.data;
+            // Preserve todayTripCount from prev when old backend omits it
+            return { ...next, todayTripCount: next.todayTripCount ?? prev.todayTripCount };
           });
           if (eligRes) {
             setEligibility(eligRes.data);
@@ -288,7 +311,10 @@ export function MockDataProvider({ children }: { children: React.ReactNode }) {
       if (cancelled) return;
       try {
         const res = await axios.get(`${API_URL}/status`, { timeout: 4000, headers: authHeaders() });
-        if (!cancelled) setState(res.data);
+        if (!cancelled) setState(prev => {
+          const next: AppState = res.data;
+          return { ...next, todayTripCount: next.todayTripCount ?? prev.todayTripCount };
+        });
       } catch { /* silent */ }
     };
 
@@ -335,14 +361,12 @@ export function MockDataProvider({ children }: { children: React.ReactNode }) {
 
   // ---- submitClaim -------------------------------------------------------
   const submitClaim = async (type: string, message: string, hoursWorked: number, imageBase64?: string) => {
-    // Optimistically show timeline immediately — prevents flash back to empty state
-    // while the backend processes the claim (4s delay before DB updates)
+    // Reset verification result for the new claim
+    setVerificationResult(null);
+    // Optimistically show timeline immediately
     setState(prev => prev ? { ...prev, claimStatus: 'processing' } : prev);
-    
-    // Capture the accumulated GPS trace and device metadata for fraud scoring.
-    // The backend scoreClaim() uses these for mock-location detection, teleportation
-    // checks, and behavioural sanity — no GPS = defaults to clean (no penalty).
-    const gpsTrace = [...gpsTraceRef.current]; // snapshot, not a live ref
+
+    const gpsTrace = [...gpsTraceRef.current];
     const lastPing = gpsTrace[gpsTrace.length - 1];
 
     const deviceData = {
@@ -362,11 +386,11 @@ export function MockDataProvider({ children }: { children: React.ReactNode }) {
     };
 
     if (!backendOnline) {
-       console.log('[MockDataContext] Offline mode: Queuing claim directly to AsyncStorage');
-       const existingQueueStr = await AsyncStorage.getItem('@offline_claims');
-       const existingQueue = existingQueueStr ? JSON.parse(existingQueueStr) : [];
-       await AsyncStorage.setItem('@offline_claims', JSON.stringify([...existingQueue, claimPayload]));
-       return;
+      console.log('[MockDataContext] Offline mode: Queuing claim directly to AsyncStorage');
+      const existingQueueStr = await AsyncStorage.getItem('@offline_claims');
+      const existingQueue = existingQueueStr ? JSON.parse(existingQueueStr) : [];
+      await AsyncStorage.setItem('@offline_claims', JSON.stringify([...existingQueue, claimPayload]));
+      return;
     }
 
     console.log(
@@ -374,48 +398,73 @@ export function MockDataProvider({ children }: { children: React.ReactNode }) {
       `last accuracy: ${deviceData.locationAccuracy}m, platform: ${deviceData.platform}`
     );
 
+    const runAdjudication = async (fraudScore: number, fraudTier: string, fraudFlags: string[]) => {
+      try {
+        const adjRes = await axios.post(`${API_URL}/claim/adjudicate`, {
+          claimId: `local-${Date.now()}`,
+          disruptionType: type,
+          zone: 'ZONE_A',
+          timestamp: new Date().toISOString(),
+          imageBase64: imageBase64 ?? null,
+          gpsLat: lastPing?.lat ?? null,
+          gpsLng: lastPing?.lng ?? null,
+        }, { headers: authHeaders(), timeout: 20000 });
+        const d = adjRes.data;
+        setVerificationResult({
+          fraudScore,
+          fraudTier,
+          fraudFlags,
+          gpsSignals: gpsTrace.length,
+          genAI: {
+            confidence: d.confidence_score ?? 0,
+            authentic: d.is_authentic_disruption ?? false,
+            reason: d.reason ?? '',
+            model: d.model ?? 'unknown',
+            txnRef: d.txnRef ?? '',
+            action: d.action ?? '',
+          },
+        });
+        return d;
+      } catch (adjErr) {
+        console.error('[MockDataContext] Adjudication failed:', adjErr);
+        setVerificationResult({
+          fraudScore,
+          fraudTier,
+          fraudFlags,
+          gpsSignals: gpsTrace.length,
+          genAI: null,
+        });
+        return null;
+      }
+    };
+
     try {
-      // Validate string base64 existence
-      const hasImage = Boolean(imageBase64 && imageBase64.length > 100);
-      
-      const res = await axios.post(`${API_URL}/trigger-disruption`, claimPayload, { headers: authHeaders(), validateStatus: (status) => status < 500 });
-      
+      const res = await axios.post(`${API_URL}/trigger-disruption`, claimPayload, {
+        headers: authHeaders(),
+        validateStatus: (status) => status < 500,
+      });
+
       if (res.status === 202) {
-        // Quarantined — Auto-trigger GenAI Vision Adjudication if we have an image
-        console.log('[MockDataContext] Claim quarantined (202). Processing GenAI auto-adjudication...');
-        
-        setState(res.data.state); // optimistic review state
-        
-        if (hasImage) {
-           try {
-             const adjudicateRes = await axios.post(`${API_URL}/claim/adjudicate`, {
-               claimId: `local-${Date.now()}`,
-               disruptionType: type,
-               zone: 'ZONE_A',
-               timestamp: new Date().toISOString(),
-               imageBase64: imageBase64,
-               gpsLat: lastPing?.lat,
-               gpsLng: lastPing?.lng,
-             }, { headers: authHeaders() });
-             
-             // Update state after GenAI result (success or reject)
-             if (adjudicateRes.data && adjudicateRes.data.payment_status === 'success') {
-                console.log(`[MockDataContext] GenAI Approved. Payout: ₹${adjudicateRes.data.payoutAmount}`);
-                // The backend updates global state returning paid claim, but we do a fast query just in case
-                const statusRes = await axios.get(`${API_URL}/status`, { timeout: 4000, headers: authHeaders() });
-                setState(statusRes.data);
-                fetchRecentClaims();
-                fetchStats();
-                return;
-             }
-           } catch (adjErr) {
-             console.error('[MockDataContext] Auto-adjudication failed:', adjErr);
-           }
+        // Quarantined — run GenAI adjudication
+        console.log('[MockDataContext] Claim quarantined (202). Running GenAI adjudication...');
+        setState(res.data.state);
+        const fraudResult = res.data.fraud_result ?? { score: 0, tier: 'quarantine', flags: [], reason: '' };
+        const adjData = await runAdjudication(fraudResult.score, fraudResult.tier, fraudResult.flags ?? []);
+        if (adjData?.payment_status === 'success') {
+          console.log(`[MockDataContext] GenAI Approved. Payout: ₹${adjData.payoutAmount}`);
+          const statusRes = await axios.get(`${API_URL}/status`, { timeout: 4000, headers: authHeaders() });
+          setState(statusRes.data);
+          fetchRecentClaims();
+          fetchStats();
+          return;
         }
       } else {
+        // Auto-approved — set state and run adjudication in background for demo visibility
         setState(res.data.state);
+        const fraudResult = res.data.fraud_result ?? { score: 0, tier: 'auto_approve', flags: [], reason: '' };
+        runAdjudication(fraudResult.score, fraudResult.tier, fraudResult.flags ?? []);
       }
-      
+
       fetchRecentClaims();
       fetchStats();
     } catch (err: any) {
@@ -425,7 +474,6 @@ export function MockDataProvider({ children }: { children: React.ReactNode }) {
         const existingQueue = existingQueueStr ? JSON.parse(existingQueueStr) : [];
         await AsyncStorage.setItem('@offline_claims', JSON.stringify([...existingQueue, claimPayload]));
       } else {
-        // Backend rejected the claim (e.g. ineligible)
         const serverMsg = err?.response?.data?.error;
         console.warn('[submitClaim] rejected:', serverMsg);
         setState(prev => prev ? { ...prev, claimStatus: 'none' } : prev);
@@ -441,8 +489,6 @@ export function MockDataProvider({ children }: { children: React.ReactNode }) {
         ? {
             ...prev,
             isTripActive: false,
-            weeklyEarnings: prev.weeklyEarnings + 45,
-            weeklyProtected: prev.weeklyProtected + prev.weeklyEarnings * 0.1,
           }
         : prev
     );
@@ -454,8 +500,11 @@ export function MockDataProvider({ children }: { children: React.ReactNode }) {
       try {
         const headers = authHeaders();
         const res = await axios.post(`${API_URL}/complete-trip`, {}, { headers });
-        setState(res.data.state);
-        // Refresh eligibility silently in the background
+        setState(prev => ({
+          ...res.data.state,
+          // complete-trip response doesn't include todayTripCount — increment locally
+          todayTripCount: (prev.todayTripCount ?? 0) + 1,
+        }));
         const eligRes = await axios.get(`${API_URL}/eligibility`, { timeout: 4000, headers });
         setEligibility(eligRes.data);
       } catch {
@@ -465,7 +514,7 @@ export function MockDataProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <MockDataContext.Provider value={{ state, loading, backendOnline, eligibility, recentClaims, stats, acceptTrip, completeTrip, submitClaim }}>
+    <MockDataContext.Provider value={{ state, loading, backendOnline, eligibility, recentClaims, stats, verificationResult, acceptTrip, completeTrip, submitClaim }}>
       {children}
     </MockDataContext.Provider>
   );

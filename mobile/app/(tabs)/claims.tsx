@@ -4,12 +4,13 @@ import {
   TextInput, KeyboardAvoidingView, Platform, Image, Alert,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { useMockData } from '../../context/MockDataContext';
+import { useMockData, VerificationResult } from '../../context/MockDataContext';
 import { AppLogo } from '../components/AppLogo';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
   CheckCircle2, Clock, Circle, Camera, Image as ImageIcon,
   ChevronDown, X, Plus, Filter, ChevronRight, ShieldCheck,
+  ShieldAlert, Cpu, MapPin, Wifi,
 } from 'lucide-react-native';
 
 const DISRUPTION_TYPES = [
@@ -237,6 +238,107 @@ function CoverageHonoredCard({ disruptionType }: { disruptionType?: string }) {
   );
 }
 
+// ── Verification Result Card ─────────────────────────────────────────────────
+function VerificationResultCard({ result }: { result: VerificationResult }) {
+  const tierColor  = result.fraudTier === 'auto_approve' ? '#16a34a' : result.fraudTier === 'quarantine' ? '#d97706' : '#dc2626';
+  const tierBg     = result.fraudTier === 'auto_approve' ? '#dcfce7' : result.fraudTier === 'quarantine' ? '#fef3c7' : '#fee2e2';
+  const tierLabel  = result.fraudTier === 'auto_approve' ? 'Clean' : result.fraudTier === 'quarantine' ? 'Reviewed' : 'Rejected';
+
+  const conf       = result.genAI?.confidence ?? 0;
+  const confPct    = Math.round(conf * 100);
+  const confColor  = conf >= 0.75 ? '#16a34a' : conf >= 0.40 ? '#d97706' : '#dc2626';
+  const actionLabel: Record<string, string> = {
+    payout_released: 'Payout Released',
+    escalated_to_analyst: 'Escalated',
+    auto_rejected: 'Auto-Rejected',
+  };
+
+  return (
+    <View style={{
+      backgroundColor: '#ffffff',
+      borderRadius: 20,
+      padding: 20,
+      borderWidth: 1,
+      borderColor: '#e2e8f0',
+      marginBottom: 16,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.06,
+      shadowRadius: 8,
+      elevation: 2,
+    }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16, gap: 8 }}>
+        <Cpu color="#7c3aed" size={16} />
+        <Text style={{ fontWeight: '800', fontSize: 15, color: '#0f172a', flex: 1 }}>Verification Results</Text>
+      </View>
+
+      {/* Anti-spoofing row */}
+      <View style={{ backgroundColor: '#f8fafc', borderRadius: 14, padding: 14, marginBottom: 12 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10, gap: 6 }}>
+          <MapPin color="#475569" size={13} />
+          <Text style={{ fontSize: 12, fontWeight: '700', color: '#475569', textTransform: 'uppercase', letterSpacing: 0.6 }}>Anti-Spoofing GPS</Text>
+        </View>
+        <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+          <View style={{ backgroundColor: '#ede9fe', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5 }}>
+            <Text style={{ fontSize: 11, fontWeight: '700', color: '#6d28d9' }}>{result.gpsSignals} GPS signal{result.gpsSignals !== 1 ? 's' : ''}</Text>
+          </View>
+          <View style={{ backgroundColor: tierBg, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5 }}>
+            <Text style={{ fontSize: 11, fontWeight: '700', color: tierColor }}>{tierLabel}</Text>
+          </View>
+          <View style={{ backgroundColor: '#f1f5f9', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5 }}>
+            <Text style={{ fontSize: 11, fontWeight: '600', color: '#64748b' }}>Score {result.fraudScore.toFixed(2)}</Text>
+          </View>
+        </View>
+        {result.fraudFlags.length > 0 && (
+          <Text style={{ fontSize: 11, color: '#d97706', marginTop: 8, lineHeight: 16 }}>
+            Flags: {result.fraudFlags.join(', ')}
+          </Text>
+        )}
+      </View>
+
+      {/* GenAI row */}
+      {result.genAI ? (
+        <View style={{ backgroundColor: '#f8fafc', borderRadius: 14, padding: 14 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10, gap: 6 }}>
+            <ShieldAlert color="#475569" size={13} />
+            <Text style={{ fontSize: 12, fontWeight: '700', color: '#475569', textTransform: 'uppercase', letterSpacing: 0.6 }}>AI Vision Check</Text>
+          </View>
+          {/* Confidence bar */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 10 }}>
+            <View style={{ flex: 1, height: 6, backgroundColor: '#e2e8f0', borderRadius: 3, overflow: 'hidden' }}>
+              <View style={{ width: `${confPct}%`, height: '100%', backgroundColor: confColor, borderRadius: 3 }} />
+            </View>
+            <Text style={{ fontSize: 12, fontWeight: '800', color: confColor, minWidth: 36 }}>{confPct}%</Text>
+          </View>
+          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
+            <View style={{ backgroundColor: result.genAI.authentic ? '#dcfce7' : '#fee2e2', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 }}>
+              <Text style={{ fontSize: 11, fontWeight: '700', color: result.genAI.authentic ? '#16a34a' : '#dc2626' }}>
+                {result.genAI.authentic ? 'Authentic' : 'Not Authentic'}
+              </Text>
+            </View>
+            {result.genAI.action && (
+              <View style={{ backgroundColor: '#f1f5f9', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 }}>
+                <Text style={{ fontSize: 11, fontWeight: '600', color: '#64748b' }}>
+                  {actionLabel[result.genAI.action] ?? result.genAI.action}
+                </Text>
+              </View>
+            )}
+          </View>
+          {result.genAI.reason !== '' && (
+            <Text style={{ fontSize: 12, color: '#475569', lineHeight: 18, marginBottom: 6 }}>{result.genAI.reason}</Text>
+          )}
+          <Text style={{ fontSize: 10, color: '#94a3b8' }}>Model: {result.genAI.model}</Text>
+        </View>
+      ) : (
+        <View style={{ backgroundColor: '#f8fafc', borderRadius: 14, padding: 14, alignItems: 'center' }}>
+          <Clock color="#94a3b8" size={14} />
+          <Text style={{ fontSize: 12, color: '#94a3b8', marginTop: 4 }}>AI verification pending…</Text>
+        </View>
+      )}
+    </View>
+  );
+}
+
 // ── Claim Status Timeline ────────────────────────────────────────────────────
 function ClaimTimeline({ claimStatus, lastTxnId }: { claimStatus: string; lastTxnId?: string | null }) {
   const isClaimSubmitted = claimStatus !== 'none';
@@ -273,7 +375,7 @@ function ClaimTimeline({ claimStatus, lastTxnId }: { claimStatus: string; lastTx
 
 // ── Main Screen ──────────────────────────────────────────────────────────────
 export default function ClaimsScreen() {
-  const { state, submitClaim, eligibility, recentClaims, stats } = useMockData();
+  const { state, submitClaim, eligibility, recentClaims, stats, verificationResult } = useMockData();
   const [formOpen, setFormOpen] = useState(false);
   const [ineligiblePopup, setIneligiblePopup] = useState(false);
   const [submittingId, setSubmittingId] = useState<string | null>(null);
@@ -395,6 +497,11 @@ export default function ClaimsScreen() {
           {/* Active claim timeline — shown for processing / approved / paid */}
           {!showInitial && !isCoverageHonored && (
             <ClaimTimeline claimStatus={state?.claimStatus ?? 'none'} lastTxnId={state?.lastTxnId} />
+          )}
+
+          {/* Verification result — anti-spoofing + GenAI, shown once available */}
+          {!showInitial && verificationResult && (
+            <VerificationResultCard result={verificationResult} />
           )}
 
           {/* File another after payout or after coverage honored */}

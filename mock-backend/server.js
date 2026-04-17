@@ -98,22 +98,39 @@ app.get('/status', async (req, res) => {
     const stateRow = await dbGet('SELECT * FROM state WHERE id = 1');
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
+    // Midnight UTC today — Today's Journey resets here each day
+    const todayMidnight = new Date();
+    todayMidnight.setUTCHours(0, 0, 0, 0);
+    const midnightISO = todayMidnight.toISOString();
+
     // Calculate real aggregate stats for the authenticated user
-    const stats = userId 
+    const stats = userId
       ? await dbGet(
-          `SELECT 
+          `SELECT
             COUNT(*) as total_trips,
             SUM(earnings) as total_earnings,
             SUM("protectedAmount") as total_protected
-           FROM trips 
+           FROM trips
            WHERE "userId" = $1 AND timestamp >= $2 AND (status = 'completed' OR status = 'disrupted' OR status = 'paid' OR status = 'coverage_honored')`,
           [userId, sevenDaysAgo]
         )
-      : { total_trips: 0, total_earnings: 3200, total_protected: 0 }; // Fallback for unauthenticated
+      : { total_trips: 0, total_earnings: 3200, total_protected: 0 };
+
+    // Today-only count — drives the Today's Journey timeline (resets at midnight UTC)
+    const todayStats = userId
+      ? await dbGet(
+          `SELECT COUNT(*) as today_count
+           FROM trips
+           WHERE "userId" = $1 AND timestamp >= $2 AND (status = 'completed' OR status = 'disrupted')`,
+          [userId, midnightISO]
+        )
+      : { today_count: 0 };
 
     const formatted = formatState(stateRow);
     formatted.weeklyEarnings = stats.total_earnings || 0;
     formatted.weeklyProtected = stats.total_protected || 0;
+    const rawToday = todayStats?.today_count ?? todayStats?.['COUNT(*)'] ?? 0;
+    formatted.todayTripCount = parseInt(String(rawToday), 10) || 0;
 
     res.json(formatted);
   } catch (error) {
@@ -167,7 +184,8 @@ app.get('/eligibility', async (req, res) => {
              AND timestamp >= $1`,
           [sevenDaysAgo]
         );
-    const tripCount = parseInt(row?.cnt ?? row?.count ?? 0, 10);
+    const rawCount = row?.cnt ?? row?.count ?? row?.['COUNT(*)'] ?? row?.CNT ?? 0;
+    const tripCount = parseInt(String(rawCount), 10) || 0;
     const eligible = tripCount >= MINIMUM_WEEKLY_TRIPS;
     res.json({ eligible, tripCount, required: MINIMUM_WEEKLY_TRIPS });
   } catch (error) {
@@ -350,7 +368,8 @@ app.post('/trigger-disruption', async (req, res) => {
              AND timestamp >= $1`,
           [sevenDaysAgo]
         );
-    const recentTripCount = parseInt(recentTripsRow?.cnt ?? recentTripsRow?.count ?? 0, 10);
+    const rawRecentCount = recentTripsRow?.cnt ?? recentTripsRow?.count ?? recentTripsRow?.['COUNT(*)'] ?? 0;
+    const recentTripCount = parseInt(String(rawRecentCount), 10) || 0;
 
     if (recentTripCount < MINIMUM_WEEKLY_TRIPS) {
       return res.status(403).json({
@@ -582,6 +601,12 @@ app.post('/trigger-disruption', async (req, res) => {
         trips_last_7_days: recentTripCount,
         weather_verified: weatherVerified,
         weather_note: weatherNote,
+      },
+      fraud_result: {
+        score: fraudResult.score,
+        tier: fraudResult.tier,
+        flags: fraudResult.flags,
+        reason: fraudResult.reason,
       },
     });
 
@@ -1245,34 +1270,45 @@ async function seedDemoAccount() {
       await dbRun(
         `INSERT INTO users (name, email, "passwordHash", phone, "driverId", platform, "createdAt")
          VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-        ['Demo Driver', 'demo@quickcover.in', hash, '+91 9999999999', 'DEMO-2024-00001', 'blinkit', new Date().toISOString()]
+        ['Arjun Kumar', 'demo@quickcover.in', hash, '+91 98765 43210', 'BLK-2024-12847', 'blinkit', new Date('2025-03-01').toISOString()]
       );
-      console.log('✅ Demo account seeded: demo@quickcover.in / demo1234');
+      console.log('✅ Demo account seeded: demo@quickcover.in / demo1234 (Arjun Kumar)');
       user = await dbGet('SELECT id FROM users WHERE email = $1', ['demo@quickcover.in']);
+    } else {
+      // Keep persona details up to date on existing accounts
+      await dbRun(
+        `UPDATE users SET name = $1, phone = $2, "driverId" = $3 WHERE email = $4`,
+        ['Arjun Kumar', '+91 98765 43210', 'BLK-2024-12847', 'demo@quickcover.in']
+      );
     }
 
-    // Ensure demo user always has 25 recent trips for eligibility — re-seed on every startup
-    // so timestamps stay within the 7-day window regardless of when Render last deployed.
-    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-    const recentRow = await dbGet(
-      `SELECT COUNT(*) AS cnt FROM trips WHERE "userId" = $1 AND timestamp >= $2 AND (status = 'completed' OR status = 'disrupted')`,
-      [user.id, sevenDaysAgo]
-    );
-    const recentCount = parseInt(recentRow?.cnt ?? recentRow?.count ?? 0, 10);
-    const needed = 25 - recentCount;
-    if (needed > 0) {
-      for (let i = 0; i < needed; i++) {
-        // Spread trips across the last 6 days so they look organic
-        const hoursAgo = Math.floor((i / needed) * 6 * 24);
-        const ts = new Date(Date.now() - hoursAgo * 60 * 60 * 1000).toISOString();
-        const seedEarning = Math.floor(Math.random() * (90 - 50 + 1)) + 50;
-        await dbRun(
-          `INSERT INTO trips (status, earnings, "protectedAmount", timestamp, "userId") VALUES ($1, $2, $3, $4, $5)`,
-          ['completed', seedEarning, 0, ts, user.id]
-        );
-      }
-      console.log(`✅ Demo account: seeded ${needed} recent trips (total ≥ 25 in last 7 days)`);
+    // Wipe all existing trips for Arjun and re-seed exactly 25 fresh ones every startup.
+    // This prevents accumulated test runs from inflating weeklyEarnings to unrealistic values.
+    await dbRun(`DELETE FROM trips WHERE "userId" = $1`, [user.id]);
+
+    const seedTrip = async (hoursAgo) => {
+      const ts = new Date(Date.now() - hoursAgo * 60 * 60 * 1000).toISOString();
+      const earning = Math.floor(Math.random() * (90 - 55 + 1)) + 55;
+      await dbRun(
+        `INSERT INTO trips (status, earnings, "protectedAmount", timestamp, "userId") VALUES ($1, $2, $3, $4, $5)`,
+        ['completed', earning, 0, ts, user.id]
+      );
+    };
+
+    // Today's 5 trips: within the last 1–7 hours so they always appear in Today's Journey
+    // regardless of what time of day (UTC) the server restarts.
+    for (let i = 0; i < 5; i++) {
+      await seedTrip(1 + i * 1.2); // 1h, 2.2h, 3.4h, 4.6h, 5.8h ago
     }
+
+    // Past 20 trips: spread evenly across the previous 6 days (NOT today)
+    for (let i = 0; i < 20; i++) {
+      const hoursAgo = 26 + Math.floor((i / 20) * (6 * 24 - 26));
+      await seedTrip(hoursAgo);
+    }
+
+    // Total: 25 trips in 7 days → eligible. Today's Journey shows 5. Weekly earnings ≈ ₹1,800.
+    console.log(`✅ Arjun Kumar: seeded 5 today + 20 past-week trips (weekly earnings ≈ ₹1,800)`);
   } catch (err) {
     console.error('Demo seed error (non-fatal):', err.message);
   }

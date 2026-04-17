@@ -116,24 +116,27 @@ function TodayJourneyTimeline({
   weeklyEarnings: number;
   weeklyProtected: number;
 }) {
-  const visibleTrips = Math.min(isTripActive ? tripCount + 1 : tripCount, 5);
+  const totalTrips = isTripActive ? tripCount + 1 : tripCount;
 
-  if (visibleTrips === 0) return null;
+  if (totalTrips === 0) return null;
 
-  // Fixed realistic per-trip earnings (matching Blinkit average payout)
-  const perTrip = 70;
+  // Show last 5 trips max — scroll window moves forward as more trips are completed.
+  // Always include the active trip if one is in progress.
+  const WINDOW = 5;
+  const windowStart = Math.max(0, totalTrips - WINDOW);
+  const visibleCount = totalTrips - windowStart;
 
   // Generate display-only timestamps working backwards from now
   const now = new Date();
-  const entries = Array.from({ length: visibleTrips }, (_, i) => {
-    const isActive = isTripActive && i === visibleTrips - 1;
-    const minsBack = (visibleTrips - 1 - i) * 35 + (isActive ? 0 : 8);
+  const entries = Array.from({ length: visibleCount }, (_, i) => {
+    const tripIndex = windowStart + i; // 0-based absolute trip index
+    const isActive = isTripActive && tripIndex === totalTrips - 1;
+    const minsBack = (visibleCount - 1 - i) * 35 + (isActive ? 0 : 8);
     const t = new Date(now.getTime() - minsBack * 60000);
     const hh = String(t.getHours()).padStart(2, '0');
     const mm = String(t.getMinutes()).padStart(2, '0');
-    // Pseudorandom realistic earning per trip based on index for variety
-    const variedEarn = 50 + ((i * 17) % 45) + (i % 2 === 0 ? 5 : 0);
-    return { time: `${hh}:${mm}`, isActive, earn: isActive ? null : variedEarn };
+    const variedEarn = 50 + ((tripIndex * 17) % 45) + (tripIndex % 2 === 0 ? 5 : 0);
+    return { tripNumber: tripIndex + 1, time: `${hh}:${mm}`, isActive, earn: isActive ? null : variedEarn };
   });
 
   return (
@@ -143,7 +146,12 @@ function TodayJourneyTimeline({
       shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2,
     }}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <Text style={{ fontWeight: '800', fontSize: 15, color: '#0f172a' }}>Today's Journey</Text>
+        <View>
+          <Text style={{ fontWeight: '800', fontSize: 15, color: '#0f172a' }}>Today's Journey</Text>
+          {windowStart > 0 && (
+            <Text style={{ fontSize: 10, color: '#94a3b8', marginTop: 2 }}>showing trips {windowStart + 1}–{totalTrips}</Text>
+          )}
+        </View>
         {weeklyProtected > 0 && (
           <View style={{ backgroundColor: '#f0fdf4', borderRadius: 8, paddingHorizontal: 9, paddingVertical: 4, borderWidth: 1, borderColor: '#bbf7d0' }}>
             <Text style={{ fontSize: 10, fontWeight: '700', color: '#16a34a' }}>₹{weeklyProtected.toLocaleString()} protected</Text>
@@ -152,7 +160,7 @@ function TodayJourneyTimeline({
       </View>
 
       {entries.map((e, i) => (
-        <View key={i} style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+        <View key={e.tripNumber} style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
           {/* Timeline spine */}
           <View style={{ width: 32, alignItems: 'center' }}>
             <View style={{
@@ -171,7 +179,7 @@ function TodayJourneyTimeline({
           }}>
             <View>
               <Text style={{ fontSize: 13, fontWeight: '700', color: e.isActive ? '#7c3aed' : '#0f172a' }}>
-                {e.isActive ? 'Trip in progress…' : `Trip #${i + 1} completed`}
+                {e.isActive ? 'Trip in progress…' : `Trip #${e.tripNumber} completed`}
               </Text>
               <Text style={{ fontSize: 11, color: '#94a3b8', marginTop: 1 }}>{e.time}</Text>
             </View>
@@ -305,7 +313,7 @@ export default function DashboardScreen() {
     );
   }
 
-  const { isTripActive, disruption, claimStatus, weeklyEarnings, weeklyProtected, lastPayoutAmount, lastTxnId, currentMicroFee, currentRiskLevel } = state;
+  const { isTripActive, disruption, claimStatus, weeklyEarnings, weeklyProtected, lastPayoutAmount, lastTxnId, currentMicroFee, currentRiskLevel, todayTripCount } = state;
   const firstName = user?.name?.split(' ')[0] ?? 'there';
   const initial = user?.name?.[0]?.toUpperCase() ?? '?';
   const today = new Date();
@@ -518,7 +526,7 @@ export default function DashboardScreen() {
 
         {/* ── Today's Journey Timeline ── */}
         <TodayJourneyTimeline
-          tripCount={eligibility.tripCount}
+          tripCount={todayTripCount}
           isTripActive={isTripActive}
           weeklyEarnings={weeklyEarnings}
           weeklyProtected={weeklyProtected}
@@ -526,7 +534,7 @@ export default function DashboardScreen() {
 
         {/* ── Today's Trips ── */}
         <View style={{ marginTop: 14 }}>
-          <TodaysTrips tripCount={eligibility.tripCount} isTripActive={isTripActive} />
+          <TodaysTrips tripCount={todayTripCount} isTripActive={isTripActive} />
         </View>
 
         {/* ── Weekly Summary ── */}

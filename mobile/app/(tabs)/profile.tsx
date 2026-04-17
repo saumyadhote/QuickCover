@@ -21,8 +21,8 @@ const DISRUPTION_META: Record<string, { icon: string; label: string }> = {
 
 const PAYOUT_METHODS = [
   { icon: <Wallet color="#7c3aed" size={20} />, bg: '#f5f3ff', label: 'In-app Wallet', sub: 'Balance: ₹435', isPrimary: true },
-  { icon: <CreditCard color="#0ea5e9" size={20} />, bg: '#f0f9ff', label: 'UPI', sub: 'arjun@okaxis', isPrimary: false },
-  { icon: <Building2 color="#64748b" size={20} />, bg: '#f8fafc', label: 'Bank Transfer', sub: 'HDFC — 4321', isPrimary: false },
+  { icon: <CreditCard color="#0ea5e9" size={20} />, bg: '#f0f9ff', label: 'UPI', sub: 'arjun.kumar@okaxis', isPrimary: false },
+  { icon: <Building2 color="#64748b" size={20} />, bg: '#f8fafc', label: 'Bank Transfer', sub: 'HDFC — ••••4321', isPrimary: false },
 ];
 
 export default function ProfileScreen() {
@@ -33,8 +33,7 @@ export default function ProfileScreen() {
 
   const initial = user?.name?.[0]?.toUpperCase() ?? '?';
   const displayPhone = user?.phone ? user.phone.replace(/^(?:\+?91\s*)+/, '+91 ') : '—';
-  const isDemo = user?.email === 'demo@quickcover.in';
-  const methodsToDisplay = isDemo ? PAYOUT_METHODS : [];
+  const methodsToDisplay = user?.email === 'demo@quickcover.in' ? PAYOUT_METHODS : [];
   const platformLabel = user?.platform
     ? user.platform.charAt(0).toUpperCase() + user.platform.slice(1) + ' Partner'
     : 'Partner';
@@ -81,7 +80,7 @@ export default function ProfileScreen() {
                   <View style={{ backgroundColor: 'rgba(74,222,128,0.15)', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1, borderColor: 'rgba(74,222,128,0.25)' }}>
                     <Text style={{ fontSize: 10, fontWeight: '800', color: '#4ade80' }}>{platformLabel}</Text>
                   </View>
-                  <Text style={{ fontSize: 11, color: '#64748b' }}>Member since Jan 2025</Text>
+                  <Text style={{ fontSize: 11, color: '#64748b' }}>Member since Mar 2025</Text>
                 </View>
               </View>
             </View>
