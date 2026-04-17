@@ -42,7 +42,7 @@ function ActiveTripCard({ claimStatus, weeklyProtected, weeklyEarnings, lastPayo
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
         <View>
           <Text style={{ fontSize: 11, color: '#64748b', fontWeight: '500', marginBottom: 2 }}>This week's earnings</Text>
-          <Text style={{ fontSize: 22, fontWeight: '800', color: '#ffffff' }}>₹{weeklyEarnings.toLocaleString()}</Text>
+          <Text style={{ fontSize: 22, fontWeight: '800', color: '#ffffff' }}>₹{(weeklyEarnings ?? 0).toLocaleString()}</Text>
         </View>
         <View style={{ backgroundColor: 'rgba(74,222,128,0.15)', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5, borderWidth: 1, borderColor: 'rgba(74,222,128,0.3)' }}>
           <Text style={{ color: '#4ade80', fontSize: 12, fontWeight: '700' }}>Active</Text>
@@ -54,7 +54,7 @@ function ActiveTripCard({ claimStatus, weeklyProtected, weeklyEarnings, lastPayo
         <View style={{ marginTop: 12, backgroundColor: 'rgba(74,222,128,0.1)', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 9, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(74,222,128,0.25)' }}>
           <CheckCircle2 color="#4ade80" size={15} />
           <Text style={{ color: '#4ade80', fontSize: 13, fontWeight: '700', marginLeft: 8 }}>
-            ₹{lastPayoutAmount.toLocaleString()} Auto-credited
+            ₹{(lastPayoutAmount ?? 0).toLocaleString()} Auto-credited
           </Text>
         </View>
       )}
@@ -154,7 +154,7 @@ function TodayJourneyTimeline({
         </View>
         {weeklyProtected > 0 && (
           <View style={{ backgroundColor: '#f0fdf4', borderRadius: 8, paddingHorizontal: 9, paddingVertical: 4, borderWidth: 1, borderColor: '#bbf7d0' }}>
-            <Text style={{ fontSize: 10, fontWeight: '700', color: '#16a34a' }}>₹{weeklyProtected.toLocaleString()} protected</Text>
+            <Text style={{ fontSize: 10, fontWeight: '700', color: '#16a34a' }}>₹{(weeklyProtected ?? 0).toLocaleString()} protected</Text>
           </View>
         )}
       </View>
@@ -386,7 +386,7 @@ export default function DashboardScreen() {
               <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 6, alignSelf: 'flex-start', maxWidth: '85%', flexWrap: 'wrap' }}>
                 <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: riskColor, marginRight: 7 }} />
                 <Text style={{ fontSize: 11, color: '#c4b5fd', fontWeight: '600', marginRight: 6 }} numberOfLines={1}>
-                  Surcharge: <Text style={{ color: '#ffffff', fontWeight: '800' }}>₹{currentMicroFee.toFixed(2)}</Text>
+                  Surcharge: <Text style={{ color: '#ffffff', fontWeight: '800' }}>₹{(currentMicroFee ?? 2).toFixed(2)}</Text>
                 </Text>
                 <View style={{ backgroundColor: riskColor, borderRadius: 5, paddingHorizontal: 6, paddingVertical: 2 }}>
                   <Text style={{ color: '#0f0a1e', fontSize: 9, fontWeight: '800' }}>{currentRiskLevel.toUpperCase()}</Text>
@@ -430,9 +430,9 @@ export default function DashboardScreen() {
               {/* Amount */}
               <View style={{ alignItems: 'center', marginBottom: 18 }}>
                 <Text style={{ color: 'rgba(134,239,172,0.6)', fontSize: 12, fontWeight: '600', marginBottom: 4 }}>Amount Received</Text>
-                <Text style={{ color: '#ffffff', fontSize: 44, fontWeight: '900', letterSpacing: -1 }}>₹{lastPayoutAmount.toLocaleString()}</Text>
+                <Text style={{ color: '#ffffff', fontSize: 44, fontWeight: '900', letterSpacing: -1 }}>₹{(lastPayoutAmount ?? 0).toLocaleString()}</Text>
                 <Text style={{ color: 'rgba(134,239,172,0.7)', fontSize: 12, marginTop: 4 }}>
-                  Protected earnings this week: ₹{weeklyProtected.toLocaleString()}
+                  Protected earnings this week: ₹{(weeklyProtected ?? 0).toLocaleString()}
                 </Text>
               </View>
 
@@ -542,12 +542,12 @@ export default function DashboardScreen() {
           <Text style={{ fontWeight: '700', fontSize: 16, color: '#0f172a', marginBottom: 14 }}>Weekly Summary</Text>
           <View style={{ flexDirection: 'row', gap: 10 }}>
             <View style={{ flex: 1, backgroundColor: '#f5f3ff', borderRadius: 14, padding: 10, alignItems: 'center', justifyContent: 'center' }}>
-              <Text style={{ fontSize: 16, fontWeight: '800', color: '#7c3aed' }} numberOfLines={1} adjustsFontSizeToFit>₹{weeklyEarnings.toLocaleString()}</Text>
+              <Text style={{ fontSize: 16, fontWeight: '800', color: '#7c3aed' }} numberOfLines={1} adjustsFontSizeToFit>₹{(weeklyEarnings ?? 0).toLocaleString()}</Text>
               <Text style={{ fontSize: 10, color: '#7c3aed', marginTop: 3, fontWeight: '600' }}>Earned</Text>
             </View>
             <View style={{ flex: 1, backgroundColor: weeklyProtected > 0 ? '#f0fdf4' : '#f8fafc', borderRadius: 14, padding: 14, alignItems: 'center' }}>
               <Text style={{ fontSize: 18, fontWeight: '800', color: weeklyProtected > 0 ? '#16a34a' : '#94a3b8' }}>
-                {weeklyProtected > 0 ? `₹${weeklyProtected.toLocaleString()}` : '—'}
+                {(weeklyProtected ?? 0) > 0 ? `₹${(weeklyProtected ?? 0).toLocaleString()}` : '—'}
               </Text>
               <Text style={{ fontSize: 11, color: weeklyProtected > 0 ? '#16a34a' : '#94a3b8', marginTop: 3, fontWeight: '600' }}>Protected</Text>
             </View>
@@ -584,7 +584,7 @@ export default function DashboardScreen() {
                 { icon: <User color="#64748b" size={13} />, label: 'Driver ID', value: user?.driverId ?? '—' },
                 { icon: <Smartphone color="#64748b" size={13} />, label: 'Platform', value: user?.platform ? user.platform.charAt(0).toUpperCase() + user.platform.slice(1) : '—' },
                 { icon: <ShieldCheck color={eligibility.eligible ? '#16a34a' : '#dc2626'} size={13} />, label: 'Coverage', value: eligibility.eligible ? `Eligible · ${eligibility.tripCount} trips` : `${eligibility.tripCount}/${eligibility.required} trips`, valueBg: eligibility.eligible ? '#f0fdf4' : '#fef2f2', valueColor: eligibility.eligible ? '#16a34a' : '#dc2626' },
-                { icon: <TrendingUp color="#16a34a" size={13} />, label: 'Weekly Earnings', value: `₹${state.weeklyEarnings.toLocaleString()}` },
+                { icon: <TrendingUp color="#16a34a" size={13} />, label: 'Weekly Earnings', value: `₹${(state.weeklyEarnings ?? 0).toLocaleString()}` },
               ].map((row, i) => (
                 <View key={i} style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: '#f1f5f9', alignItems: 'center', justifyContent: 'center', marginRight: 10 }}>{row.icon}</View>
@@ -628,7 +628,7 @@ export default function DashboardScreen() {
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text style={{ fontWeight: '700', fontSize: 14, color: '#0f172a' }}>Payout Credited</Text>
-                      <Text style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>₹{lastPayoutAmount.toLocaleString()} sent to your wallet</Text>
+                      <Text style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>₹{(lastPayoutAmount ?? 0).toLocaleString()} sent to your wallet</Text>
                       <Text style={{ fontSize: 11, color: '#94a3b8', marginTop: 3 }}>Today</Text>
                     </View>
                   </View>
