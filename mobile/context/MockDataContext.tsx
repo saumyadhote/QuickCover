@@ -352,7 +352,7 @@ export function MockDataProvider({ children }: { children: React.ReactNode }) {
 
       try {
         const res = await axios.post(`${API_URL}/accept-trip`, gpsBody, { headers: authHeaders() });
-        setState(res.data.state);
+        if (res.data?.state) setState(res.data.state);
       } catch {
         // It failed, but we already updated optimistically above to keep UI smooth
       }
@@ -500,11 +500,15 @@ export function MockDataProvider({ children }: { children: React.ReactNode }) {
       try {
         const headers = authHeaders();
         const res = await axios.post(`${API_URL}/complete-trip`, {}, { headers });
-        setState(prev => ({
-          ...res.data.state,
-          // complete-trip response doesn't include todayTripCount — increment locally
-          todayTripCount: (prev.todayTripCount ?? 0) + 1,
-        }));
+        const next = res.data?.state;
+        setState(prev => {
+          if (!next) return prev;
+          return {
+            ...next,
+            // complete-trip response doesn't include todayTripCount — increment locally
+            todayTripCount: (prev.todayTripCount ?? 0) + 1,
+          };
+        });
         const eligRes = await axios.get(`${API_URL}/eligibility`, { timeout: 4000, headers });
         setEligibility(eligRes.data);
       } catch {
