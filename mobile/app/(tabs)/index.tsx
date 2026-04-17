@@ -200,25 +200,7 @@ function TodayJourneyTimeline({
 
 // ── Today's Trips List ───────────────────────────────────────────────────────
 function TodaysTrips({ tripCount, isTripActive }: { tripCount: number; isTripActive: boolean }) {
-  // tripCount from eligibility = completed + disrupted in last 7 days (not just today),
-  // so we show it as a "recent trips" indicator with the real count.
   const displayCount = isTripActive ? tripCount + 1 : tripCount;
-
-  if (tripCount === 0 && !isTripActive) {
-    return (
-      <View style={{ backgroundColor: '#ffffff', borderRadius: 20, padding: 18, marginHorizontal: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-          <Text style={{ fontWeight: '700', fontSize: 16, color: '#0f172a' }}>Recent Trips</Text>
-          <Text style={{ fontSize: 13, color: '#94a3b8', fontWeight: '600' }}>0 trips</Text>
-        </View>
-        <View style={{ alignItems: 'center', paddingVertical: 20 }}>
-          <MapPin color="#cbd5e1" size={28} />
-          <Text style={{ fontSize: 14, color: '#94a3b8', fontWeight: '500', marginTop: 10 }}>No trips yet this week</Text>
-          <Text style={{ fontSize: 12, color: '#cbd5e1', marginTop: 4 }}>Complete trips to build your eligibility</Text>
-        </View>
-      </View>
-    );
-  }
 
   return (
     <View style={{ backgroundColor: '#ffffff', borderRadius: 20, padding: 18, marginHorizontal: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}>
@@ -534,7 +516,7 @@ export default function DashboardScreen() {
 
         {/* ── Today's Trips ── */}
         <View style={{ marginTop: 14 }}>
-          <TodaysTrips tripCount={todayTripCount} isTripActive={isTripActive} />
+          <TodaysTrips tripCount={eligibility.tripCount} isTripActive={isTripActive} />
         </View>
 
         {/* ── Weekly Summary ── */}
