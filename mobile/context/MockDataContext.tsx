@@ -505,8 +505,12 @@ export function MockDataProvider({ children }: { children: React.ReactNode }) {
           if (!next) return prev;
           return {
             ...next,
-            // complete-trip response doesn't include todayTripCount — increment locally
-            todayTripCount: (prev.todayTripCount ?? 0) + 1,
+            // /complete-trip doesn't recalculate weekly earnings — keep prev values
+            weeklyEarnings: next.weeklyEarnings ?? prev?.weeklyEarnings ?? 0,
+            weeklyProtected: next.weeklyProtected ?? prev?.weeklyProtected ?? 0,
+            currentMicroFee: next.currentMicroFee ?? prev?.currentMicroFee ?? 2.0,
+            currentRiskLevel: next.currentRiskLevel ?? prev?.currentRiskLevel ?? 'Low',
+            todayTripCount: (prev?.todayTripCount ?? 0) + 1,
           };
         });
         const eligRes = await axios.get(`${API_URL}/eligibility`, { timeout: 4000, headers });
