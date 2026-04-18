@@ -7,13 +7,13 @@
 
 ## Demo Video
 
-> 📹 **[INSERT LINK TO 5-MINUTE DEMOJAM VIDEO HERE]**
+> 📹 **https://www.youtube.com/watch?v=ck7u68NWqgE**
 
 ---
 
 ### Pitch Deck
 
-> 📄 **[INSERT LINK TO PHASE 3 PITCH DECK PDF HERE]**
+> 📄 **https://drive.google.com/file/d/1bc_g0seygZyw8mrdW4FCOQMM6JUlYRA3/view**
 
 ---
 
@@ -546,8 +546,6 @@ A pre-built release APK is available for direct sideloading — no Android Studi
 **Download (EAS Build — latest):**
 > 📦 **https://expo.dev/artifacts/eas/nMtCrhJbTe5wNmoH49oe5J.apk**
 
-**GitHub Releases (permanent link):**
-> 📦 **[INSERT GITHUB RELEASES APK LINK HERE]**
 
 **Installation steps:**
 1. Download the `.apk` to an Android device (Android 10+)
